@@ -1,0 +1,38 @@
+# ── Dependencies ──
+node_modules/
+/backend/deps/
+
+# ── Build artifacts ──
+/backend/_build/
+/backend/cover/
+/backend/doc/
+/backend/.fetch
+/frontend/dist/
+dist-ssr/
+
+# ── Elixir/Erlang ──
+*.beam
+*.ez
+erl_crash.dump
+backend-*.tar
+.elixir_ls/
+
+# ── User-uploaded media (local disk storage, not meant for version control) ──
+/backend/priv/static/uploads/*
+!/backend/priv/static/uploads/.gitkeep
+
+# ── Environment / secrets ──
+.env
+.env.*
+!.env.example
+
+# ── Editor / OS ──
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# ── Local Claude Code settings (per-developer, not shared) ──
+.claude/settings.local.json

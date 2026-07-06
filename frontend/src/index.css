@@ -1,0 +1,67 @@
+:root {
+  /* Discord dark theme palette */
+  --bg-primary:   #36393f;
+  --bg-secondary: #2f3136;
+  --bg-tertiary:  #202225;
+  --bg-input:     #40444b;
+
+  --text-normal:  #dcddde;
+  --text-muted:   #72767d;
+  --text-heading: #ffffff;
+
+  --interactive-normal: #b9bbbe;
+  --interactive-hover:  #dcddde;
+  --interactive-active: #ffffff;
+
+  --accent:       #7289da;
+  --accent-hover: #677bc4;
+
+  --success: #43b581;
+  --danger:  #f04747;
+  --warning: #faa61a;
+
+  font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  color: var(--text-normal);
+  background: var(--bg-primary);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+}
+
+h1, h2, h3 {
+  margin: 0;
+  color: var(--text-heading);
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, textarea {
+  font-family: inherit;
+}

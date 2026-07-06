@@ -1,0 +1,11 @@
+_build/
+deps/
+.elixir_ls/
+.git/
+.gitignore
+*.md
+test/
+priv/static/
+Dockerfile
+.dockerignore
+.formatter.exs

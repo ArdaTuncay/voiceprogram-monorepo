@@ -1,0 +1,101 @@
+.server-sidebar {
+  background: var(--bg-tertiary);
+  width: 72px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.server-icon-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.server-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-normal);
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-radius 0.15s, background 0.15s, color 0.15s;
+}
+
+.server-icon:hover {
+  border-radius: 16px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.server-icon.active {
+  border-radius: 16px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.server-create-area {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.server-icon-create {
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--success);
+}
+
+.server-icon-create:hover {
+  background: var(--success);
+  color: #fff;
+}
+
+.server-icon-join {
+  font-size: 18px;
+  color: var(--accent);
+  margin-top: 4px;
+}
+
+.server-icon-join:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.server-create-form {
+  width: 100%;
+}
+
+.server-create-input {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--text-normal);
+  font-size: 12px;
+  padding: 8px 6px;
+  text-align: center;
+  outline: none;
+}
+
+.server-create-error {
+  color: var(--danger);
+  font-size: 10px;
+  text-align: center;
+  margin-top: 4px;
+  word-break: break-word;
+}

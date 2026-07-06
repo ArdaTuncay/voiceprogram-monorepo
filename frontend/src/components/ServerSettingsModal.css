@@ -1,0 +1,198 @@
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin: -4px -4px 16px;
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.settings-tab {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.settings-tab:hover {
+  color: var(--text-normal);
+}
+
+.settings-tab.active {
+  color: var(--text-heading);
+  border-bottom-color: var(--accent);
+}
+
+.settings-section {
+  color: var(--text-normal);
+  font-size: 14px;
+}
+
+.settings-label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.settings-row {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: none;
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.settings-save-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settings-save-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.settings-save-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.settings-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.settings-danger-zone {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--bg-tertiary);
+}
+
+.settings-danger-title {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+.settings-danger-description {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.settings-delete-btn,
+.settings-confirm-delete-btn {
+  background: var(--danger);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.settings-delete-btn:hover,
+.settings-confirm-delete-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.settings-confirm-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.settings-cancel-btn {
+  background: var(--bg-input);
+  border: none;
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.settings-cancel-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+}
+
+.settings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.settings-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.settings-list-item:last-child {
+  border-bottom: none;
+}
+
+.settings-owner-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 3px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.settings-icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.settings-icon-btn:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--bg-tertiary);
+}
+
+.settings-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.settings-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 8px 4px;
+}
