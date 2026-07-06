@@ -138,6 +138,15 @@ export function fetchServerMembers(serverId: string): Promise<ApiResult<ServerMe
   return authedGet<ServerMember[]>(`/servers/${serverId}/members`);
 }
 
+/** Creates a text or voice channel in a server. Owner only. */
+export function createChannel(
+  serverId: string,
+  name: string,
+  type: 'text' | 'voice'
+): Promise<ApiResult<Channel>> {
+  return authedPost<Channel>(`/servers/${serverId}/channels`, { name, type });
+}
+
 /** Renames a server. Owner only — the backend rejects it otherwise. */
 export function updateServer(serverId: string, name: string): Promise<ApiResult<Server>> {
   return authedPut<Server>(`/servers/${serverId}`, { name });

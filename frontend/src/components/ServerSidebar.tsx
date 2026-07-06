@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import type { FormEvent } from 'react';
 import type { Server } from '../types';
 import JoinServerModal from './JoinServerModal';
+import CreateServerModal from './CreateServerModal';
 import './ServerSidebar.css';
 
 interface Props {
@@ -25,30 +25,8 @@ function serverInitials(name: string): string {
 }
 
 export default function ServerSidebar({ servers, activeServerId, onSelect, onCreate, onJoin }: Props) {
-  const [creating, setCreating] = useState(false);
-  const [name, setName] = useState('');
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed) return;
-
-    setSubmitting(true);
-    const errorMessage = await onCreate(trimmed);
-    setSubmitting(false);
-
-    if (errorMessage) {
-      setError(errorMessage);
-      return;
-    }
-
-    setName('');
-    setError('');
-    setCreating(false);
-  }
 
   return (
     <aside className="server-sidebar">
@@ -66,35 +44,14 @@ export default function ServerSidebar({ servers, activeServerId, onSelect, onCre
       </div>
 
       <div className="server-create-area">
-        {creating ? (
-          <form className="server-create-form" onSubmit={handleSubmit}>
-            <input
-              autoFocus
-              className="server-create-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={() => {
-                if (!name.trim()) {
-                  setCreating(false);
-                  setError('');
-                }
-              }}
-              placeholder="Sunucu adı"
-              maxLength={50}
-              disabled={submitting}
-            />
-            {error && <div className="server-create-error">{error}</div>}
-          </form>
-        ) : (
-          <button
-            className="server-icon server-icon-create"
-            onClick={() => setCreating(true)}
-            title="Sunucu Oluştur"
-            aria-label="Sunucu Oluştur"
-          >
-            +
-          </button>
-        )}
+        <button
+          className="server-icon server-icon-create"
+          onClick={() => setShowCreateModal(true)}
+          title="Sunucu Oluştur"
+          aria-label="Sunucu Oluştur"
+        >
+          +
+        </button>
 
         <button
           className="server-icon server-icon-join"
@@ -105,6 +62,10 @@ export default function ServerSidebar({ servers, activeServerId, onSelect, onCre
           ➜
         </button>
       </div>
+
+      {showCreateModal && (
+        <CreateServerModal onCreate={onCreate} onClose={() => setShowCreateModal(false)} />
+      )}
 
       {showJoinModal && (
         <JoinServerModal onJoin={onJoin} onClose={() => setShowJoinModal(false)} />

@@ -22,6 +22,7 @@ import { useVoiceChannel } from '../hooks/useVoiceChannel';
 import ServerSidebar from './ServerSidebar';
 import InviteModal from './InviteModal';
 import ServerSettingsModal from './ServerSettingsModal';
+import CreateChannelModal from './CreateChannelModal';
 import './Chat.css';
 
 interface Props {
@@ -76,6 +77,7 @@ export default function Chat({ user, onLogout }: Props) {
   const [unreadChannelIds, setUnreadChannelIds] = useState<Set<string>>(new Set());
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [createChannelType, setCreateChannelType] = useState<'text' | 'voice' | null>(null);
   const [typingUsers, setTypingUsers] = useState<Record<string, string | null>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -116,6 +118,12 @@ export default function Chat({ user, onLogout }: Props) {
   // which channel to fall back to.
   const channelsRef = useRef(channels);
   channelsRef.current = channels;
+
+  // Same reasoning again: "channel_created" needs to know whether the new
+  // channel belongs to the server currently being viewed before adding it
+  // to the visible list.
+  const activeServerIdRef = useRef(activeServerId);
+  activeServerIdRef.current = activeServerId;
 
   // Set by a notification click when it targets a channel in a different
   // server: tells the channel-fetch effect below to select that channel
@@ -164,7 +172,12 @@ export default function Chat({ user, onLogout }: Props) {
   // Join the active channel's socket topic; leaves the previous one and
   // re-joins automatically whenever the user switches channels.
   useEffect(() => {
-    if (!activeChannelId) return;
+    if (!activeChannelId) {
+      setMessages([]);
+      setOnlineUsers([]);
+      setTypingUsers({});
+      return;
+    }
 
     setMessages([]);
     setOnlineUsers([]);
@@ -243,6 +256,10 @@ export default function Chat({ user, onLogout }: Props) {
             notification.close();
           };
         }
+      },
+      onChannelCreated: (payload) => {
+        if (payload.server_id !== activeServerIdRef.current) return;
+        setChannels((prev) => (prev.some((c) => c.id === payload.id) ? prev : [...prev, payload]));
       },
       onChannelDeleted: (payload) => {
         const stillPresent = channelsRef.current.some((c) => c.id === payload.channel_id);
@@ -486,7 +503,19 @@ export default function Chat({ user, onLogout }: Props) {
         </div>
 
         <nav className="channel-list">
-          <div className="channel-category-label">Text Channels</div>
+          <div className="channel-category-row">
+            <span className="channel-category-label">Text Channels</span>
+            {isServerOwner && (
+              <button
+                className="channel-category-add-btn"
+                onClick={() => setCreateChannelType('text')}
+                title="Metin Kanalı Oluştur"
+                aria-label="Metin Kanalı Oluştur"
+              >
+                +
+              </button>
+            )}
+          </div>
           {textChannels.map((ch) => {
             const unread = unreadChannelIds.has(ch.id);
             return (
@@ -502,7 +531,19 @@ export default function Chat({ user, onLogout }: Props) {
             );
           })}
 
-          <div className="channel-category-label">Voice Channels</div>
+          <div className="channel-category-row">
+            <span className="channel-category-label">Voice Channels</span>
+            {isServerOwner && (
+              <button
+                className="channel-category-add-btn"
+                onClick={() => setCreateChannelType('voice')}
+                title="Ses Kanalı Oluştur"
+                aria-label="Ses Kanalı Oluştur"
+              >
+                +
+              </button>
+            )}
+          </div>
           {voiceChannels.map((room) => {
             const isActive = voice.activeRoomId === room.id;
             return (
@@ -766,33 +807,35 @@ export default function Chat({ user, onLogout }: Props) {
         </div>
       )}
 
-      {/* ── Right sidebar: online users ── */}
-      <aside className="online-sidebar">
-        <div className="online-sidebar-header">
-          Çevrimiçi — {onlineUsers.length}
-        </div>
-        <div className="online-user-list">
-          {onlineUsers.map((presenceUser) => {
-            const color = userColor(presenceUser.user_id);
-            const name = presenceUser.username ?? 'Unknown';
-            return (
-              <div key={presenceUser.user_id} className="online-user-item">
-                <div className="online-user-avatar-wrapper">
-                  <div
-                    className="online-user-avatar"
-                    style={{ background: color }}
-                    title={name}
-                  >
-                    {initials(name)}
+      {/* ── Right sidebar: online users — hidden entirely until a server is active ── */}
+      {activeServerId && (
+        <aside className="online-sidebar">
+          <div className="online-sidebar-header">
+            Çevrimiçi — {onlineUsers.length}
+          </div>
+          <div className="online-user-list">
+            {onlineUsers.map((presenceUser) => {
+              const color = userColor(presenceUser.user_id);
+              const name = presenceUser.username ?? 'Unknown';
+              return (
+                <div key={presenceUser.user_id} className="online-user-item">
+                  <div className="online-user-avatar-wrapper">
+                    <div
+                      className="online-user-avatar"
+                      style={{ background: color }}
+                      title={name}
+                    >
+                      {initials(name)}
+                    </div>
+                    <span className="online-status-dot" />
                   </div>
-                  <span className="online-status-dot" />
+                  <span className="online-user-name">{name}</span>
                 </div>
-                <span className="online-user-name">{name}</span>
-              </div>
-            );
-          })}
-        </div>
-      </aside>
+              );
+            })}
+          </div>
+        </aside>
+      )}
 
       {/* Hidden elements that actually play the remote peers' voice audio. */}
       {Object.entries(voice.remoteStreams).map(([peerId, stream]) => (
@@ -816,6 +859,14 @@ export default function Chat({ user, onLogout }: Props) {
           server={activeServer}
           channels={channels}
           onClose={() => setShowSettingsModal(false)}
+        />
+      )}
+
+      {createChannelType && activeServerId && isServerOwner && (
+        <CreateChannelModal
+          serverId={activeServerId}
+          type={createChannelType}
+          onClose={() => setCreateChannelType(null)}
         />
       )}
     </div>

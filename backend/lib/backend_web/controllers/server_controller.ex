@@ -49,6 +49,27 @@ defmodule BackendWeb.ServerController do
     end
   end
 
+  @doc "POST /api/servers/:server_id/channels — creates a text or voice channel. Owner only."
+  def create_channel(conn, %{"server_id" => server_id} = params) do
+    with %Server{} = server <- Servers.get_server(server_id),
+         true <- Servers.owner?(server.id, conn.assigns.current_user.id) do
+      case Servers.create_channel(server.id, params) do
+        {:ok, channel} ->
+          conn
+          |> put_status(:created)
+          |> json(channel_json(channel))
+
+        {:error, changeset} ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{errors: format_errors(changeset)})
+      end
+    else
+      false -> forbidden(conn)
+      nil -> not_found(conn)
+    end
+  end
+
   @doc "PUT /api/servers/:id — renames a server. Owner only."
   def update(conn, %{"id" => server_id} = params) do
     with %Server{} = server <- Servers.get_server(server_id),

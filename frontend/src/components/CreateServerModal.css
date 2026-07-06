@@ -1,0 +1,59 @@
+.create-server-description {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+
+.create-server-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.create-server-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.create-server-input {
+  background: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-size: 15px;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.create-server-input:focus {
+  border-color: var(--accent);
+}
+
+.create-server-error {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.create-server-submit-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-top: 8px;
+}
+
+.create-server-submit-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.create-server-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

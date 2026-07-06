@@ -130,6 +130,30 @@ defmodule Backend.Servers do
   end
 
   @doc """
+  Creates a text or voice channel in a server. Broadcasts `"channel_created"`
+  to every server member so it appears in their channel list live.
+  """
+  def create_channel(server_id, attrs) do
+    %Channel{}
+    |> Channel.changeset(Map.put(attrs, "server_id", server_id))
+    |> Repo.insert()
+    |> case do
+      {:ok, channel} ->
+        broadcast_to_members(server_id, "channel_created", %{
+          id: channel.id,
+          name: channel.name,
+          type: channel.type,
+          server_id: server_id
+        })
+
+        {:ok, channel}
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
   Permanently deletes a text or voice channel. Broadcasts `"channel_deleted"`
   to every server member so it disappears from their channel list live.
   """

@@ -6,6 +6,7 @@ import type {
   NewMessageNotification,
   TypingNotification,
   ChannelDeletedNotification,
+  ChannelCreatedNotification,
   ServerUpdatedNotification,
   ServerDeletedNotification,
   MemberKickedNotification,
@@ -158,6 +159,7 @@ export function sendVoiceStatus(muted: boolean, deafened: boolean): void {
 
 export interface UserChannelCallbacks {
   onNewMessage: (payload: NewMessageNotification) => void;
+  onChannelCreated: (payload: ChannelCreatedNotification) => void;
   onChannelDeleted: (payload: ChannelDeletedNotification) => void;
   onServerUpdated: (payload: ServerUpdatedNotification) => void;
   onServerDeleted: (payload: ServerDeletedNotification) => void;
@@ -177,6 +179,9 @@ export function joinUserChannel(userId: string, callbacks: UserChannelCallbacks)
   userChannel = room;
 
   room.on('new_message', (payload: NewMessageNotification) => callbacks.onNewMessage(payload));
+  room.on('channel_created', (payload: ChannelCreatedNotification) =>
+    callbacks.onChannelCreated(payload)
+  );
   room.on('channel_deleted', (payload: ChannelDeletedNotification) =>
     callbacks.onChannelDeleted(payload)
   );

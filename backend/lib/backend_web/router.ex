@@ -24,6 +24,7 @@ defmodule BackendWeb.Router do
     put "/servers/:id", ServerController, :update
     delete "/servers/:id", ServerController, :delete
     get "/servers/:id/channels", ServerController, :channels
+    post "/servers/:server_id/channels", ServerController, :create_channel
     get "/servers/:id/members", ServerController, :members
     delete "/servers/:server_id/members/:user_id", ServerController, :delete_member
 

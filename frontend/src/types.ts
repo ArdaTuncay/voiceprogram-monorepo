@@ -66,6 +66,10 @@ export interface ChannelDeletedNotification {
   server_id: string;
 }
 
+export interface ChannelCreatedNotification extends Channel {
+  server_id: string;
+}
+
 export interface ServerUpdatedNotification {
   server_id: string;
   name: string;
