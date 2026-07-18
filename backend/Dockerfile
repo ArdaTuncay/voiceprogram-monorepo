@@ -1,8 +1,12 @@
 # Multi-stage build: compiles a Phoenix release in a full Elixir/OTP image,
 # then copies just the compiled release into a minimal Debian runtime image.
-ARG ELIXIR_VERSION=1.16.2
-ARG OTP_VERSION=26.2.3
-ARG DEBIAN_VERSION=bookworm-20240130-slim
+# Pinned to the actual dev toolchain (Elixir 1.20.2 / OTP 29) instead of the
+# scaffold defaults — both tags below were confirmed to exist on Docker Hub
+# (hexpm/elixir and library/debian) before pinning, since a missing tag only
+# surfaces as a build failure on the very first real deploy.
+ARG ELIXIR_VERSION=1.20.2
+ARG OTP_VERSION=29.0.3
+ARG DEBIAN_VERSION=bookworm-20260623-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"

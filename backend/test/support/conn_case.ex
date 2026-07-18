@@ -28,6 +28,7 @@ defmodule BackendWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import BackendWeb.ConnCase
+      import Backend.Fixtures
     end
   end
 
