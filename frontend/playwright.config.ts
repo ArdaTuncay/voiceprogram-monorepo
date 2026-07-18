@@ -33,7 +33,25 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          args: [
+            // There's no real microphone/camera in a headless CI/dev
+            // environment for getUserMedia() to grab, and no human to click
+            // through a permission dialog even if there were one.
+            // --use-fake-ui-for-media-stream auto-grants the permission
+            // prompt instead of leaving it hanging forever; --use-fake-
+            // device-for-media-stream backs it with a synthetic audio/video
+            // source (a generated tone + a color bar pattern) so
+            // getUserMedia() actually resolves with real, encodable
+            // MediaStreamTracks instead of erroring — needed for
+            // voice-channel.spec.ts's real RTCPeerConnection/WebRTC flow.
+            '--use-fake-ui-for-media-stream',
+            '--use-fake-device-for-media-stream',
+          ],
+        },
+      },
     },
   ],
 

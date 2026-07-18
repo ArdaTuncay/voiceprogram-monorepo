@@ -152,6 +152,22 @@ export function useVoiceChannel(user: User) {
   // channel/analyser.
   const joinGenerationRef = useRef(0);
 
+  // Test-only visibility hook for Playwright E2E tests (see
+  // e2e/voice-channel.spec.ts) — this hook's return value only exposes
+  // derived state (remoteStreams, participants, ...), never the real
+  // RTCPeerConnection objects, so there's no other way for a test running
+  // outside React to observe an actual connectionState transition (e.g.
+  // confirming 'connected' really happens, not just that the UI eventually
+  // shows a peer). Doesn't change any behavior — peersRef.current is the
+  // same Map either way, this only publishes the reference. DEV-only:
+  // import.meta.env.DEV is statically false in a production build, so Vite
+  // dead-code-eliminates this whole block — no runtime cost or exposure
+  // outside local dev/test.
+  if (import.meta.env.DEV) {
+    (window as unknown as { __e2eVoicePeers?: Map<string, RTCPeerConnection> }).__e2eVoicePeers =
+      peersRef.current;
+  }
+
   const setSpeaking = useCallback((id: string, speaking: boolean) => {
     setSpeakingUserIds((prev) => {
       if (speaking === prev.has(id)) return prev;
