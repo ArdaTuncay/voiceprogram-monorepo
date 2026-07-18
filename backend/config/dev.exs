@@ -56,6 +56,30 @@ config :backend, BackendWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :backend, dev_routes: true
 
+# BackendWeb.RequireCloudflarePlug no-ops when :cloudflare_origin_secret is
+# unset (the default here) — nothing sits in front of this app locally for
+# there to be a Cloudflare hop to verify. To exercise the plug's rejection
+# path locally (e.g. testing a Cloudflare Transform Rule setup end to end
+# against this dev server), uncomment both lines below with matching
+# values and send requests with a `X-Origin-Secret: dev-secret` header:
+#
+# config :backend, :cloudflare_origin_secret, "dev-secret"
+
+# To test S3/R2 uploads locally instead of local-disk storage, fill in real
+# credentials below (see config/runtime.exs for the production equivalent
+# and Backend.Uploads.S3 for how the request is signed). Left as :local by
+# default (config.exs) since no bucket/credentials are available in this
+# dev environment.
+#
+# config :backend, :uploads,
+#   adapter: :s3,
+#   bucket: "zircle-uploads-dev",
+#   region: "auto",
+#   endpoint: "https://<account_id>.r2.cloudflarestorage.com",
+#   access_key_id: "...",
+#   secret_access_key: "...",
+#   public_url_base: "https://pub-xxxxxxxx.r2.dev"
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 

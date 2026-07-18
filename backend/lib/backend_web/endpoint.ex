@@ -19,6 +19,48 @@ defmodule BackendWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
+  # Cloudflare's own published edge ranges — https://www.cloudflare.com/ips-v4/
+  # and https://www.cloudflare.com/ips-v6/ (checked 2026-07-14; Cloudflare
+  # adds ranges only occasionally, but does, so re-check this list now and
+  # then). RemoteIp uses this to recognize Cloudflare as a trusted hop when
+  # walking a forwarding header's IP chain — see RequireCloudflarePlug's
+  # moduledoc for why that alone still isn't enough to stop a Cloudflare
+  # bypass, which is what that plug is for.
+  @cloudflare_ip_ranges ~w[
+    173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22
+    141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20
+    197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13
+    104.24.0.0/14 172.64.0.0/13 131.0.72.0/22
+    2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32
+    2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+  ]
+
+  # Render/Railway (and any other PaaS) sit in front of this app as a plain
+  # HTTP reverse proxy, not PROXY-protocol passthrough — so conn.remote_ip
+  # is otherwise always the proxy's own address, not the real client's. That
+  # silently breaks BackendWeb.RateLimiterPlug's IP-based bucket (every
+  # request looks like it's from the same "IP", so the login/register brute
+  # -force guard either does nothing or, worse, lets one user's failed
+  # attempts count against everyone sharing that bucket). Rewriting
+  # conn.remote_ip here — before anything else reads it — fixes that at the
+  # source instead of patching each reader. Must come before every other
+  # plug, hence first in the pipeline, ahead of even static file serving.
+  #
+  # cf-connecting-ip (not x-forwarded-for) because it's Cloudflare's own
+  # single, unambiguous value for "who actually connected to us" — no
+  # client-supplied chain to walk/spoof. Trusting it is only safe once
+  # RequireCloudflarePlug (right below) has confirmed the request really
+  # came through Cloudflare in the first place.
+  plug RemoteIp, headers: ["cf-connecting-ip"], proxies: @cloudflare_ip_ranges
+
+  # Must run immediately after RemoteIp, before anything else trusts
+  # conn.remote_ip or serves a response — see its moduledoc.
+  plug BackendWeb.RequireCloudflarePlug
+
+  # Must run before Plug.Static so static/upload responses get these
+  # headers too, not just JSON API responses — see its moduledoc.
+  plug BackendWeb.SecurityHeadersPlug
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # When code reloading is disabled (e.g., in production),
@@ -54,7 +96,16 @@ defmodule BackendWeb.Endpoint do
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
-    json_decoder: Phoenix.json_library()
+    json_decoder: Phoenix.json_library(),
+    # Plug's own default multipart body-size ceiling is 8_000_000 bytes —
+    # the exact same number as Backend.Uploads' 8MB attachment limit.
+    # Multipart encoding adds boundary/header overhead on top of the raw
+    # file bytes, so a file just under 8MB could blow Plug's ceiling before
+    # ever reaching Backend.Uploads.store/1's own (friendly, "Dosya çok
+    # büyük") check — the request would just fail at the parser instead.
+    # Raised well above the app-level limit so Backend.Uploads is always
+    # the one that actually enforces it and returns the intended error.
+    length: 12_000_000
 
   plug Plug.MethodOverride
   plug Plug.Head

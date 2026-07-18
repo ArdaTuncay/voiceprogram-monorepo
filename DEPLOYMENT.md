@@ -66,8 +66,12 @@ Backend klasöründe (`/backend`) hazır bir `Dockerfile` var — multi-stage bu
 | `FRONTEND_URL` | Frontend'in adresi — CORS ve WebSocket origin kontrolü için **kritik** (Adım 5'ten sonra girilecek) | `https://voiceprogram.vercel.app` (birden fazla adres için virgülle ayırın) |
 | `PORT` | Render/Railway genelde otomatik ayarlar, elle girmenize gerek yok | — |
 | `POOL_SIZE` | (opsiyonel) Veritabanı bağlantı havuzu boyutu | `10` |
+| `CLOUDFLARE_ORIGIN_SECRET` | (opsiyonel ama Cloudflare kullanıyorsanız **kritik**) Cloudflare Transform Rule ile eklenen `X-Origin-Secret` header'ıyla eşleşmesi gereken gizli değer — bkz. `BackendWeb.RequireCloudflarePlug` | `openssl rand -hex 32` ile üretin |
+| `SENTRY_DSN` | (opsiyonel) Beklenmedik hataları/çökmeleri Sentry'e göndermek için | sentry.io projenizin DSN'i |
 
 **Not:** `FRONTEND_URL` girilmezse backend `CORS`'u herkese açık (`*`) bırakır ve WebSocket origin kontrolünü tamamen kapatır (`check_origin: false`) — geliştirme/test için çalışır ama üretimde **mutlaka** gerçek frontend adresinizi girin, aksi halde herhangi bir site sizin API'nize istek atabilir.
+
+**Not:** `CLOUDFLARE_ORIGIN_SECRET` girilmezse `RequireCloudflarePlug` hiçbir şey yapmaz (no-op) — Cloudflare'i domain'inizin önüne koyduysanız mutlaka set edin, aksi halde biri Render/Railway'in verdiği `*.onrender.com`/`*.up.railway.app` adresine doğrudan istek atarak Cloudflare'i (WAF, edge rate-limit, IP maskeleme) tamamen atlayabilir.
 
 `mix phx.gen.secret` çalıştırmak için yerel makinenizde:
 ```bash
@@ -87,6 +91,18 @@ Migration'lar Docker imajı her başladığında (`CMD ["/bin/sh", "-c", "/app/b
   ```
   (Not: seeds.exs derlenmiş release'e dahil edilmemiş olabilir çünkü kaynak kod değil; bu adım opsiyoneldir — atlarsanız uygulama yine de çalışır, sadece kullanıcılar ilk girişte kendi sunucularını "+" ile oluşturur.)
 - **Railway**: Servis → **Settings → Deploy → Custom Start Command** ile geçici olarak değiştirip bir kerelik çalıştırabilir, veya Railway CLI ile `railway run` kullanabilirsiniz.
+
+---
+
+## ⚠️ Bilinen Deploy Etkisi: `20260715000000_replace_token_valid_from_with_token_version` Migration'ı Tüm Oturumları Geçersiz Kılar
+
+Bu migration `users` tablosundaki `token_valid_from` (timestamp) alanını kaldırıp yerine `token_version` (integer, `default: 0`) ekliyor; `Backend.Accounts.generate_user_token/1` ve `authenticate_token/1` artık oturum token'ının geçerliliğini bu yeni alana göre kontrol ediyor (bkz. `backend/lib/backend/accounts.ex`).
+
+**Sonuç:** bu migration deploy edildiği an, **deploy öncesi imzalanmış tüm token'lar** (yani o anda aktif olan tüm oturumlar) geçersiz olur — çünkü o token'lar eski formatta (`token_version` alanı olmadan) imzalanmış, `authenticate_token/1` bunları `{:error, :invalid}` olarak reddeder. Bu, güvenlik açısından zararsızdır (kullanıcı sadece yeniden giriş yapmak zorunda kalır, veri kaybı olmaz) ama beklenmedik bir "herkes aniden çıkış yapılmış" deneyimi yaratabilir:
+
+- Deploy sonrası açık olan tüm sekmeler/cihazlar bir sonraki API isteğinde/WebSocket yeniden bağlanmasında 401 alıp login ekranına düşecek.
+- Bunu deploy penceresi/duyurusu planlarken hesaba katın (ör. "bakım sonrası tekrar giriş yapmanız gerekebilir" gibi bir not).
+- Migration'lar zaten container her başladığında otomatik çalıştığından (`bin/migrate && bin/server`), bu davranış deploy'un bir parçası olarak kendiliğinden gerçekleşir — ekstra bir işlem yapmanız gerekmiyor, sadece bunu bekleyin.
 
 ---
 
@@ -124,6 +140,99 @@ Frontend'in gerçek adresini öğrendiniz — şimdi backend'e dönüp:
 3. Bir sunucu oluşturun, mesaj gönderin — WebSocket bağlantısının kurulduğunu (Network → WS sekmesinde `101 Switching Protocols`) doğrulayın.
 4. Sesli kanala girip mikrofon izni isteğinin geldiğini doğrulayın (Vercel zaten HTTPS servis ettiği için bu sorunsuz çalışmalı).
 5. Farklı ağlardaki (ör. biri ev Wi-Fi'si, diğeri mobil veri) iki kişiyle sesli/ekran paylaşımı testi yapın — **bkz. aşağıdaki bilinen sınırlama**.
+
+---
+
+## Depolama (S3/R2): Nesne Yaşam Döngüsü (Lifecycle) Politikaları
+
+`S3_BUCKET` ortam değişkeni set edildiğinde (bkz. Adım 3, ve `config/runtime.exs`) backend yüklenen dosyaları `Backend.Uploads.S3` üzerinden bir S3-uyumlu bucket'a (AWS S3, Cloudflare R2, DigitalOcean Spaces) yazar. Bucket'ın kendisinde aşağıdaki iki Lifecycle kuralının tanımlanması önerilir — bunlar backend kodundan tamamen bağımsız, bulut sağlayıcısının kendi tarafında otomatik çalışan temizlik kurallarıdır:
+
+1. **Yarıda kalan çok parçalı (multipart) yüklemelerin iptali** — iptal edilen veya yarıda kesilen büyük dosya yüklemeleri bucket'ta gizlice yer kaplamaya devam edebilir. `AbortIncompleteMultipartUpload` kuralı, başlatılıp **7 gün** içinde tamamlanmayan multipart yüklemeleri otomatik iptal edip temizler. Prefix kısıtlaması yok — tüm bucket'a uygulanır, çünkü yarım kalan parçalar herhangi bir key altında oluşabilir.
+2. **Yetim geçici dosyaların silinmesi** — ileride "yüklenip hiçbir mesaja bağlanmamış" dosyalar için ayrı bir `uploads/tmp/` prefix'i kurgulanırsa, bu prefix altındaki nesneler `Expiration` kuralıyla **14 gün** sonra kalıcı olarak silinir. **Not:** Bu prefix şu an kod tarafında kullanılmıyor (`Backend.Uploads.store/1` düz, prefix'siz rastgele dosya adları üretir) — kural, böyle bir ayrım ileride eklendiğinde devreye girmesi için şablon olarak hazırlanmıştır.
+
+### JSON (AWS CLI `put-bucket-lifecycle-configuration`)
+
+Aşağıdaki içeriği `lifecycle.json` olarak kaydedin — hem AWS S3 hem de Cloudflare R2'nin S3-uyumlu API'siyle aynı formatı kabul eder:
+
+```json
+{
+  "Rules": [
+    {
+      "ID": "abort-incomplete-multipart-uploads",
+      "Status": "Enabled",
+      "Filter": {},
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 7
+      }
+    },
+    {
+      "ID": "expire-orphaned-tmp-uploads",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "uploads/tmp/"
+      },
+      "Expiration": {
+        "Days": 14
+      }
+    }
+  ]
+}
+```
+
+Uygulamak için:
+
+```bash
+# AWS S3
+aws s3api put-bucket-lifecycle-configuration \
+  --bucket <bucket-adiniz> \
+  --lifecycle-configuration file://lifecycle.json
+
+# Cloudflare R2 (aynı komut, S3-uyumlu endpoint üzerinden)
+aws s3api put-bucket-lifecycle-configuration \
+  --endpoint-url https://<account_id>.r2.cloudflarestorage.com \
+  --bucket <bucket-adiniz> \
+  --lifecycle-configuration file://lifecycle.json
+```
+
+### XML (ham S3 REST API `PutBucketLifecycleConfiguration` gövdesi)
+
+Bir araç/panel JSON değil ham XML istiyorsa aynı iki kural:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<LifecycleConfiguration>
+  <Rule>
+    <ID>abort-incomplete-multipart-uploads</ID>
+    <Status>Enabled</Status>
+    <Filter></Filter>
+    <AbortIncompleteMultipartUpload>
+      <DaysAfterInitiation>7</DaysAfterInitiation>
+    </AbortIncompleteMultipartUpload>
+  </Rule>
+  <Rule>
+    <ID>expire-orphaned-tmp-uploads</ID>
+    <Status>Enabled</Status>
+    <Filter>
+      <Prefix>uploads/tmp/</Prefix>
+    </Filter>
+    <Expiration>
+      <Days>14</Days>
+    </Expiration>
+  </Rule>
+</LifecycleConfiguration>
+```
+
+### AWS S3 Konsolu (elle kurulum)
+
+1. S3 → bucket'ınız → **Management** sekmesi → **Lifecycle rules** → **Create lifecycle rule**.
+2. **Kural 1:** İsim `abort-incomplete-multipart-uploads`, kapsam "Apply to all objects in the bucket", **Lifecycle rule actions** altında yalnızca *"Delete expired object delete markers or incomplete multipart uploads"* işaretleyin → **Number of days** = `7`.
+3. **Kural 2:** İsim `expire-orphaned-tmp-uploads`, kapsam "Limit the scope..." → Prefix = `uploads/tmp/`, action *"Expire current versions of objects"* → **Number of days** = `14`.
+
+### Cloudflare R2 Panosu (elle kurulum)
+
+1. R2 → bucket'ınız → **Settings** → **Object Lifecycle Rules** → **Add rule**.
+2. **Kural 1:** **Rule name** = `abort-incomplete-multipart-uploads`, prefix boş bırakın (tüm bucket), **Action** = "Delete incomplete multipart uploads", **After** = `7 days`.
+3. **Kural 2:** **Rule name** = `expire-orphaned-tmp-uploads`, **Prefix** = `uploads/tmp/`, **Action** = "Delete objects", **After** = `14 days`.
 
 ---
 

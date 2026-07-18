@@ -23,6 +23,12 @@ end
 config :backend, BackendWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# Exposed at runtime (not just compile-time Mix.env()) so plugs like
+# BackendWeb.SecurityHeadersPlug can gate environment-specific behavior
+# (e.g. HSTS, which must never be sent in dev) via Application.get_env
+# instead of baking Mix.env() into the compiled build.
+config :backend, :environment, config_env()
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -33,12 +39,55 @@ if config_env() == :prod do
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
+  # Defaults to verify_peer (the safe side) so a missing env var can't
+  # silently disable certificate verification. Only set DATABASE_SSL_VERIFY
+  # to verify_none if the provider's Postgres genuinely doesn't offer a
+  # verifiable CA chain — see the Logger.warning in Backend.Application for
+  # the runtime reminder that this is happening.
+  database_ssl_verify =
+    case System.get_env("DATABASE_SSL_VERIFY", "verify_peer") do
+      "verify_peer" ->
+        :verify_peer
+
+      "verify_none" ->
+        :verify_none
+
+      other ->
+        raise """
+        geçersiz DATABASE_SSL_VERIFY değeri: #{inspect(other)}.
+        Kabul edilen değerler: "verify_peer" (varsayılan) veya "verify_none".
+        """
+    end
+
+  ssl_opts =
+    case database_ssl_verify do
+      :verify_peer ->
+        db_host = database_url |> URI.parse() |> Map.fetch!(:host)
+
+        # No DATABASE_CA_CERT_FILE means fall back to the OS/Erlang trust
+        # store bundled with OTP (public_key.cacerts_get/0, available since
+        # OTP 25 — this project targets OTP 29, see backend/Dockerfile).
+        cacert_opt =
+          case System.get_env("DATABASE_CA_CERT_FILE") do
+            nil -> [cacerts: :public_key.cacerts_get()]
+            path -> [cacertfile: path]
+          end
+
+        [verify: :verify_peer, server_name_indication: String.to_charlist(db_host)] ++
+          cacert_opt
+
+      :verify_none ->
+        [verify: :verify_none]
+    end
+
+  config :backend, :database_ssl_verify, database_ssl_verify
+
   config :backend, Backend.Repo,
-  ssl: true,
-  ssl_opts: [verify: :verify_none],
-  url: database_url,
-  pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-  socket_options: maybe_ipv6
+    ssl: true,
+    ssl_opts: ssl_opts,
+    url: database_url,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+    socket_options: maybe_ipv6
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
@@ -70,6 +119,65 @@ if config_env() == :prod do
 
   config :backend, :cors_origins, frontend_origins || "*"
 
+  # check_origin must not silently fall back to `false` (which disables
+  # Phoenix's WebSocket origin check entirely) just because FRONTEND_URL
+  # was left unset by mistake — fail loudly at boot instead.
+  check_origin =
+    frontend_origins ||
+      raise """
+      FRONTEND_URL ortam değişkeni prod ortamında zorunludur, WebSocket origin kontrolü için gereklidir.
+      Örnek: FRONTEND_URL=https://example.com veya FRONTEND_URL=https://example.com,https://preview.vercel.app
+      """
+
+  # Blocks requests that skipped Cloudflare entirely (see
+  # BackendWeb.RequireCloudflarePlug) — set this to the same random value
+  # configured in a Cloudflare Transform Rule that adds it as the
+  # X-Origin-Secret header on every request Cloudflare forwards to this
+  # origin. Left unset, the plug no-ops (no protection) — only actually
+  # closes the bypass once both sides agree on a value.
+  config :backend, :cloudflare_origin_secret, System.get_env("CLOUDFLARE_ORIGIN_SECRET")
+
+  # Sentry.LoggerHandler (attached in Backend.Application, registered in
+  # config/config.exs) reports unhandled exceptions and process crashes
+  # here. Left unset, Sentry itself no-ops — nothing is ever sent.
+  config :sentry,
+    dsn: System.get_env("SENTRY_DSN"),
+    environment_name: config_env(),
+    enable_source_code_context: true,
+    root_source_code_paths: [File.cwd!()]
+
+  # Chat attachment storage. Local disk (the dev default, see config.exs)
+  # doesn't survive across instances/redeploys on most PaaS providers, so
+  # production should point at an S3-compatible bucket instead — AWS S3,
+  # Cloudflare R2, or DigitalOcean Spaces all work via Backend.Uploads.S3's
+  # SigV4 signer without any adapter-specific code. Falls back to :local if
+  # S3_BUCKET isn't set, so an S3-less deploy still boots (uploads just
+  # won't survive a redeploy/multi-instance setup — same limitation as
+  # before this config existed).
+  #
+  # R2 example:
+  #   S3_BUCKET=zircle-uploads
+  #   S3_REGION=auto
+  #   S3_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com
+  #   S3_ACCESS_KEY_ID=...
+  #   S3_SECRET_ACCESS_KEY=...
+  #   S3_PUBLIC_URL_BASE=https://pub-xxxxxxxx.r2.dev
+  #
+  # Plain AWS S3 example: omit S3_ENDPOINT/S3_PUBLIC_URL_BASE, set
+  # S3_REGION to the bucket's real region (e.g. eu-central-1) and make the
+  # bucket (or its objects) publicly readable, or front it with a CDN and
+  # set S3_PUBLIC_URL_BASE to that instead.
+  if System.get_env("S3_BUCKET") do
+    config :backend, :uploads,
+      adapter: :s3,
+      bucket: System.fetch_env!("S3_BUCKET"),
+      region: System.get_env("S3_REGION", "auto"),
+      endpoint: System.get_env("S3_ENDPOINT"),
+      access_key_id: System.fetch_env!("S3_ACCESS_KEY_ID"),
+      secret_access_key: System.fetch_env!("S3_SECRET_ACCESS_KEY"),
+      public_url_base: System.get_env("S3_PUBLIC_URL_BASE")
+  end
+
   config :backend, BackendWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
@@ -79,7 +187,7 @@ if config_env() == :prod do
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
       ip: {0, 0, 0, 0, 0, 0, 0, 0}
     ],
-    check_origin: frontend_origins || false,
+    check_origin: check_origin,
     secret_key_base: secret_key_base
 
   # ## SSL Support

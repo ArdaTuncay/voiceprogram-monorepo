@@ -1,44 +1,81 @@
 defmodule BackendWeb.VoiceChannel do
+  @moduledoc """
+  WebRTC signaling relay for a voice channel's room — joins/leaves drive
+  presence (used to seed new peers with who to call), and offers/answers/ICE
+  candidates are relayed as opaque payloads between peers (see
+  `useVoiceChannel.ts`, which does the actual peer connection work).
+  """
+
   use Phoenix.Channel
 
   alias Backend.Chat
-  alias Backend.Servers
   alias Backend.Presence
+  alias Backend.Servers
+  alias BackendWeb.ChannelRateLimiter
+
+  # "update_status" (mute/deafen): infrequent, deliberate user action —
+  # generous headroom, just a backstop against a buggy client looping.
+  @update_status_scale :timer.minutes(1)
+  @update_status_limit 30
+
+  # "video_offer"/"video_answer"/"ice_candidate": share ONE bucket per
+  # ordered peer pair (not one bucket per event type) because they're all
+  # part of negotiating a single connection — a normal negotiation is one
+  # offer/answer plus a handful of ICE candidates, so a shared per-pair
+  # budget catches a flood aimed at one peer without needing to guess how
+  # that flood is split across the three message types. Keyed off
+  # `socket.topic` (not a dedicated assign — voice_channel doesn't store a
+  # room id in assigns) so a flood in one room can't burn a user's budget
+  # signaling in another.
+  @signal_scale :timer.seconds(10)
+  @signal_limit 50
 
   @impl true
   def join("voice:" <> room_id, _params, socket) do
-    case Chat.get_channel(room_id) do
-      nil ->
-        {:error, %{reason: "channel not found"}}
+    with channel when not is_nil(channel) <- Chat.get_channel(room_id),
+         true <- Servers.member?(channel.server_id, socket.assigns.user_id) do
+      # Peers already tracked in this room before we track ourselves below —
+      # the joining client uses this list to initiate WebRTC offers, so each
+      # pair only negotiates once (no offer/offer glare).
+      existing_peers = socket |> Presence.list() |> Map.keys()
 
-      channel ->
-        if Servers.member?(channel.server_id, socket.assigns.user_id) do
-          # Peers already tracked in this room before we track ourselves
-          # below — the joining client uses this list to initiate WebRTC
-          # offers, so each pair only negotiates once (no offer/offer glare).
-          existing_peers = socket |> Presence.list() |> Map.keys()
+      if socket.assigns.user_id in existing_peers do
+        # Same user already has a live channel process in this room
+        # (another tab/device). Reject rather than evict the existing
+        # connection — force-dropping it could silently cut an active call
+        # on another device the user isn't looking at right now, which is a
+        # riskier UX call than just refusing the new join.
+        {:error, %{reason: "already_connected_elsewhere"}}
+      else
+        # Tracked here (synchronously), not in the :after_join handler below
+        # — `existing_peers` was just read from the same Presence state
+        # we're about to write to, so track needs to happen as close to that
+        # read as possible to keep the TOCTOU gap between the duplicate-join
+        # check and this join actually registering itself as tight as the
+        # channel model allows. `socket.channel_pid` is already set to
+        # `self()` by Phoenix before `join/3` runs, so this is safe to call
+        # here rather than deferring it.
+        {:ok, _} =
+          Presence.track(socket, socket.assigns.user_id, %{
+            username: socket.assigns.username,
+            online_at: System.system_time(:second),
+            muted: false,
+            deafened: false
+          })
 
-          send(self(), :after_join)
+        send(self(), :after_join)
 
-          {:ok, %{peers: existing_peers}, socket}
-        else
-          {:error, %{reason: "not authorized"}}
-        end
+        {:ok, %{peers: existing_peers}, socket}
+      end
+    else
+      nil -> {:error, %{reason: "channel not found"}}
+      false -> {:error, %{reason: "not authorized"}}
     end
   end
 
   @impl true
   def handle_info(:after_join, socket) do
-    {:ok, _} =
-      Presence.track(socket, socket.assigns.user_id, %{
-        username: socket.assigns.username,
-        online_at: System.system_time(:second),
-        muted: false,
-        deafened: false
-      })
-
     push(socket, "presence_state", Presence.list(socket))
-
     {:noreply, socket}
   end
 
@@ -48,10 +85,20 @@ defmodule BackendWeb.VoiceChannel do
   # separate custom event is needed.
   @impl true
   def handle_in("update_status", %{"muted" => muted, "deafened" => deafened}, socket) do
-    {:ok, _} =
-      Presence.update(socket, socket.assigns.user_id, fn meta ->
-        Map.merge(meta, %{muted: muted, deafened: deafened})
-      end)
+    key = {:voice, "update_status", socket.topic, socket.assigns.user_id}
+
+    unless ChannelRateLimiter.limited?(
+             key,
+             @update_status_scale,
+             @update_status_limit,
+             socket.assigns.user_id,
+             "voice_update_status"
+           ) do
+      {:ok, _} =
+        Presence.update(socket, socket.assigns.user_id, fn meta ->
+          Map.merge(meta, %{muted: muted, deafened: deafened})
+        end)
+    end
 
     {:noreply, socket}
   end
@@ -62,20 +109,29 @@ defmodule BackendWeb.VoiceChannel do
   # "from" is overwritten with the authenticated id so a client can't spoof
   # signaling messages as if they came from someone else.
   @impl true
-  def handle_in("video_offer", payload, socket) do
-    broadcast_from!(socket, "video_offer", Map.put(payload, "from", socket.assigns.user_id))
-    {:noreply, socket}
-  end
+  def handle_in("video_offer", payload, socket), do: relay_signal(socket, "video_offer", payload)
 
   @impl true
-  def handle_in("video_answer", payload, socket) do
-    broadcast_from!(socket, "video_answer", Map.put(payload, "from", socket.assigns.user_id))
-    {:noreply, socket}
-  end
+  def handle_in("video_answer", payload, socket),
+    do: relay_signal(socket, "video_answer", payload)
 
   @impl true
-  def handle_in("ice_candidate", payload, socket) do
-    broadcast_from!(socket, "ice_candidate", Map.put(payload, "from", socket.assigns.user_id))
+  def handle_in("ice_candidate", payload, socket),
+    do: relay_signal(socket, "ice_candidate", payload)
+
+  defp relay_signal(socket, event, payload) do
+    key = {:voice, "signal", socket.topic, socket.assigns.user_id, Map.get(payload, "to")}
+
+    unless ChannelRateLimiter.limited?(
+             key,
+             @signal_scale,
+             @signal_limit,
+             socket.assigns.user_id,
+             "voice_#{event}"
+           ) do
+      broadcast_from!(socket, event, Map.put(payload, "from", socket.assigns.user_id))
+    end
+
     {:noreply, socket}
   end
 end
