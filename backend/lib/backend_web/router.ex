@@ -63,6 +63,8 @@ defmodule BackendWeb.Router do
     get "/dm_rooms/:dm_room_id/search", DmController, :search
 
     get "/utils/preview", PreviewController, :show
+
+    get "/voice/turn-credentials", VoiceController, :turn_credentials
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

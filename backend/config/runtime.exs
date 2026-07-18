@@ -160,6 +160,18 @@ if config_env() == :prod do
   # — the whole point of switching to JSON in the first place.
   config :logger, :default_handler, formatter: {LoggerJSON.Formatters.Basic, metadata: :all}
 
+  # Metered.ca TURN Server static credential pair (see Backend.Turn — a
+  # plain config-driven ICE server list builder, no API call) — kept
+  # server-side so it never reaches the frontend as a VITE_* var. Either
+  # both env vars are set or neither is; a half-set pair (one present,
+  # one blank/missing) is treated as unset by Backend.Turn's own guard,
+  # falling back to STUN-only with a warning log rather than sending a
+  # broken credential. Locally, see config/dev.secret.exs.example instead.
+  config :backend, :turn_config, %{
+    username: System.get_env("METERED_TURN_USERNAME"),
+    credential: System.get_env("METERED_TURN_CREDENTIAL")
+  }
+
   # Chat attachment storage. Local disk (the dev default, see config.exs)
   # doesn't survive across instances/redeploys on most PaaS providers, so
   # production should point at an S3-compatible bucket instead — AWS S3,
