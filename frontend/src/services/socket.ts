@@ -286,6 +286,22 @@ export function sendVoiceStatus(muted: boolean, deafened: boolean): void {
   voiceChannel?.push('update_status', { muted, deafened });
 }
 
+/**
+ * Diagnostic-only, fire-and-forget: reports which ICE candidate type a
+ * peer connection ended up using (or none, if it never got one) — see
+ * useVoiceChannel.ts's logIceOutcome for what calls this and why. Never
+ * carries a candidate's own address/ip/port, only its type.
+ */
+export function sendIceDiagnostics(
+  candidateType: RTCIceCandidateType | null,
+  connectionState: 'connected' | 'failed'
+): void {
+  voiceChannel?.push('report_ice_stats', {
+    candidate_type: candidateType,
+    connection_state: connectionState,
+  });
+}
+
 export interface UserChannelCallbacks {
   onNewMessage: (payload: NewMessageNotification) => void;
   onServerDeleted: (payload: ServerDeletedNotification) => void;

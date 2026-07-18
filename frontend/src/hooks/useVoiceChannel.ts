@@ -6,6 +6,7 @@ import {
   sendVoiceAnswer,
   sendIceCandidate,
   sendVoiceStatus,
+  sendIceDiagnostics,
 } from '../services/socket';
 
 // How long to wait on a VITE_TURN_API_URL fetch before giving up on it and
@@ -122,6 +123,77 @@ export const GLARE_RECOVERY_DELAY_MS = 1000;
 interface AnalyserHandle {
   ctx: AudioContext;
   raf: number;
+}
+
+/**
+ * Diagnostic-only: identifies which ICE candidate type (host/srflx/prflx/
+ * relay) a peer connection actually ended up using, and reports it (see
+ * PROJECT_ARCHITECTURE.md's WebRTC section for why — deciding whether a
+ * managed TURN server is worth setting up needs real-user data on how
+ * often `relay` is actually the one that works, not just local/dev
+ * testing where a direct `host` path always succeeds). Called exactly
+ * once per peer connection per outcome — from `onconnectionstatechange`'s
+ * `'connected'`/`'failed'` cases, never polled — so this is a single
+ * `getStats()` snapshot, not a running log.
+ *
+ * Finds the actually-selected pair via the `candidate-pair` stats report
+ * with `nominated: true` (see MDN's RTCPeerConnection.getStats()), then
+ * looks up that pair's `local-candidate` report for its `candidateType`.
+ * On `'failed'`, no pair may ever have been nominated at all — logged as
+ * `candidateType: null` ("none"), which is itself useful signal (ICE
+ * couldn't even select a path to try).
+ *
+ * Deliberately reads only `candidateType` off the local-candidate report,
+ * never `address`/`ip`/`port`/`relatedAddress` (a peer's real IP, or a
+ * TURN relay's) — this only ever needs to know *which kind* of path was
+ * used, not *where* it went, so nothing PII-shaped is ever read out of
+ * the stats in the first place, let alone logged or sent anywhere.
+ */
+// TypeScript's lib.dom.d.ts has no dedicated interface for a
+// 'local-candidate'/'remote-candidate' stats report (unlike
+// RTCIceCandidatePairStats, which it does define) — this covers the one
+// field this needs off it.
+interface IceCandidateStatsReport {
+  candidateType?: RTCIceCandidateType;
+}
+
+async function logIceOutcome(
+  peerId: string,
+  pc: RTCPeerConnection,
+  outcome: 'connected' | 'failed'
+) {
+  let candidateType: RTCIceCandidateType | null = null;
+
+  try {
+    const stats = await pc.getStats();
+
+    for (const report of stats.values()) {
+      if (report.type === 'candidate-pair' && (report as RTCIceCandidatePairStats).nominated) {
+        const localCandidateId = (report as RTCIceCandidatePairStats).localCandidateId;
+        const localCandidate = localCandidateId
+          ? (stats.get(localCandidateId) as IceCandidateStatsReport | undefined)
+          : undefined;
+        candidateType = localCandidate?.candidateType ?? null;
+        break;
+      }
+    }
+  } catch {
+    // getStats() itself failing shouldn't crash the connection-state
+    // handler that calls this — this is best-effort diagnostics, nothing
+    // downstream depends on it succeeding.
+  }
+
+  // No Sentry (or any other error/telemetry SDK) is installed on the
+  // frontend (checked before adding this) — console.info is the only
+  // local signal available. sendIceDiagnostics below is what actually
+  // makes this reach anywhere aggregatable across real users (see
+  // BackendWeb.VoiceChannel's "report_ice_stats" handler, which just
+  // Logger.infos it — no new DB table/analytics pipeline for this).
+  console.info(
+    `[voice-ice] peer=${peerId} candidateType=${candidateType ?? 'none'} connectionState=${outcome}`
+  );
+
+  sendIceDiagnostics(candidateType, outcome);
 }
 
 export function useVoiceChannel(user: User) {
@@ -333,11 +405,13 @@ export function useVoiceChannel(user: User) {
           setReconnecting(peerId, true);
           clearReconnectTimer(peerId);
           void restartIceForPeer(peerId, pc);
+          void logIceOutcome(peerId, pc, 'failed');
           break;
 
         case 'connected':
           clearReconnectTimer(peerId);
           setReconnecting(peerId, false);
+          void logIceOutcome(peerId, pc, 'connected');
           break;
 
         case 'closed':

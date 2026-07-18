@@ -17,9 +17,15 @@ vi.mock('../../services/socket', () => ({
   sendVoiceAnswer: vi.fn(),
   sendIceCandidate: vi.fn(),
   sendVoiceStatus: vi.fn(),
+  sendIceDiagnostics: vi.fn(),
 }));
 
-import { joinVoiceChannel, sendVoiceAnswer, sendVoiceOffer } from '../../services/socket';
+import {
+  joinVoiceChannel,
+  sendVoiceAnswer,
+  sendVoiceOffer,
+  sendIceDiagnostics,
+} from '../../services/socket';
 
 // Chosen so the lexicographic relationship to 'me' (this file's shared test
 // user) is unambiguous at a glance, not incidental: 'aaa-peer' < 'me' <
@@ -553,5 +559,52 @@ describe.sequential('useVoiceChannel — handleOffer glare resolution, ICE queue
     });
 
     expect(pc.restartIce).toHaveBeenCalled();
+  });
+
+  it('onconnectionstatechange: "connected" reports the nominated candidate pair\'s type via sendIceDiagnostics', async () => {
+    mockJoinChannel(['aaa-peer']);
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    const pc = FakeRTCPeerConnection.instances[0];
+    // Overrides the default (see webrtcTestUtils.ts) to prove this reads
+    // the actual getStats() result, not a hardcoded value.
+    pc.getStats = vi.fn(async () => new Map([
+      ['pair-1', { id: 'pair-1', type: 'candidate-pair', nominated: true, localCandidateId: 'local-1' }],
+      ['local-1', { id: 'local-1', type: 'local-candidate', candidateType: 'relay' }],
+    ]));
+
+    await act(async () => {
+      pc.connectionState = 'connected';
+      pc.onconnectionstatechange?.();
+      await flushMicrotasks();
+    });
+
+    expect(sendIceDiagnostics).toHaveBeenCalledWith('relay', 'connected');
+  });
+
+  it('onconnectionstatechange: "failed" with no nominated candidate pair reports a null candidateType', async () => {
+    mockJoinChannel(['aaa-peer']);
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    const pc = FakeRTCPeerConnection.instances[0];
+    // ICE never found a workable pair at all — the failure case this is
+    // meant to distinguish from "found one, then it broke".
+    pc.getStats = vi.fn(async () => new Map());
+
+    await act(async () => {
+      pc.connectionState = 'failed';
+      pc.onconnectionstatechange?.();
+      await flushMicrotasks();
+    });
+
+    expect(sendIceDiagnostics).toHaveBeenCalledWith(null, 'failed');
   });
 });

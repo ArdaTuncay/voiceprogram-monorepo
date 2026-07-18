@@ -93,6 +93,21 @@ export class FakeRTCPeerConnection {
   close = vi.fn(() => {
     this.connectionState = 'closed';
   });
+  // Default: a single nominated candidate-pair/local-candidate report, as
+  // if ICE settled on a direct host path — the common case, and what most
+  // tests don't care about one way or the other. A test that does care
+  // (e.g. asserting a 'relay' outcome) overwrites this per-instance, same
+  // convention as `signalingState`/`connectionState` above.
+  getStats = vi.fn(
+    async (): Promise<Map<string, Record<string, unknown>>> =>
+      new Map([
+        [
+          'fake-pair',
+          { id: 'fake-pair', type: 'candidate-pair', nominated: true, localCandidateId: 'fake-local' },
+        ],
+        ['fake-local', { id: 'fake-local', type: 'local-candidate', candidateType: 'host' }],
+      ])
+  );
 
   constructor() {
     FakeRTCPeerConnection.instances.push(this);

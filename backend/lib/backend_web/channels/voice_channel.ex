@@ -8,6 +8,8 @@ defmodule BackendWeb.VoiceChannel do
 
   use Phoenix.Channel
 
+  require Logger
+
   alias Backend.Chat
   alias Backend.Presence
   alias Backend.Servers
@@ -17,6 +19,17 @@ defmodule BackendWeb.VoiceChannel do
   # generous headroom, just a backstop against a buggy client looping.
   @update_status_scale :timer.minutes(1)
   @update_status_limit 30
+
+  # "report_ice_stats": diagnostic-only, fires at most once per peer
+  # connection per outcome (see useVoiceChannel.ts's logIceOutcome) — a
+  # generous budget here is just a backstop against a malicious/buggy
+  # client spamming fake diagnostic log lines, not a meaningful abuse
+  # vector on its own (see handle_in/3 below for what actually gets
+  # logged, and why it's safe to).
+  @ice_stats_scale :timer.minutes(1)
+  @ice_stats_limit 20
+  @valid_candidate_types ~w(host srflx prflx relay)
+  @valid_connection_states ~w(connected failed)
 
   # "video_offer"/"video_answer"/"ice_candidate": share ONE bucket per
   # ordered peer pair (not one bucket per event type) because they're all
@@ -118,6 +131,55 @@ defmodule BackendWeb.VoiceChannel do
   @impl true
   def handle_in("ice_candidate", payload, socket),
     do: relay_signal(socket, "ice_candidate", payload)
+
+  # Diagnostic-only — see useVoiceChannel.ts's logIceOutcome, which sends
+  # this once per peer connection when it reaches "connected" or "failed",
+  # after inspecting its own getStats() to find the selected candidate
+  # pair's local candidate type. Purpose: find out from real users (not
+  # just local/dev testing) how often a connection actually needs a TURN
+  # relay vs. getting away with a direct host/srflx path, to decide
+  # whether standing up a managed TURN server is worth it — see
+  # PROJECT_ARCHITECTURE.md's WebRTC section.
+  #
+  # Logs candidate TYPE only (host/srflx/prflx/relay) — never an IP/port,
+  # which the frontend never sends here in the first place (see that
+  # function's own comment). No PII in this log line.
+  #
+  # Deliberately just a Logger.info, not a DB row or a call to an external
+  # analytics service — this is meant to be read by grepping logs over a
+  # few weeks to inform one infrastructure decision, not a permanent
+  # telemetry pipeline.
+  @impl true
+  def handle_in("report_ice_stats", params, socket) do
+    key = {:voice, "report_ice_stats", socket.topic, socket.assigns.user_id}
+
+    unless ChannelRateLimiter.limited?(
+             key,
+             @ice_stats_scale,
+             @ice_stats_limit,
+             socket.assigns.user_id,
+             "voice_report_ice_stats"
+           ) do
+      candidate_type = normalize(params["candidate_type"], @valid_candidate_types, "none")
+
+      connection_state =
+        normalize(params["connection_state"], @valid_connection_states, "unknown")
+
+      Logger.info(
+        "voice ICE diagnostic user_id=#{socket.assigns.user_id} room=#{socket.topic} " <>
+          "candidate_type=#{candidate_type} connection_state=#{connection_state}"
+      )
+    end
+
+    {:noreply, socket}
+  end
+
+  # Guards against a malicious/buggy client sending an unexpected
+  # candidate_type/connection_state value straight into a log line —
+  # falls back to a fixed, known-safe placeholder instead.
+  defp normalize(value, allowed, default) do
+    if value in allowed, do: value, else: default
+  end
 
   defp relay_signal(socket, event, payload) do
     key = {:voice, "signal", socket.topic, socket.assigns.user_id, Map.get(payload, "to")}
