@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (Elixir/Phoenix)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # A real service container, not a native install — unlike local dev
+      # (see PROJECT_ARCHITECTURE.md's "Yerel Geliştirme Ortamı Kurulumu"),
+      # there's no "not registered as a service" problem here: GitHub
+      # Actions starts/stops this for the whole job automatically.
+      postgres:
+        image: postgres:17
+        env:
+          # Matches backend/config/test.exs's Backend.Repo config exactly.
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: backend_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Elixir/OTP
+        uses: erlef/setup-beam@v1
+        with:
+          # Pinned to backend/Dockerfile's actual build toolchain (see its
+          # comment) rather than mix.exs's floor (elixir: "~> 1.15").
+          elixir-version: "1.20.2"
+          otp-version: "29.0.3"
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Restore Dialyzer PLT cache
+        uses: actions/cache@v4
+        with:
+          path: backend/_build/dev/dialyxir_*.plt*
+          key: ${{ runner.os }}-plt-${{ hashFiles('backend/mix.lock') }}
+          # Deliberately no restore-keys fallback: a PLT built against a
+          # different mix.lock is for a different dependency set, so
+          # falling back to a stale one would risk masking newly added
+          # deps instead of just rebuilding. On a cache miss (including
+          # every run's first time seeing a given mix.lock hash), `mix
+          # precommit`'s dialyzer step below builds the PLT from scratch —
+          # the same ~53s cold build measured locally (see
+          # PROJECT_ARCHITECTURE.md 5.1) — then this step caches it for
+          # next time.
+
+      # mix precommit = compile --warnings-as-errors, credo --strict,
+      # deps.audit, hex.audit, deps.unlock --unused, format, dialyzer,
+      # test (see backend/mix.exs's aliases/0) — the exact same gate used
+      # locally, run here unmodified. `mix deps.audit` clones the Hex
+      # advisory DB from GitHub over the network on first run; GitHub
+      # Actions runners have outbound internet access by default, so this
+      # is expected to work with no extra configuration, same as locally.
+      - name: Run precommit
+        run: mix precommit
+
+  frontend:
+    name: Frontend (React/Vite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Matches the local dev Node version (no .nvmrc/.node-version in
+          # the repo; @types/node's ^24.13.2 in package.json also targets
+          # the 24.x line).
+          node-version: "24.15.0"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
