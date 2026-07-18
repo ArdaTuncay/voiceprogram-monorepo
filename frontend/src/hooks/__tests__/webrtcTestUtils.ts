@@ -109,7 +109,15 @@ export class FakeRTCPeerConnection {
       ])
   );
 
-  constructor() {
+  /** The `RTCConfiguration` (notably `iceServers`) `useVoiceChannel.ts`'s
+   * `createPeerConnection` actually constructed this instance with — lets
+   * a test assert on the resolved ICE server list (static STUN + any
+   * backend-proxied TURN servers merged in) without needing its own
+   * separate mechanism to observe `getIceServers()`'s result. */
+  configuration: RTCConfiguration;
+
+  constructor(configuration: RTCConfiguration = {}) {
+    this.configuration = configuration;
     FakeRTCPeerConnection.instances.push(this);
   }
 }

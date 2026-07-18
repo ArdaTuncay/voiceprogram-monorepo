@@ -13,6 +13,7 @@ import type {
   MessagesPage,
   SearchFilters,
   SearchResultsPage,
+  TurnCredentialsResponse,
 } from '../types';
 import { API_BASE_URL } from '../config';
 import { getStoredToken, storeToken } from './tokenStorage';
@@ -312,4 +313,15 @@ export function searchDmMessages(
 /** Fetches OpenGraph metadata for a chat link-preview card. */
 export function fetchLinkPreview(url: string): Promise<ApiResult<LinkPreview>> {
   return authedGet<LinkPreview>(`/utils/preview?url=${encodeURIComponent(url)}`);
+}
+
+/**
+ * Proxied Metered.ca TURN credentials (see BackendWeb.VoiceController) —
+ * the Metered API key stays server-side. `ice_servers` may be `[]` if no
+ * TURN provider is configured/reachable; see useVoiceChannel.ts's
+ * fetchBackendTurnServers, which treats that the same as a network
+ * failure (add nothing, keep the existing static STUN list).
+ */
+export function fetchTurnCredentials(): Promise<ApiResult<TurnCredentialsResponse>> {
+  return authedGet<TurnCredentialsResponse>('/voice/turn-credentials');
 }

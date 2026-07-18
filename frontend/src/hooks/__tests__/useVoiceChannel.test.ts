@@ -1,6 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GLARE_RECOVERY_DELAY_MS, ICE_DISCONNECT_GRACE_MS, useVoiceChannel } from '../useVoiceChannel';
+import {
+  GLARE_RECOVERY_DELAY_MS,
+  ICE_DISCONNECT_GRACE_MS,
+  resetIceServersCacheForTests,
+  useVoiceChannel,
+} from '../useVoiceChannel';
 import type { User } from '../../types';
 import type { VoiceChannelCallbacks, VoiceChannelHandle } from '../../services/socket';
 import {
@@ -20,12 +25,21 @@ vi.mock('../../services/socket', () => ({
   sendIceDiagnostics: vi.fn(),
 }));
 
+// getIceServers() (useVoiceChannel.ts) calls this directly — mocked here
+// (default: resolves with no data, i.e. the "backend has no Metered key
+// configured" shape) so the backend-TURN-proxy describe block below can
+// control it per test via resetIceServersCacheForTests().
+vi.mock('../../services/api', () => ({
+  fetchTurnCredentials: vi.fn(() => Promise.resolve({ data: { ice_servers: [] } })),
+}));
+
 import {
   joinVoiceChannel,
   sendVoiceAnswer,
   sendVoiceOffer,
   sendIceDiagnostics,
 } from '../../services/socket';
+import { fetchTurnCredentials } from '../../services/api';
 
 // Chosen so the lexicographic relationship to 'me' (this file's shared test
 // user) is unambiguous at a glance, not incidental: 'aaa-peer' < 'me' <
@@ -606,5 +620,68 @@ describe.sequential('useVoiceChannel — handleOffer glare resolution, ICE queue
     });
 
     expect(sendIceDiagnostics).toHaveBeenCalledWith(null, 'failed');
+  });
+});
+
+// Same .sequential/FakeRTCPeerConnection.instances constraint as every
+// other describe block above — see the first one's comment.
+describe.sequential('useVoiceChannel — backend-proxied Metered TURN credentials', () => {
+  let getUserMedia: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ({ getUserMedia } = installWebrtcMocks());
+    getUserMedia.mockResolvedValue(makeFakeStream());
+    // getIceServers()'s module-level cache (useVoiceChannel.ts) would
+    // otherwise lock in whichever fetchTurnCredentials mock resolved
+    // first across this whole file's test run — see
+    // resetIceServersCacheForTests's own doc comment.
+    resetIceServersCacheForTests();
+  });
+
+  afterEach(() => {
+    cleanupActiveHooks();
+    vi.unstubAllGlobals();
+    resetIceServersCacheForTests();
+  });
+
+  it('falls back to the static STUN-only list when the backend TURN endpoint fails', async () => {
+    vi.mocked(fetchTurnCredentials).mockRejectedValueOnce(new Error('network error'));
+    vi.mocked(joinVoiceChannel).mockReturnValue(resolvedChannel(['aaa-peer']));
+
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+    // callPeer() (and therefore createPeerConnection's own await
+    // getIceServers()) is fire-and-forget from join()'s point of view —
+    // same reasoning as the "non-superseded join" test up top.
+    await waitFor(() => expect(sendVoiceOffer).toHaveBeenCalled());
+
+    const pc = FakeRTCPeerConnection.instances[0];
+    expect(pc.configuration.iceServers).toEqual([{ urls: 'stun:stun.l.google.com:19302' }]);
+  });
+
+  it('adds the backend-proxied TURN servers to the static STUN list when the endpoint succeeds', async () => {
+    vi.mocked(fetchTurnCredentials).mockResolvedValueOnce({
+      data: {
+        ice_servers: [{ urls: 'turn:turn.example.com:443', username: 'u', credential: 'c' }],
+      },
+    });
+    vi.mocked(joinVoiceChannel).mockReturnValue(resolvedChannel(['aaa-peer']));
+
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+    await waitFor(() => expect(sendVoiceOffer).toHaveBeenCalled());
+
+    const pc = FakeRTCPeerConnection.instances[0];
+    expect(pc.configuration.iceServers).toEqual([
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'turn:turn.example.com:443', username: 'u', credential: 'c' },
+    ]);
   });
 });

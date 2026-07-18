@@ -171,6 +171,13 @@ export interface VoiceSignalPayload {
   candidate?: RTCIceCandidateInit;
 }
 
+/** `GET /api/voice/turn-credentials` — see BackendWeb.VoiceController.
+ * `ice_servers` is empty (not an error) when no TURN provider is
+ * configured/reachable server-side. */
+export interface TurnCredentialsResponse {
+  ice_servers: RTCIceServer[];
+}
+
 export interface ApiError {
   error?: string;
   errors?: Record<string, string[]>;

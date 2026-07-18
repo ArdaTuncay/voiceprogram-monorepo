@@ -8,6 +8,7 @@ import {
   sendVoiceStatus,
   sendIceDiagnostics,
 } from '../services/socket';
+import { fetchTurnCredentials } from '../services/api';
 
 // How long to wait on a VITE_TURN_API_URL fetch before giving up on it and
 // falling back to the static/STUN-only config — a hung managed-TURN-provider
@@ -91,13 +92,48 @@ async function resolveIceServers(): Promise<RTCIceServer[]> {
   return buildStaticIceServers();
 }
 
+/**
+ * Our own backend's proxied Metered.ca TURN credentials (see
+ * BackendWeb.VoiceController / Backend.Turn, PROJECT_ARCHITECTURE.md
+ * 2.9) — the Metered API key never reaches the frontend this way, unlike
+ * `VITE_TURN_API_URL`/the static `VITE_TURN_*` vars above. Always
+ * additive to whatever `resolveIceServers()` already resolves (see
+ * `getIceServers()` below) — never replaces the static STUN entry.
+ * Silently returns `[]` on any failure (network error, 401, backend has
+ * no Metered key configured, ...) so a proxy outage/misconfiguration
+ * never blocks joining a voice channel — same STUN-only-degrades-
+ * gracefully philosophy as every other ICE server source here.
+ */
+async function fetchBackendTurnServers(): Promise<RTCIceServer[]> {
+  try {
+    const { data } = await fetchTurnCredentials();
+    return data?.ice_servers ?? [];
+  } catch {
+    return [];
+  }
+}
+
 // Resolved once and cached — every peer connection in this tab shares the
 // same TURN credentials rather than each triggering its own API round trip.
 let iceServersPromise: Promise<RTCIceServer[]> | null = null;
 
 function getIceServers(): Promise<RTCIceServer[]> {
-  if (!iceServersPromise) iceServersPromise = resolveIceServers();
+  if (!iceServersPromise) {
+    iceServersPromise = Promise.all([resolveIceServers(), fetchBackendTurnServers()]).then(
+      ([configured, backendTurn]) => [...configured, ...backendTurn]
+    );
+  }
   return iceServersPromise;
+}
+
+/** Test-only: clears the module-level cache above so each test can
+ * control fetchBackendTurnServers'/resolveIceServers' resolved value
+ * independently, instead of whichever test runs first in a given
+ * process permanently deciding it for every test after. Exported the
+ * same way ICE_DISCONNECT_GRACE_MS/GLARE_RECOVERY_DELAY_MS below already
+ * are — a small, deliberate test seam, not something app code calls. */
+export function resetIceServersCacheForTests(): void {
+  iceServersPromise = null;
 }
 
 // Volume (0-255) above which a stream counts as "speaking", and how long
