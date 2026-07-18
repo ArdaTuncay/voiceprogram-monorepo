@@ -1038,7 +1038,7 @@ it('bumps useSessionStore so App.tsx can fall back to the Auth screen', () => {
 
 **Frontend test suite sonucu (bu oturumda doğrulanmıştır):** `npm run test` → **26 test, 26 geçti** (3 dosya, düzeltmelerden sonra 3 kere art arda çalıştırıldı, flaky değil). `npm run build` (`tsc -b` + `vite build`) → 0 TypeScript hatası.
 
-### 5.2 CI/CD (GitHub Actions)
+### 5.3 CI/CD (GitHub Actions)
 
 `.github/workflows/ci.yml` — `main`'e her push'ta ve `main`'e açılan her pull request'te tetiklenir, **iki bağımsız paralel job**:
 
@@ -1048,6 +1048,31 @@ it('bumps useSessionStore so App.tsx can fall back to the Auth screen', () => {
 **Dialyzer PLT cache stratejisi:** `actions/cache` ile `backend/_build/dev/dialyxir_*.plt*` cache'lenir, key `backend/mix.lock`'un hash'ine bağlıdır (`${{ hashFiles('backend/mix.lock') }}`) — `mix.lock` değişmediği sürece sonraki her koşu, yerelde ölçülen ~53 saniyelik soğuk PLT inşasını atlar. Bilinçli olarak `restore-keys` fallback'i **yok**: farklı bir `mix.lock`'a ait bir PLT farklı bir bağımlılık setini temsil eder, bayat bir PLT'ye düşmek yeni bağımlılıkları sessizce gözden kaçırma riski taşır. İlk koşu (veya her `mix.lock` değişikliğinden sonraki ilk koşu) cache'te bulamaz ve soğuk inşayı normal şekilde yapar, sonra cache'ler — **bu, ilk gerçek CI koşusunda doğrulandı: backend job'ı 7m43s sürdü (çoğunluğu soğuk PLT inşası), her iki job da (`frontend` 25s) hatasız geçti.**
 
 **Branch protection henüz ayarlanmadı** — bu workflow dosyası `backend`/`frontend` job'larını çalıştırır ve başarısız olurlarsa job kendiliğinden kırmızı görünür, ama `main`'e merge'i bu iki job'ın geçmesi şartına **bağlamak** GitHub UI'dan (Settings → Branches → Branch protection rules → "Require status checks to pass before merging") ayrıca, elle yapılması gereken bir adımdır — bu dosya bunu kendi kendine yapılandıramaz.
+
+### 5.4 E2E Testleri (Playwright)
+
+**Konum:** `frontend/e2e/*.spec.ts`, config `frontend/playwright.config.ts`. Çalıştırma: `npm run test:e2e` (frontend kökünden). Şu an tek tarayıcı hedefleniyor — **sadece Chromium** (proje Discord-tarzı bir masaüstü/web uygulaması; WebKit/Firefox şimdilik gereksiz).
+
+**Vitest/RTL'den farkı:** 5.1/5.2'deki testler mock'lanmış/izole birim testleri. E2E testleri gerçek stack'i uçtan uca sürer — gerçek Vite dev sunucusu, gerçek `mix phx.server`, gerçek Postgres (`backend_dev`), gerçek WebSocket (Phoenix Channels) bağlantısı. Hiçbir şey mock'lanmaz.
+
+**Otomatik sunucu ayağa kaldırma — araştırma sonucu:** Playwright'in `webServer` seçeneği **dizi (array) kabul ediyor** (`TestConfigWebServer | TestConfigWebServer[]`, Playwright 1.28+), yani hem backend hem frontend'i otomatik başlatıp health-check'leyebiliyor — iki ayrı manuel süreç gerekmiyor:
+- `backend` girdisi: `mix phx.server`'ı `cwd: ../backend` ile başlatır, hazır olduğunu `http://localhost:4000/api/servers`'a HTTP isteği atarak anlar (Playwright'in `url` health-check'i **herhangi bir** HTTP yanıtını — 401 dahil — "sunucu ayakta" sayar, sadece 2xx beklemez).
+- `frontend` girdisi: `npm run dev`'i başlatır, `http://localhost:5173`'ü health-check eder.
+- `reuseExistingServer: !process.env.CI` — yerelde zaten çalışan bir dev sunucusu varsa (örn. elle `mix phx.server` açıksa) onu kullanır, yeniden başlatmaz; CI'da (henüz eklenmedi, bkz. aşağı) her zaman temiz başlatır.
+- **Tek gerçek istisna: Postgres.** Playwright sadece kendi başlattığı Node/BEAM süreçlerini yönetebilir, native bir Windows kurulumunu (bu makinenin Postgres'i gibi) değil — bkz. 5.0. `webServer` bunu health-check edemez/başlatamaz; testten önce Postgres'in ayakta olduğu elle (veya CI'da bir `services:` container'ıyla, bkz. 5.3) sağlanmalı.
+- **Doğrulandı:** Süreçler her test koşusunun sonunda düzgün kapanıyor (3 ardışık koşudan sonra `mix`/`beam`/`node`/`vite` süreci veya 4000/5173 portlarında `LISTEN` durumu kalmadı, sadece `TimeWait` — Windows'ta parent-process öldürmenin çocuk süreçleri düzgün temizlemediği bilinen bir risktir, burada sorun çıkarmadı).
+
+**İlk kritik akış — `auth-and-chat.spec.ts`:** register → logout → aynı hesapla login → sunucu oluştur (otomatik `#genel` kanalına düşer) → mesaj gönder → mesajın UI'da göründüğünü doğrula. Tek bir `test()` içinde `test.step(...)` ile 4 adıma bölünmüş (ayrı ayrı raporlanır ama aynı sayfa/oturumu paylaşır — register olmadan login'i test etmenin bir anlamı yok).
+
+**Test verisi temizliği — kararı ve gerekçesi: otomatik DB temizliği YOK.**
+- Her test kullanıcı adı/email/sunucu adı/mesaj içeriği `Date.now()` ile damgalanıyor — aynı anda iki koşu (veya aynı koşunun tekrarları) asla aynı satırlara çarpmaz, bir teardown adımının sağlayacağı izolasyonun aynısını sağlıyor.
+- `backend_dev`, paylaşımlı/production bir veritabanı değil, tek geliştiricinin yerel veritabanı — tekrarlanan e2e koşularından birikecek birkaç `e2e_user_<timestamp>` satırı, tarayıcıdan elle test etmenin zaten bıraktığı türden bir kalıntı, temizlememenin bir maliyeti yok.
+- `playwright.config.ts`'te `workers: 1` bilinçli olarak sabitlendi — iki worker'ın `Date.now()` tabanlı "benzersiz" değerlerinin aynı milisaniyeye denk gelip çarpışması ihtimalini (ne kadar düşük olursa olsun) sıfırlıyor.
+- Bu karar, veritabanı paylaşımlı hale geldiğinde (örn. e2e ileride CI'a eklenirse, bkz. aşağı) geçerliliğini yitirir — o noktada gerçek izolasyon (her `afterEach`'te `Backend.Repo` truncate'i veya ayrı bir `backend_e2e` veritabanı) gerekir; bu, `e2e/auth-and-chat.spec.ts`'in kendi başlık yorumunda da not edildi.
+
+**Doğrulama (bu oturumda):** `npm run test:e2e` ardışık **3 kez** çalıştırıldı — üçü de **1 passed**, flaky değil. İlk koşuda `backend_dev`'de bekleyen migration'lar bulundu (`mix ecto.migrate` ile çözüldü — bu oturumda önceki turlarda eklenen çok sayıda migration `backend_test`'e uygulanmıştı ama `backend_dev`'e hiç uygulanmamıştı) ve bir locator belirsizliği (`getByRole('button', { name: 'Oluştur' })` hem "Sunucu Oluştur" hem "Oluştur" butonlarına substring eşleşiyordu, `exact: true` ile çözüldü) — ikisi de testin kendisinde/ortamda gerçek, kalıcı düzeltmelerdi, geçici bir gevşetme değil.
+
+**CI'a henüz eklenmedi** — `.github/workflows/ci.yml`'e bir `e2e` job'ı eklemek backend+frontend+Postgres'in CI runner'ında ayağa kaldırılmasını gerektiriyor (yerel `webServer` otomasyonunun CI'daki dengi + bir Postgres `services:` container'ı, bkz. 5.3), bu ayrı bir iş olarak bilinçli olarak ertelendi.
 
 ---
 
