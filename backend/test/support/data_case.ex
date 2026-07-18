@@ -36,11 +36,17 @@ defmodule Backend.DataCase do
   end
 
   @doc """
-  Sets up the sandbox based on the test tags.
+  Sets up the sandbox based on the test tags. Returns the owner pid (e.g.
+  for a test that needs to `Sandbox.stop_owner/1` it early — see
+  BackendWeb.HealthControllerTest — to simulate a real "can't reach the
+  database" failure; `Sandbox.checkin/1` alone doesn't do this in `shared`
+  mode, since the checked-out connection belongs to this owner process,
+  not the calling test process).
   """
   def setup_sandbox(tags) do
     pid = Sandbox.start_owner!(Backend.Repo, shared: not tags[:async])
-    on_exit(fn -> Sandbox.stop_owner(pid) end)
+    on_exit(fn -> if Process.alive?(pid), do: Sandbox.stop_owner(pid) end)
+    pid
   end
 
   @doc """

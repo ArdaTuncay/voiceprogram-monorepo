@@ -66,5 +66,15 @@ COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/backend ./
 
 USER nobody
 
+# Backend.Release.health_check/0 (see rel/overlays/bin/healthcheck) makes a
+# real HTTP request to this same container's own GET /api/healthz — no
+# curl/wget in this minimal runtime image (deliberately not adding either
+# just for this: :gen_tcp, used instead, is already part of every Erlang/OTP
+# install, no extra package). --start-period gives the app time to boot and
+# run migrations (see CMD below) before a slow first check counts as a
+# failure.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD ["/app/bin/healthcheck"]
+
 # Run database migrations, then start the server — see rel/overlays/bin/.
 CMD ["/bin/sh", "-c", "/app/bin/migrate && /app/bin/server"]

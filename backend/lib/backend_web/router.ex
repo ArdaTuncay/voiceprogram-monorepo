@@ -12,6 +12,15 @@ defmodule BackendWeb.Router do
   scope "/api", BackendWeb do
     pipe_through :api
 
+    # Unauthenticated by design — an orchestrator's health check has no
+    # user token to send. Also exempted from BackendWeb.RequireCloudflarePlug
+    # (see its @exempt_paths) since Render/Railway's own health checker hits
+    # this directly, bypassing Cloudflare entirely, and from any
+    # BackendWeb.RateLimiterPlug (simply never attached here) — a health
+    # check tripping a rate limit and starting to read as "unhealthy" would
+    # be exactly backwards.
+    get "/healthz", HealthController, :show
+
     post "/users/register", UserController, :register
     post "/users/login", UserController, :login
   end

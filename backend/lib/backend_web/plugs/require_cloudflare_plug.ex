@@ -31,9 +31,27 @@ defmodule BackendWeb.RequireCloudflarePlug do
 
   import Plug.Conn
 
+  # Render/Railway's own container health check (and Dockerfile's
+  # HEALTHCHECK, from inside the container — see Backend.Release.health_check/0)
+  # hits this path directly, bypassing Cloudflare entirely by design — there's
+  # no Cloudflare hop for a same-host/orchestrator request to have passed
+  # through in the first place. Without this exemption, setting
+  # CLOUDFLARE_ORIGIN_SECRET in prod would make every health check fail with
+  # 403, reading as "unhealthy" and getting the instance killed/cycled — the
+  # opposite of what this plug is for.
+  @exempt_paths ["/api/healthz"]
+
   def init(opts), do: opts
 
   def call(conn, _opts) do
+    if conn.request_path in @exempt_paths do
+      conn
+    else
+      check_origin(conn)
+    end
+  end
+
+  defp check_origin(conn) do
     case Application.get_env(:backend, :cloudflare_origin_secret) do
       nil ->
         conn
