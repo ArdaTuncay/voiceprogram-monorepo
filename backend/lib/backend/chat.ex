@@ -29,6 +29,24 @@ defmodule Backend.Chat do
   end
 
   @doc """
+  Returns every voice channel's id, across every server — used by
+  `Backend.Telemetry.PeriodicReporter` to know which `"voice:<id>"`
+  Presence topics to query. `Phoenix.Tracker`/`Phoenix.Presence` has no
+  "list every currently-active topic" API of its own (only `list/2`,
+  which already requires knowing the topic) — combining this DB list with
+  a `Backend.Presence.list/1` call per id is the only way to answer "how
+  many voice channels currently have someone in them" without inventing
+  a separate, redundant piece of state that would need to be kept in
+  sync with Presence by hand.
+  """
+  def list_voice_channel_ids do
+    Channel
+    |> where([c], c.type == "voice")
+    |> select([c], c.id)
+    |> Repo.all()
+  end
+
+  @doc """
   Returns a page of messages for a channel, most recent first internally but
   returned in chronological (oldest → newest) order, preloaded with their
   authors and grouped reactions.

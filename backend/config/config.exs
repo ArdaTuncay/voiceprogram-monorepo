@@ -29,6 +29,13 @@ config :backend, Backend.RateLimiter,
   clean_period: :timer.minutes(1),
   key_older_than: :timer.minutes(10)
 
+# How often Backend.Telemetry.PeriodicReporter logs its structured
+# summary line (active voice channels/users, ICE relay ratio, uptime —
+# see that module's moduledoc). Uncomment and change to override; left
+# unset here on purpose so the module's own @default_interval (5 minutes)
+# is the one source of truth for the actual default.
+# config :backend, Backend.Telemetry.PeriodicReporter, interval: :timer.minutes(5)
+
 # Configure the endpoint
 config :backend, BackendWeb.Endpoint,
   url: [host: "localhost"],
@@ -49,10 +56,25 @@ config :backend, BackendWeb.Endpoint,
 # at the `config/runtime.exs`.
 config :backend, Backend.Mailer, adapter: Swoosh.Adapters.Local
 
-# Configure Elixir's Logger
+# Configure Elixir's Logger. `metadata:` here also doubles as the
+# allowlist credo's Logger config check validates custom Logger.info/
+# warning/error metadata keys against (see Backend.Telemetry.PeriodicReporter's
+# `event`/`active_voice_channels`/etc.) — dev's own format string
+# (config/dev.exs) doesn't include `$metadata` so none of this prints
+# there either way; prod's structured JSON logging (config/runtime.exs)
+# uses `metadata: :all` independently of this list, so those fields
+# reach prod's logs regardless of whether they're declared here too.
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
+  metadata: [
+    :request_id,
+    :event,
+    :active_voice_channels,
+    :connected_voice_users,
+    :ice_relay_count,
+    :ice_connected_total,
+    :uptime_seconds
+  ]
 
 # Sends unhandled exceptions and process crashes (not just explicit
 # `Logger.error` calls) to Sentry — see Backend.Application, which calls

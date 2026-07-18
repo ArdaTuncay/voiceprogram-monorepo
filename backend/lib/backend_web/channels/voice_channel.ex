@@ -13,6 +13,7 @@ defmodule BackendWeb.VoiceChannel do
   alias Backend.Chat
   alias Backend.Presence
   alias Backend.Servers
+  alias Backend.Telemetry.IceStatsCounter
   alias BackendWeb.ChannelRateLimiter
 
   # "update_status" (mute/deafen): infrequent, deliberate user action —
@@ -164,6 +165,15 @@ defmodule BackendWeb.VoiceChannel do
 
       connection_state =
         normalize(params["connection_state"], @valid_connection_states, "unknown")
+
+      # Feeds Backend.Telemetry.PeriodicReporter's relay-vs-total ratio —
+      # only "connected" outcomes count (a "failed" one never selected any
+      # candidate to actually use, relay or otherwise, so it wouldn't mean
+      # anything in a ratio of "how often did a successful connection need
+      # relay").
+      if connection_state == "connected" do
+        IceStatsCounter.record_connected(candidate_type == "relay")
+      end
 
       Logger.info(
         "voice ICE diagnostic user_id=#{socket.assigns.user_id} room=#{socket.topic} " <>
