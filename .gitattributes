@@ -1,0 +1,40 @@
+# Root-cause fix for Windows `core.autocrlf=true` converting checked-out
+# text files to CRLF regardless of what's stored in the repository. This
+# repo is developed on Windows but deploys to Linux (backend/Dockerfile,
+# backend/rel/overlays/bin/*), and a CRLF shebang line breaks a shell
+# script outright. Force LF for every text file, on every OS, in both the
+# repository and the working directory, so `core.autocrlf` can't
+# reintroduce CRLF regardless of a contributor's Windows git config.
+# See PROJECT_ARCHITECTURE.md Sections 5.1/7 for the history — this used
+# to surface as spurious `mix credo --strict`/`mix format` "windows line
+# endings" findings across most of the backend.
+
+* text=auto eol=lf
+
+# Explicit, by extension — belt-and-suspenders on top of the blanket rule
+# above, so the intent stays unambiguous even if that rule ever changes.
+*.ex             text eol=lf
+*.exs            text eol=lf
+*.md             text eol=lf
+*.ts             text eol=lf
+*.tsx            text eol=lf
+*.css            text eol=lf
+*.json           text eol=lf
+*.html           text eol=lf
+*.svg            text eol=lf
+*.txt            text eol=lf
+*.po             text eol=lf
+*.pot            text eol=lf
+*.lock           text eol=lf
+*.gitignore      text eol=lf
+*.gitattributes  text eol=lf
+*.dockerignore   text eol=lf
+Dockerfile       text eol=lf
+
+# Deployment shell scripts — CRLF here breaks the shebang in the Linux
+# release container.
+backend/rel/overlays/bin/* text eol=lf
+
+# Genuine binaries — never touch, never diff as text.
+*.png  binary
+*.ico  binary
