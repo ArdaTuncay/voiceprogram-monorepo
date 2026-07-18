@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
 import { createInvite } from '../services/api';
+import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
 import './InviteModal.css';
 
 interface Props {
-  serverId: string;
   onClose: () => void;
 }
 
-export default function InviteModal({ serverId, onClose }: Props) {
+export default function InviteModal({ onClose }: Props) {
+  const serverId = useServerStore((s) => s.activeServerId);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (!serverId) return;
     let cancelled = false;
     setLoading(true);
     createInvite(serverId).then(({ data, error }) => {

@@ -12,10 +12,10 @@ dist
 dist-ssr
 *.local
 
-# Local secrets — never commit real values.
+# Local secrets — never commit real values. Mode files like .env.development
+# are fine to commit (Vite convention: they hold non-secret, team-shared
+# defaults); .local variants are always per-developer/secret, via *.local above.
 .env
-.env.*
-!.env.example
 
 # Editor directories and files
 .vscode/*

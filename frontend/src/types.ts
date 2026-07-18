@@ -8,6 +8,12 @@ export interface AuthResponse extends User {
   token: string;
 }
 
+export interface Reaction {
+  emoji: string;
+  count: number;
+  user_ids: string[];
+}
+
 export interface ChatMessage {
   id: string;
   content: string;
@@ -16,6 +22,37 @@ export interface ChatMessage {
   user_id: string;
   username: string | null;
   inserted_at: string;
+  is_edited: boolean;
+  reactions: Reaction[];
+}
+
+/** A page of message history from `GET .../messages`, oldest → newest —
+ * `has_more` tells the caller whether another older page is worth fetching. */
+export interface MessagesPage {
+  messages: ChatMessage[];
+  has_more: boolean;
+}
+
+/** Optional filters for `searchChannelMessages`/`searchDmMessages` — all
+ * fields are optional and combine as AND. */
+export interface SearchFilters {
+  query?: string;
+  author_id?: string;
+  has_file?: boolean;
+}
+
+/** Search results from `GET .../search`, most recent match first — capped
+ * at a fixed page size server-side, not cursor-paginated. */
+export interface SearchResultsPage {
+  messages: ChatMessage[];
+}
+
+/** Broadcast on both "chat:<id>" and "dm:<id>" topics whenever a reaction is
+ * added/removed — `reactions` is the message's full, already-grouped list
+ * (not a delta), so the store just replaces it. */
+export interface ReactionToggledPayload {
+  message_id: string;
+  reactions: Reaction[];
 }
 
 export interface UploadResult {
@@ -43,10 +80,18 @@ export interface TypingNotification {
   is_typing: boolean;
 }
 
+export type ChannelType = 'text' | 'voice' | 'category';
+
 export interface Channel {
   id: string;
   name: string;
-  type: 'text' | 'voice';
+  type: ChannelType;
+  /** The category channel (`type: 'category'`) this one is grouped under,
+   * or `null` if it's uncategorized (or is itself a category — categories
+   * are one level deep, never nested). */
+  parent_id: string | null;
+  /** Sort order among siblings (same `parent_id`) — ascending. */
+  position: number;
 }
 
 export interface Server {
@@ -55,10 +100,18 @@ export interface Server {
   owner_id: string;
 }
 
+export type UserStatus = 'online' | 'offline';
+
 export interface ServerMember {
   user_id: string;
   username: string | null;
   role: 'owner' | 'member';
+  status: UserStatus;
+}
+
+export interface MemberStatusChangedNotification {
+  user_id: string;
+  status: UserStatus;
 }
 
 export interface ChannelDeletedNotification {
@@ -68,6 +121,15 @@ export interface ChannelDeletedNotification {
 
 export interface ChannelCreatedNotification extends Channel {
   server_id: string;
+}
+
+/** Broadcast once to the shared "server:<id>" topic whenever a channel
+ * moves into/out of a category or its siblings get reordered (see
+ * Backend.Servers.update_channel_positions/2) — carries the server's full,
+ * freshly-ordered channel list rather than a diff. */
+export interface ChannelPositionsUpdatedNotification {
+  server_id: string;
+  channels: Channel[];
 }
 
 export interface ServerUpdatedNotification {
@@ -80,6 +142,15 @@ export interface ServerDeletedNotification {
 }
 
 export interface MemberKickedNotification {
+  server_id: string;
+  user_id: string;
+}
+
+/** Broadcast once to the shared "server:<id>" topic (see BackendWeb.ServerChannel)
+ * whenever a member leaves or is kicked — same shape as MemberKickedNotification,
+ * which stays a separate, personal-channel-only event specifically for the
+ * affected user (see Backend.Servers.kick_member/2). */
+export interface MemberLeftNotification {
   server_id: string;
   user_id: string;
 }
@@ -103,4 +174,48 @@ export interface VoiceSignalPayload {
 export interface ApiError {
   error?: string;
   errors?: Record<string, string[]>;
+}
+
+export type FriendshipStatus = 'pending' | 'accepted' | 'blocked';
+export type FriendshipDirection = 'incoming' | 'outgoing';
+
+/** A friendship/request row, already shaped from the viewing user's point of
+ * view by the backend (see Backend.Friends.to_view/2) — `user_id`/`username`/
+ * `user_status` describe the OTHER person, never the viewer themselves. */
+export interface Friendship {
+  id: string;
+  status: FriendshipStatus;
+  direction: FriendshipDirection;
+  user_id: string;
+  username: string | null;
+  user_status: UserStatus;
+}
+
+export interface FriendRemovedNotification {
+  id: string;
+}
+
+/** A DM room, already shaped from the viewing user's point of view by the
+ * backend (see Backend.DirectMessages.to_view/2) — `user_id`/`username`/
+ * `user_status` describe the OTHER participant, never the viewer. */
+export interface DmRoom {
+  id: string;
+  user_id: string;
+  username: string | null;
+  user_status: UserStatus;
+}
+
+export interface NewDmMessageNotification extends ChatMessage {
+  dm_room_id: string;
+}
+
+/** OpenGraph (or plain <title>/<meta name="description">) metadata for a
+ * chat link-preview card — see Backend.LinkPreview. Any field but `url` may
+ * be null if the page didn't have it. */
+export interface LinkPreview {
+  url: string;
+  title: string | null;
+  description: string | null;
+  image: string | null;
+  site_name: string | null;
 }

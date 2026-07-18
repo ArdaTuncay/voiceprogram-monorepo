@@ -1,9 +1,17 @@
 defmodule Backend.Servers do
+  @moduledoc """
+  Servers (Discord-style "guilds"), their members, and invite codes. A
+  server always has exactly one owner (the creator) — ownership can't be
+  transferred and the owner can't leave via `leave_server/2`, only delete
+  the whole server via `delete_server/1`.
+  """
+
   import Ecto.Query, warn: false
 
-  alias Backend.Repo
-  alias Backend.Servers.{Server, ServerMember, Invite}
+  alias Backend.Chat
   alias Backend.Chat.Channel
+  alias Backend.Repo
+  alias Backend.Servers.{Invite, Server, ServerMember}
 
   @invite_code_alphabet ~c"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
   @invite_code_length 7
@@ -73,20 +81,41 @@ defmodule Backend.Servers do
     |> Repo.all()
   end
 
-  @doc "Returns every member of a server with their username and role, ordered by username."
+  @doc "Returns every member of a server with their username, role, and online status, ordered by username."
   def list_members(server_id) do
     ServerMember
     |> where([m], m.server_id == ^server_id)
     |> join(:inner, [m], u in Backend.Accounts.User, on: u.id == m.user_id)
     |> order_by([_m, u], asc: u.username)
-    |> select([m, u], %{user_id: m.user_id, username: u.username, role: m.role})
+    |> select([m, u], %{user_id: m.user_id, username: u.username, role: m.role, status: u.status})
     |> Repo.all()
   end
 
   @doc """
-  Renames a server. Broadcasts `"server_updated"` to every member's personal
-  `"user:<id>"` topic (see `BackendWeb.UserChannel`) so open clients update
-  the name live, whether or not they're currently viewing this server.
+  Returns the distinct user ids that share at least one server with
+  `user_id` (excluding `user_id` itself). Used to fan out
+  `"member_status_changed"` broadcasts (see `BackendWeb.UserChannel`) to
+  everyone who'd plausibly want to know — no separate "who's watching
+  whom" subscription list needed.
+  """
+  def list_co_member_user_ids(user_id) do
+    my_server_ids =
+      ServerMember
+      |> where([m], m.user_id == ^user_id)
+      |> select([m], m.server_id)
+
+    ServerMember
+    |> where([m], m.server_id in subquery(my_server_ids) and m.user_id != ^user_id)
+    |> distinct(true)
+    |> select([m], m.user_id)
+    |> Repo.all()
+  end
+
+  @doc """
+  Renames a server. Broadcasts `"server_updated"` once to the shared
+  `"server:<id>"` topic (see `BackendWeb.ServerChannel`) — every member
+  currently viewing this server gets it live; members elsewhere pick up the
+  new name next time they open it (see `list_servers_for_user/1`).
   """
   def update_server(%Server{} = server, attrs) do
     server
@@ -94,7 +123,7 @@ defmodule Backend.Servers do
     |> Repo.update()
     |> case do
       {:ok, updated} ->
-        broadcast_to_members(updated.id, "server_updated", %{
+        broadcast_to_server(updated.id, "server_updated", %{
           server_id: updated.id,
           name: updated.name
         })
@@ -130,8 +159,9 @@ defmodule Backend.Servers do
   end
 
   @doc """
-  Creates a text or voice channel in a server. Broadcasts `"channel_created"`
-  to every server member so it appears in their channel list live.
+  Creates a text, voice, or category channel in a server. Broadcasts
+  `"channel_created"` once to the shared `"server:<id>"` topic so it appears
+  live for everyone currently viewing this server.
   """
   def create_channel(server_id, attrs) do
     %Channel{}
@@ -139,7 +169,7 @@ defmodule Backend.Servers do
     |> Repo.insert()
     |> case do
       {:ok, channel} ->
-        broadcast_to_members(server_id, "channel_created", %{
+        broadcast_to_server(server_id, "channel_created", %{
           id: channel.id,
           name: channel.name,
           type: channel.type,
@@ -155,19 +185,16 @@ defmodule Backend.Servers do
 
   @doc """
   Permanently deletes a text or voice channel. Broadcasts `"channel_deleted"`
-  to every server member so it disappears from their channel list live.
+  once to the shared `"server:<id>"` topic so it disappears live for
+  everyone currently viewing this server.
   """
   def delete_channel(%Channel{} = channel) do
-    member_ids = list_member_user_ids(channel.server_id)
-
     case Repo.delete(channel) do
       {:ok, deleted} ->
-        Enum.each(member_ids, fn user_id ->
-          BackendWeb.Endpoint.broadcast("user:#{user_id}", "channel_deleted", %{
-            channel_id: deleted.id,
-            server_id: deleted.server_id
-          })
-        end)
+        broadcast_to_server(deleted.server_id, "channel_deleted", %{
+          channel_id: deleted.id,
+          server_id: deleted.server_id
+        })
 
         {:ok, deleted}
 
@@ -177,10 +204,73 @@ defmodule Backend.Servers do
   end
 
   @doc """
+  Bulk-updates a server's channels' `parent_id`/`position` in one
+  transaction — covers both moving a channel into/out of a category and
+  reordering siblings, since both are just a new `(parent_id, position)`
+  pair. `updates` is a list of `%{id: channel_id, parent_id: parent_id_or_nil,
+  position: position}` maps; only channels actually belonging to `server_id`
+  are touched (scoped the same way `delete_channel/1`'s caller already scopes
+  by server, so a client can't move another server's channel by guessing its
+  id). All-or-nothing: the first invalid update rolls the whole batch back.
+
+  Broadcasts `"channel_positions_updated"` once to the shared `"server:<id>"`
+  topic with the server's full, freshly-ordered channel list — simpler for
+  every client to reconcile than a diff, and no different in cost than the
+  full refetch `loadChannelsForActiveServer` already does on a plain reload.
+
+  Returns `{:ok, channels}` or `{:error, :not_found | changeset}`.
+  """
+  def update_channel_positions(server_id, updates) do
+    Repo.transaction(fn ->
+      Enum.each(updates, &apply_position_update(server_id, &1))
+    end)
+    |> case do
+      {:ok, _} ->
+        channels = Chat.list_channels_for_server(server_id)
+
+        broadcast_to_server(server_id, "channel_positions_updated", %{
+          server_id: server_id,
+          channels: Enum.map(channels, &channel_position_json/1)
+        })
+
+        {:ok, channels}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp apply_position_update(server_id, %{id: id} = update) do
+    case Repo.get_by(Channel, id: id, server_id: server_id) do
+      nil ->
+        Repo.rollback(:not_found)
+
+      channel ->
+        attrs = Map.take(update, [:parent_id, :position])
+
+        case channel |> Channel.position_changeset(attrs) |> Repo.update() do
+          {:ok, _updated} -> :ok
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+    end
+  end
+
+  defp channel_position_json(channel) do
+    %{
+      id: channel.id,
+      name: channel.name,
+      type: channel.type,
+      parent_id: channel.parent_id,
+      position: channel.position
+    }
+  end
+
+  @doc """
   Removes `user_id` from `server_id`. Broadcasts `"member_kicked"` to the
-  kicked user (so their client can navigate them out) and to every remaining
-  member (so member lists update) — same event, single payload, filtered
-  client-side by `user_id`, mirroring `notify_other_members/3` in ChatChannel.
+  kicked user's own personal `"user:<id>"` topic specifically — they need to
+  know and navigate away regardless of whether they currently have this
+  server open — and `"member_left"` once to the shared `"server:<id>"` topic
+  so everyone else currently viewing it updates live.
 
   Returns `{:error, :not_found}` if the user isn't a member.
   """
@@ -190,15 +280,56 @@ defmodule Backend.Servers do
         {:error, :not_found}
 
       member ->
-        remaining_member_ids =
-          server_id |> list_member_user_ids() |> Enum.reject(&(&1 == user_id))
-
         case Repo.delete(member) do
           {:ok, deleted} ->
             payload = %{server_id: server_id, user_id: user_id}
+            BackendWeb.Endpoint.broadcast("user:#{user_id}", "member_kicked", payload)
+            broadcast_to_server(server_id, "member_left", payload)
+            {:ok, deleted}
 
-            [user_id | remaining_member_ids]
-            |> Enum.each(&BackendWeb.Endpoint.broadcast("user:#{&1}", "member_kicked", payload))
+          error ->
+            error
+        end
+    end
+  end
+
+  @doc """
+  Removes `user_id` from `server_id` at their own request. The owner cannot
+  leave this way — they must delete the server instead (see
+  `delete_server/1`) since a server with no owner would be broken.
+
+  Broadcasts `"member_left"` once to the shared `"server:<id>"` topic (the
+  leaving user already knows — they initiated it — so this is purely for
+  everyone else currently viewing the server).
+
+  Returns `{:error, :owner_cannot_leave}` for the owner, or
+  `{:error, :not_found}` if `user_id` isn't a member.
+  """
+  def leave_server(server_id, user_id) do
+    case get_server(server_id) do
+      %Server{owner_id: ^user_id} ->
+        {:error, :owner_cannot_leave}
+
+      %Server{} ->
+        remove_member(server_id, user_id)
+
+      nil ->
+        {:error, :not_found}
+    end
+  end
+
+  defp remove_member(server_id, user_id) do
+    case Repo.get_by(ServerMember, server_id: server_id, user_id: user_id) do
+      nil ->
+        {:error, :not_found}
+
+      member ->
+        case Repo.delete(member) do
+          {:ok, deleted} ->
+            broadcast_to_server(server_id, "member_left", %{
+              server_id: server_id,
+              user_id: user_id
+            })
 
             {:ok, deleted}
 
@@ -208,10 +339,8 @@ defmodule Backend.Servers do
     end
   end
 
-  defp broadcast_to_members(server_id, event, payload) do
-    server_id
-    |> list_member_user_ids()
-    |> Enum.each(&BackendWeb.Endpoint.broadcast("user:#{&1}", event, payload))
+  defp broadcast_to_server(server_id, event, payload) do
+    BackendWeb.Endpoint.broadcast("server:#{server_id}", event, payload)
   end
 
   @doc """
@@ -223,6 +352,32 @@ defmodule Backend.Servers do
   def create_invite(server_id, inviter_id, attrs \\ %{}) do
     attrs = Map.merge(attrs, %{server_id: server_id, inviter_id: inviter_id})
     do_create_invite(attrs, @invite_code_max_attempts)
+  end
+
+  @doc "Lists every invite ever created for a server, most recently created first."
+  def list_invites(server_id) do
+    Invite
+    |> where([i], i.server_id == ^server_id)
+    |> order_by([i], desc: i.inserted_at)
+    |> Repo.all()
+  end
+
+  @doc """
+  Deletes an invite, scoped to `server_id` so an owner can't revoke another
+  server's invite by guessing its id. Returns `{:error, :not_found}` if the
+  id isn't a valid UUID, doesn't exist, or belongs to a different server.
+  """
+  def revoke_invite(invite_id, server_id) do
+    case Ecto.UUID.cast(invite_id) do
+      :error ->
+        {:error, :not_found}
+
+      {:ok, _} ->
+        case Repo.get_by(Invite, id: invite_id, server_id: server_id) do
+          nil -> {:error, :not_found}
+          invite -> Repo.delete(invite)
+        end
+    end
   end
 
   defp do_create_invite(_attrs, 0), do: {:error, :code_generation_failed}

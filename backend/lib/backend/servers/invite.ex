@@ -2,8 +2,8 @@ defmodule Backend.Servers.Invite do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Backend.Servers.Server
   alias Backend.Accounts.User
+  alias Backend.Servers.Server
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id

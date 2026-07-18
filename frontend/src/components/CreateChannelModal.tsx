@@ -1,21 +1,36 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { createChannel } from '../services/api';
+import type { ChannelType } from '../types';
+import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
 import './CreateChannelModal.css';
 
 interface Props {
-  serverId: string;
-  type: 'text' | 'voice';
+  type: ChannelType;
+  /** Groups the new text/voice channel under this category — ignored (and
+   * omitted) when `type === 'category'`, since categories can't be nested. */
+  parentId?: string | null;
   onClose: () => void;
 }
 
-export default function CreateChannelModal({ serverId, type, onClose }: Props) {
+const TITLES: Record<ChannelType, string> = {
+  text: 'Metin Kanalı Oluştur',
+  voice: 'Ses Kanalı Oluştur',
+  category: 'Kategori Oluştur',
+};
+
+const ICONS: Record<ChannelType, string> = { text: '#', voice: '🔊', category: '📁' };
+const PLACEHOLDERS: Record<ChannelType, string> = {
+  text: 'yeni-kanal',
+  voice: 'yeni-ses-kanalı',
+  category: 'YENİ KATEGORİ',
+};
+
+export default function CreateChannelModal({ type, parentId, onClose }: Props) {
+  const createChannel = useServerStore((s) => s.createChannel);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  const title = type === 'text' ? 'Metin Kanalı Oluştur' : 'Ses Kanalı Oluştur';
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -24,7 +39,7 @@ export default function CreateChannelModal({ serverId, type, onClose }: Props) {
 
     setSubmitting(true);
     setError('');
-    const { error } = await createChannel(serverId, trimmed, type);
+    const error = await createChannel(trimmed, type, type === 'category' ? undefined : parentId);
     setSubmitting(false);
 
     if (error) {
@@ -33,25 +48,25 @@ export default function CreateChannelModal({ serverId, type, onClose }: Props) {
     }
 
     // On success the new channel appears once the "channel_created" broadcast
-    // updates Chat.tsx's channel list — see Backend.Servers.create_channel/2.
+    // updates useServerStore's channel list — see Backend.Servers.create_channel/2.
     onClose();
   }
 
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal title={TITLES[type]} onClose={onClose}>
       <form className="create-channel-form" onSubmit={handleSubmit}>
         <label className="create-channel-label" htmlFor="create-channel-name">
-          Kanal Adı
+          {type === 'category' ? 'Kategori Adı' : 'Kanal Adı'}
         </label>
         <div className="create-channel-input-row">
-          <span className="create-channel-input-icon">{type === 'voice' ? '🔊' : '#'}</span>
+          <span className="create-channel-input-icon">{ICONS[type]}</span>
           <input
             id="create-channel-name"
             autoFocus
             className="create-channel-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={type === 'voice' ? 'yeni-ses-kanalı' : 'yeni-kanal'}
+            placeholder={PLACEHOLDERS[type]}
             maxLength={50}
             disabled={submitting}
           />
@@ -62,7 +77,7 @@ export default function CreateChannelModal({ serverId, type, onClose }: Props) {
           type="submit"
           disabled={submitting || !name.trim()}
         >
-          {submitting ? 'Oluşturuluyor…' : 'Kanal Oluştur'}
+          {submitting ? 'Oluşturuluyor…' : type === 'category' ? 'Kategori Oluştur' : 'Kanal Oluştur'}
         </button>
       </form>
     </Modal>

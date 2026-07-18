@@ -1,0 +1,63 @@
+.link-preview-card {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  max-width: 440px;
+  margin-top: 6px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  overflow: hidden;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.link-preview-card:hover {
+  background: var(--bg-tertiary);
+}
+
+.link-preview-accent {
+  width: 4px;
+  flex-shrink: 0;
+  background: var(--accent);
+}
+
+.link-preview-body {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.link-preview-site {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.link-preview-title {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.link-preview-description {
+  color: var(--text-normal);
+  font-size: 13px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.link-preview-image {
+  width: 96px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 0 6px 6px 0;
+}

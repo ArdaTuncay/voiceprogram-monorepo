@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
 import './CreateServerModal.css';
 
 interface Props {
-  /** Returns an error message on failure, or `undefined` on success. */
-  onCreate: (name: string) => Promise<string | undefined>;
   onClose: () => void;
 }
 
-export default function CreateServerModal({ onCreate, onClose }: Props) {
+export default function CreateServerModal({ onClose }: Props) {
+  const createServer = useServerStore((s) => s.createServer);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -20,7 +20,7 @@ export default function CreateServerModal({ onCreate, onClose }: Props) {
     if (!trimmed) return;
 
     setSubmitting(true);
-    const errorMessage = await onCreate(trimmed);
+    const errorMessage = await createServer(trimmed);
     setSubmitting(false);
 
     if (errorMessage) {

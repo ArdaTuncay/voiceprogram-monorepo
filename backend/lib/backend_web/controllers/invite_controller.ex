@@ -4,6 +4,13 @@ defmodule BackendWeb.InviteController do
   alias Backend.Servers
   alias Backend.Servers.Server
 
+  # Caps invite-code creation per server (see BackendWeb.RateLimiterPlug) —
+  # keyed by the "server_id" path param alongside the usual per-IP limit,
+  # so spamming invite creation for one server is bounded even from
+  # multiple IPs.
+  plug BackendWeb.RateLimiterPlug,
+       [scale: :timer.minutes(1), limit: 10, key: {:param, "server_id"}] when action in [:create]
+
   @doc "POST /api/servers/:server_id/invites — creates a new invite code for the server."
   def create(conn, %{"server_id" => server_id} = params) do
     with %Server{} = server <- Servers.get_server(server_id),
@@ -41,6 +48,46 @@ defmodule BackendWeb.InviteController do
         |> put_status(:not_found)
         |> json(%{error: "Server not found"})
     end
+  end
+
+  @doc "GET /api/servers/:server_id/invites — lists every invite for the server. Owner only."
+  def index(conn, %{"server_id" => server_id}) do
+    with %Server{} = server <- Servers.get_server(server_id),
+         true <- Servers.owner?(server.id, conn.assigns.current_user.id) do
+      json(conn, Enum.map(Servers.list_invites(server.id), &invite_json/1))
+    else
+      false -> forbidden(conn)
+      _ -> not_found(conn)
+    end
+  end
+
+  @doc "DELETE /api/servers/:server_id/invites/:id — revokes an invite. Owner only."
+  def delete(conn, %{"server_id" => server_id, "id" => invite_id}) do
+    with %Server{} = server <- Servers.get_server(server_id),
+         true <- Servers.owner?(server.id, conn.assigns.current_user.id) do
+      case Servers.revoke_invite(invite_id, server.id) do
+        {:ok, _} ->
+          send_resp(conn, :no_content, "")
+
+        {:error, :not_found} ->
+          conn |> put_status(:not_found) |> json(%{error: "Invite not found"})
+      end
+    else
+      false -> forbidden(conn)
+      _ -> not_found(conn)
+    end
+  end
+
+  defp forbidden(conn) do
+    conn
+    |> put_status(:forbidden)
+    |> json(%{error: "Only the server owner can perform this action"})
+  end
+
+  defp not_found(conn) do
+    conn
+    |> put_status(:not_found)
+    |> json(%{error: "Server not found"})
   end
 
   @doc "POST /api/invites/:code/accept — redeems an invite code for the current user."

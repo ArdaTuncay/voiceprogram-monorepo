@@ -1,9 +1,9 @@
 defmodule BackendWeb.ServerController do
   use BackendWeb, :controller
 
+  alias Backend.Chat
   alias Backend.Servers
   alias Backend.Servers.Server
-  alias Backend.Chat
 
   def index(conn, _params) do
     servers = Servers.list_servers_for_user(conn.assigns.current_user.id)
@@ -49,7 +49,7 @@ defmodule BackendWeb.ServerController do
     end
   end
 
-  @doc "POST /api/servers/:server_id/channels — creates a text or voice channel. Owner only."
+  @doc "POST /api/servers/:server_id/channels — creates a text, voice, or category channel. Owner only."
   def create_channel(conn, %{"server_id" => server_id} = params) do
     with %Server{} = server <- Servers.get_server(server_id),
          true <- Servers.owner?(server.id, conn.assigns.current_user.id) do
@@ -68,6 +68,40 @@ defmodule BackendWeb.ServerController do
       false -> forbidden(conn)
       nil -> not_found(conn)
     end
+  end
+
+  @doc """
+  PATCH /api/servers/:server_id/channels/positions — bulk-updates channel
+  `parent_id`/`position` (moving a channel into/out of a category,
+  reordering siblings). Owner only.
+  """
+  def update_channel_positions(conn, %{"server_id" => server_id, "channels" => channels_params}) do
+    with %Server{} = server <- Servers.get_server(server_id),
+         true <- Servers.owner?(server.id, conn.assigns.current_user.id) do
+      updates = Enum.map(channels_params, &normalize_position_update/1)
+
+      case Servers.update_channel_positions(server.id, updates) do
+        {:ok, channels} ->
+          json(conn, Enum.map(channels, &channel_json/1))
+
+        {:error, :not_found} ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{error: "One or more channels not found"})
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{errors: format_errors(changeset)})
+      end
+    else
+      false -> forbidden(conn)
+      nil -> not_found(conn)
+    end
+  end
+
+  defp normalize_position_update(%{"id" => id} = params) do
+    %{id: id, parent_id: Map.get(params, "parent_id"), position: Map.get(params, "position", 0)}
   end
 
   @doc "PUT /api/servers/:id — renames a server. Owner only."
@@ -105,24 +139,44 @@ defmodule BackendWeb.ServerController do
   def delete_member(conn, %{"server_id" => server_id, "user_id" => user_id}) do
     with %Server{} = server <- Servers.get_server(server_id),
          true <- Servers.owner?(server.id, conn.assigns.current_user.id) do
-      if user_id == server.owner_id do
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: "Cannot kick the server owner"})
-      else
-        case Servers.kick_member(server.id, user_id) do
-          {:ok, _} ->
-            send_resp(conn, :no_content, "")
-
-          {:error, :not_found} ->
-            conn
-            |> put_status(:not_found)
-            |> json(%{error: "Member not found"})
-        end
-      end
+      do_delete_member(conn, server, user_id)
     else
       false -> forbidden(conn)
       nil -> not_found(conn)
+    end
+  end
+
+  defp do_delete_member(conn, server, user_id) do
+    if user_id == server.owner_id do
+      conn
+      |> put_status(:unprocessable_entity)
+      |> json(%{error: "Cannot kick the server owner"})
+    else
+      case Servers.kick_member(server.id, user_id) do
+        {:ok, _} ->
+          send_resp(conn, :no_content, "")
+
+        {:error, :not_found} ->
+          conn
+          |> put_status(:not_found)
+          |> json(%{error: "Member not found"})
+      end
+    end
+  end
+
+  @doc "DELETE /api/servers/:server_id/leave — leaves a server. Any member except the owner."
+  def leave(conn, %{"server_id" => server_id}) do
+    case Servers.leave_server(server_id, conn.assigns.current_user.id) do
+      {:ok, _} ->
+        send_resp(conn, :no_content, "")
+
+      {:error, :owner_cannot_leave} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: "Server owner cannot leave — delete the server instead"})
+
+      {:error, :not_found} ->
+        not_found(conn)
     end
   end
 
@@ -143,7 +197,13 @@ defmodule BackendWeb.ServerController do
   end
 
   defp channel_json(channel) do
-    %{id: channel.id, name: channel.name, type: channel.type}
+    %{
+      id: channel.id,
+      name: channel.name,
+      type: channel.type,
+      parent_id: channel.parent_id,
+      position: channel.position
+    }
   end
 
   defp format_errors(changeset) do

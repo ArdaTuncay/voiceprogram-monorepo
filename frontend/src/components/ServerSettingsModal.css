@@ -196,3 +196,37 @@
   font-size: 13px;
   padding: 8px 4px;
 }
+
+.member-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.member-status-dot.online {
+  background: var(--success);
+}
+
+.invite-code {
+  display: block;
+  font-family: monospace;
+  font-size: 14px;
+  color: var(--text-heading);
+  letter-spacing: 0.5px;
+}
+
+.invite-code-inactive {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.invite-meta {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}

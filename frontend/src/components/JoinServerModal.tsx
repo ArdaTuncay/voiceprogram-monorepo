@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
 import './JoinServerModal.css';
 
 interface Props {
-  /** Returns an error message on failure, or `undefined` on success. */
-  onJoin: (code: string) => Promise<string | undefined>;
   onClose: () => void;
 }
 
-export default function JoinServerModal({ onJoin, onClose }: Props) {
+export default function JoinServerModal({ onClose }: Props) {
+  const joinServerByInvite = useServerStore((s) => s.joinServerByInvite);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -20,7 +20,7 @@ export default function JoinServerModal({ onJoin, onClose }: Props) {
     if (!trimmed) return;
 
     setSubmitting(true);
-    const errorMessage = await onJoin(trimmed);
+    const errorMessage = await joinServerByInvite(trimmed);
     setSubmitting(false);
 
     if (errorMessage) {

@@ -1,18 +1,8 @@
 import { useState } from 'react';
-import type { Server } from '../types';
+import { useServerStore } from '../stores/useServerStore';
 import JoinServerModal from './JoinServerModal';
 import CreateServerModal from './CreateServerModal';
 import './ServerSidebar.css';
-
-interface Props {
-  servers: Server[];
-  activeServerId: string | null;
-  onSelect: (serverId: string) => void;
-  /** Returns an error message on failure, or `undefined` on success. */
-  onCreate: (name: string) => Promise<string | undefined>;
-  /** Returns an error message on failure, or `undefined` on success. */
-  onJoin: (code: string) => Promise<string | undefined>;
-}
 
 function serverInitials(name: string): string {
   const initials = name
@@ -24,21 +14,38 @@ function serverInitials(name: string): string {
   return (initials || '?').toUpperCase();
 }
 
-export default function ServerSidebar({ servers, activeServerId, onSelect, onCreate, onJoin }: Props) {
+export default function ServerSidebar() {
+  const servers = useServerStore((s) => s.servers);
+  const activeServerId = useServerStore((s) => s.activeServerId);
+  const setActiveServerId = useServerStore((s) => s.setActiveServerId);
+  const unreadServerIds = useServerStore((s) => s.unreadServerIds);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
 
   return (
     <aside className="server-sidebar">
+      <button
+        className={`server-icon home-icon${activeServerId === null ? ' active' : ''}`}
+        onClick={() => setActiveServerId(null)}
+        title="Direkt Mesajlar"
+        aria-label="Direkt Mesajlar"
+      >
+        🏠
+      </button>
+
+      <div className="server-sidebar-divider" />
+
       <div className="server-icon-list">
         {servers.map((server) => (
           <button
             key={server.id}
             className={`server-icon${server.id === activeServerId ? ' active' : ''}`}
-            onClick={() => onSelect(server.id)}
+            onClick={() => setActiveServerId(server.id)}
             title={server.name}
           >
             {serverInitials(server.name)}
+            {unreadServerIds.has(server.id) && <span className="server-unread-badge" />}
           </button>
         ))}
       </div>
@@ -63,13 +70,9 @@ export default function ServerSidebar({ servers, activeServerId, onSelect, onCre
         </button>
       </div>
 
-      {showCreateModal && (
-        <CreateServerModal onCreate={onCreate} onClose={() => setShowCreateModal(false)} />
-      )}
+      {showCreateModal && <CreateServerModal onClose={() => setShowCreateModal(false)} />}
 
-      {showJoinModal && (
-        <JoinServerModal onJoin={onJoin} onClose={() => setShowJoinModal(false)} />
-      )}
+      {showJoinModal && <JoinServerModal onClose={() => setShowJoinModal(false)} />}
     </aside>
   );
 }

@@ -1,25 +1,32 @@
 import { useState, useEffect } from 'react';
-import type { Channel, Server, ServerMember } from '../types';
+import type { Channel, Server, ServerMember, Invite } from '../types';
 import {
   updateServer,
   deleteServer,
   deleteChannel,
   kickMember,
   fetchServerMembers,
+  fetchServerInvites,
+  revokeInvite,
 } from '../services/api';
+import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
 import './ServerSettingsModal.css';
 
-type Tab = 'general' | 'channels' | 'members';
+type Tab = 'general' | 'channels' | 'members' | 'invites';
 
 interface Props {
-  server: Server;
-  channels: Channel[];
   onClose: () => void;
 }
 
-export default function ServerSettingsModal({ server, channels, onClose }: Props) {
+export default function ServerSettingsModal({ onClose }: Props) {
+  const activeServerId = useServerStore((s) => s.activeServerId);
+  const servers = useServerStore((s) => s.servers);
+  const channels = useServerStore((s) => s.channels);
+  const server = servers.find((s) => s.id === activeServerId);
   const [tab, setTab] = useState<Tab>('general');
+
+  if (!server) return null;
 
   return (
     <Modal title={`Sunucu Ayarları — ${server.name}`} onClose={onClose}>
@@ -42,11 +49,18 @@ export default function ServerSettingsModal({ server, channels, onClose }: Props
         >
           Üyeler
         </button>
+        <button
+          className={`settings-tab${tab === 'invites' ? ' active' : ''}`}
+          onClick={() => setTab('invites')}
+        >
+          Davet Linkleri
+        </button>
       </div>
 
       {tab === 'general' && <GeneralTab server={server} onClose={onClose} />}
       {tab === 'channels' && <ChannelsTab channels={channels} />}
       {tab === 'members' && <MembersTab serverId={server.id} ownerId={server.owner_id} />}
+      {tab === 'invites' && <InvitesTab serverId={server.id} />}
     </Modal>
   );
 }
@@ -197,6 +211,10 @@ function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [kickingId, setKickingId] = useState<string | null>(null);
+  // Live updates (see BackendWeb.UserChannel's "member_status_changed") take
+  // priority over whatever was last fetched — fetchServerMembers's `status`
+  // is just the seed value until the first live update for that user arrives.
+  const memberStatuses = useServerStore((s) => s.memberStatuses);
 
   useEffect(() => {
     let cancelled = false;
@@ -236,25 +254,131 @@ function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }
     <div className="settings-section">
       {error && <div className="settings-error">⚠ {error}</div>}
       <ul className="settings-list">
-        {members.map((member) => (
-          <li key={member.user_id} className="settings-list-item">
-            <span>
-              {member.username ?? 'Bilinmeyen'}
-              {member.user_id === ownerId && <span className="settings-owner-badge">Sahip</span>}
-            </span>
-            {member.user_id !== ownerId && (
+        {members.map((member) => {
+          const status = memberStatuses[member.user_id] ?? member.status;
+          return (
+            <li key={member.user_id} className="settings-list-item">
+              <span>
+                <span
+                  className={`member-status-dot${status === 'online' ? ' online' : ''}`}
+                  title={status === 'online' ? 'Çevrimiçi' : 'Çevrimdışı'}
+                />
+                {member.username ?? 'Bilinmeyen'}
+                {member.user_id === ownerId && <span className="settings-owner-badge">Sahip</span>}
+              </span>
+              {member.user_id !== ownerId && (
+                <button
+                  className="settings-icon-btn"
+                  onClick={() => handleKick(member.user_id)}
+                  disabled={kickingId === member.user_id}
+                  title="Sunucudan At"
+                  aria-label={`${member.username ?? 'kullanıcıyı'} sunucudan at`}
+                >
+                  🚫
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function formatExpiresAt(expiresAt: string | null): string {
+  if (!expiresAt) return 'Süresiz';
+  const date = new Date(expiresAt.includes('Z') ? expiresAt : expiresAt + 'Z');
+  return date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function isInviteExpired(invite: Invite): boolean {
+  if (!invite.expires_at) return false;
+  const expiresAt = new Date(invite.expires_at.includes('Z') ? invite.expires_at : invite.expires_at + 'Z');
+  return expiresAt.getTime() <= Date.now();
+}
+
+function isInviteMaxedOut(invite: Invite): boolean {
+  return invite.max_uses !== null && invite.uses_count >= invite.max_uses;
+}
+
+function InvitesTab({ serverId }: { serverId: string }) {
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchServerInvites(serverId).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error || !data) {
+        setError(error ?? 'Davet listesi alınamadı');
+      } else {
+        setInvites(data);
+      }
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId]);
+
+  async function handleRevoke(inviteId: string) {
+    setRevokingId(inviteId);
+    setError('');
+    const { error } = await revokeInvite(serverId, inviteId);
+    setRevokingId(null);
+
+    if (error) {
+      setError(error);
+      return;
+    }
+    setInvites((prev) => prev.filter((i) => i.id !== inviteId));
+  }
+
+  if (loading) {
+    return <div className="settings-section">Yükleniyor…</div>;
+  }
+
+  return (
+    <div className="settings-section">
+      {error && <div className="settings-error">⚠ {error}</div>}
+      <ul className="settings-list">
+        {invites.map((invite) => {
+          const expired = isInviteExpired(invite);
+          const maxedOut = isInviteMaxedOut(invite);
+          const inactive = expired || maxedOut;
+          return (
+            <li key={invite.id} className="settings-list-item">
+              <span>
+                <code className={`invite-code${inactive ? ' invite-code-inactive' : ''}`}>
+                  {invite.code}
+                </code>
+                <span className="invite-meta">
+                  {expired
+                    ? 'Süresi doldu'
+                    : maxedOut
+                      ? 'Kullanım limiti doldu'
+                      : formatExpiresAt(invite.expires_at)}
+                  {' · '}
+                  {invite.uses_count}
+                  {invite.max_uses !== null ? `/${invite.max_uses}` : ''} kullanım
+                </span>
+              </span>
               <button
                 className="settings-icon-btn"
-                onClick={() => handleKick(member.user_id)}
-                disabled={kickingId === member.user_id}
-                title="Sunucudan At"
-                aria-label={`${member.username ?? 'kullanıcıyı'} sunucudan at`}
+                onClick={() => handleRevoke(invite.id)}
+                disabled={revokingId === invite.id}
+                title="Daveti İptal Et"
+                aria-label={`${invite.code} kodlu daveti iptal et`}
               >
-                🚫
+                🗑️
               </button>
-            )}
-          </li>
-        ))}
+            </li>
+          );
+        })}
+        {invites.length === 0 && <li className="settings-empty">Henüz davet linki yok.</li>}
       </ul>
     </div>
   );

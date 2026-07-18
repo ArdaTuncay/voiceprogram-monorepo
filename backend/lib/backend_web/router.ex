@@ -19,21 +19,41 @@ defmodule BackendWeb.Router do
   scope "/api", BackendWeb do
     pipe_through [:api, :authenticated]
 
+    post "/users/logout_all", UserController, :logout_all
+
     get "/servers", ServerController, :index
     post "/servers", ServerController, :create
     put "/servers/:id", ServerController, :update
     delete "/servers/:id", ServerController, :delete
+    delete "/servers/:server_id/leave", ServerController, :leave
     get "/servers/:id/channels", ServerController, :channels
     post "/servers/:server_id/channels", ServerController, :create_channel
+    patch "/servers/:server_id/channels/positions", ServerController, :update_channel_positions
     get "/servers/:id/members", ServerController, :members
     delete "/servers/:server_id/members/:user_id", ServerController, :delete_member
 
+    get "/servers/:server_id/channels/:channel_id/messages", ChannelController, :messages
+    get "/channels/:channel_id/search", ChannelController, :search
     delete "/channels/:id", ChannelController, :delete
 
+    get "/servers/:server_id/invites", InviteController, :index
     post "/servers/:server_id/invites", InviteController, :create
+    delete "/servers/:server_id/invites/:id", InviteController, :delete
     post "/invites/:code/accept", InviteController, :accept
 
     post "/upload", UploadController, :create
+
+    get "/friends", FriendController, :index
+    post "/friends/request", FriendController, :request
+    post "/friends/accept", FriendController, :accept
+    delete "/friends/:id", FriendController, :delete
+
+    get "/dms", DmController, :index
+    post "/dms", DmController, :create
+    get "/dms/:room_id/messages", DmController, :messages
+    get "/dm_rooms/:dm_room_id/search", DmController, :search
+
+    get "/utils/preview", PreviewController, :show
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

@@ -10,6 +10,19 @@
   overflow-y: auto;
 }
 
+.home-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.server-sidebar-divider {
+  width: 32px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
 .server-icon-list {
   display: flex;
   flex-direction: column;
@@ -19,6 +32,7 @@
 }
 
 .server-icon {
+  position: relative;
   width: 48px;
   height: 48px;
   flex-shrink: 0;
@@ -32,6 +46,18 @@
   align-items: center;
   justify-content: center;
   transition: border-radius 0.15s, background 0.15s, color 0.15s;
+}
+
+.server-unread-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 3px solid var(--bg-tertiary);
+  box-sizing: content-box;
 }
 
 .server-icon:hover {

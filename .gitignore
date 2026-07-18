@@ -22,9 +22,12 @@ backend-*.tar
 !/backend/priv/static/uploads/.gitkeep
 
 # ── Environment / secrets ──
+# .env / *.local are always per-developer or secret. Frontend mode files
+# (.env.development, .env.production) are intentionally NOT covered here —
+# Vite convention keeps only non-secret, team-shared defaults in those, and
+# they're meant to be committed (see frontend/.env.development).
 .env
-.env.*
-!.env.example
+*.local
 
 # ── Editor / OS ──
 .vscode/*

@@ -1,0 +1,269 @@
+.friends-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.friends-subtabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 48px;
+  padding: 0 16px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.friends-subtab {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.friends-subtab:hover {
+  color: var(--text-normal);
+  background: var(--bg-primary);
+}
+
+.friends-subtab.active {
+  color: var(--text-heading);
+  background: var(--bg-primary);
+}
+
+.friends-subtab-add {
+  margin-left: auto;
+  color: var(--success);
+}
+
+.friends-subtab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.friends-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.friends-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.friends-loading,
+.friends-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 24px 4px;
+}
+
+.friends-section-title {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 20px 4px 8px;
+}
+
+.friends-section-title:first-child {
+  margin-top: 4px;
+}
+
+.friends-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.friends-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.friends-list-item:last-child {
+  border-bottom: none;
+}
+
+.friends-list-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.friends-list-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.friends-status-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  border: 2.5px solid var(--bg-primary);
+}
+
+.friends-status-dot.online {
+  background: var(--success);
+}
+
+.friends-list-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.friends-list-name {
+  color: var(--text-normal);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.friends-list-status {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.friends-remove-btn,
+.friends-accept-btn,
+.friends-message-btn {
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.friends-message-btn {
+  margin-right: 4px;
+}
+
+.friends-message-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.friends-accept-btn {
+  color: var(--success);
+}
+
+.friends-accept-btn:hover:not(:disabled) {
+  background: var(--success);
+  color: #fff;
+}
+
+.friends-remove-btn:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+}
+
+.friends-remove-btn:disabled,
+.friends-accept-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.add-friend-form {
+  max-width: 480px;
+}
+
+.add-friend-title {
+  color: var(--text-heading);
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+.add-friend-description {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+.add-friend-row {
+  display: flex;
+  gap: 8px;
+}
+
+.add-friend-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: none;
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.add-friend-submit-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.add-friend-submit-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.add-friend-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.add-friend-success {
+  color: var(--success);
+  font-size: 13px;
+  margin-top: 12px;
+}

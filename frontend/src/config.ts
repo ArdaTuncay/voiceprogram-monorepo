@@ -7,8 +7,14 @@
  */
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
-/** Resolves a backend-relative path (e.g. an uploaded file's `/uploads/...` URL) against API_BASE_URL. */
+/**
+ * Resolves a file URL returned by the backend for display. Local-disk
+ * uploads come back as a backend-relative path (`/uploads/...`) that needs
+ * API_BASE_URL prepended; S3/R2 uploads (see Backend.Uploads.S3) come back
+ * already-absolute and must be left alone.
+ */
 export function resolveFileUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
   return `${API_BASE_URL}${path}`;
 }
 

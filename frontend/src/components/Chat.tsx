@@ -1,63 +1,33 @@
-import { useState, useEffect, useRef } from 'react';
-import type { KeyboardEvent, ChangeEvent, DragEvent } from 'react';
-import type {
-  User,
-  ChatMessage,
-  PresenceUser,
-  Channel,
-  Server,
-  NewMessageNotification,
-  TypingNotification,
-} from '../types';
-import { fetchServers, createServer, fetchServerChannels, acceptInvite, uploadFile } from '../services/api';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import type { KeyboardEvent, ChangeEvent, DragEvent, UIEvent } from 'react';
+import type { User, Channel, ChannelType } from '../types';
 import { resolveFileUrl } from '../config';
-import {
-  joinChatChannel,
-  joinUserChannel,
-  shout,
-  sendTyping,
-  disconnectSocket,
-} from '../services/socket';
+import { disconnectSocket } from '../services/socket';
 import { useVoiceChannel } from '../hooks/useVoiceChannel';
+import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
+import { useCollapsedCategories } from '../hooks/useCollapsedCategories';
+import { useServerStore, groupChannelsByCategory } from '../stores/useServerStore';
+import { useChatStore } from '../stores/useChatStore';
+import { useDMStore } from '../stores/useDMStore';
+import { useSocketSync } from '../stores/useSocketStore';
+import { useConnectionStore } from '../stores/useConnectionStore';
+import { userColor, initials } from '../utils';
 import ServerSidebar from './ServerSidebar';
 import InviteModal from './InviteModal';
 import ServerSettingsModal from './ServerSettingsModal';
 import CreateChannelModal from './CreateChannelModal';
+import LeaveServerModal from './LeaveServerModal';
+import FriendsPanel from './FriendsPanel';
+import DMChatView from './DMChatView';
+import MessageItem from './MessageItem';
+import SearchBar from './SearchBar';
+import SearchResultsPanel from './SearchResultsPanel';
 import './Chat.css';
 
 interface Props {
   user: User;
   onLogout: () => void;
 }
-
-/** Deterministic color per user from a small Discord-like palette. */
-function userColor(userId: string): string {
-  const palette = [
-    '#7289da', '#43b581', '#faa61a', '#f04747',
-    '#1abc9c', '#e91e63', '#9b59b6', '#e67e22',
-  ];
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = (hash << 5) - hash + userId.charCodeAt(i);
-    hash |= 0;
-  }
-  return palette[Math.abs(hash) % palette.length];
-}
-
-function formatTime(raw: string): string {
-  // Elixir sends UTC without "Z"; append it so Date parses correctly.
-  const d = new Date(raw.includes('Z') ? raw : raw + 'Z');
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function initials(name: string | null): string {
-  if (!name) return '?';
-  return name.slice(0, 2).toUpperCase();
-}
-
-// How long to wait after the last keystroke before telling the channel the
-// user stopped typing.
-const TYPING_STOP_DELAY_MS = 2000;
 
 function typingIndicatorText(usernames: (string | null)[]): string {
   const names = usernames.map((name) => name || 'Bilinmeyen');
@@ -66,236 +36,124 @@ function typingIndicatorText(usernames: (string | null)[]): string {
 }
 
 export default function Chat({ user, onLogout }: Props) {
-  const [servers, setServers] = useState<Server[]>([]);
-  const [activeServerId, setActiveServerId] = useState<string | null>(null);
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [draft, setDraft] = useState('');
-  const [channelError, setChannelError] = useState('');
-  const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
-  const [unreadChannelIds, setUnreadChannelIds] = useState<Set<string>>(new Set());
+  const servers = useServerStore((s) => s.servers);
+  const activeServerId = useServerStore((s) => s.activeServerId);
+  const channels = useServerStore((s) => s.channels);
+  const activeChannelId = useServerStore((s) => s.activeChannelId);
+  const unreadChannelIds = useServerStore((s) => s.unreadChannelIds);
+  const channelError = useServerStore((s) => s.channelError);
+  const selectChannel = useServerStore((s) => s.selectChannel);
+  const loadServers = useServerStore((s) => s.loadServers);
+
+  const messages = useChatStore((s) => s.messages);
+  const draft = useChatStore((s) => s.draft);
+  const onlineUsers = useChatStore((s) => s.onlineUsers);
+  const typingUsers = useChatStore((s) => s.typingUsers);
+  const isUploading = useChatStore((s) => s.isUploading);
+  const uploadError = useChatStore((s) => s.uploadError);
+  const isDraggingFile = useChatStore((s) => s.isDraggingFile);
+  const lightboxUrl = useChatStore((s) => s.lightboxUrl);
+  const hasMoreMessages = useChatStore((s) => s.hasMoreMessages);
+  const isLoadingOlderMessages = useChatStore((s) => s.isLoadingOlderMessages);
+  const loadOlderMessages = useChatStore((s) => s.loadOlderMessages);
+  const handleDraftChange = useChatStore((s) => s.handleDraftChange);
+  const sendMessage = useChatStore((s) => s.sendMessage);
+  const handleFileSelected = useChatStore((s) => s.handleFileSelected);
+  const setDraggingFile = useChatStore((s) => s.setDraggingFile);
+  const setLightboxUrl = useChatStore((s) => s.setLightboxUrl);
+  const toggleReaction = useChatStore((s) => s.toggleReaction);
+  const editMessage = useChatStore((s) => s.editMessage);
+  const searchResults = useChatStore((s) => s.searchResults);
+  const isSearching = useChatStore((s) => s.isSearching);
+  const isSearchPanelOpen = useChatStore((s) => s.isSearchPanelOpen);
+  const highlightedMessageId = useChatStore((s) => s.highlightedMessageId);
+  const searchChannelMessages = useChatStore((s) => s.searchChannelMessages);
+  const closeSearchPanel = useChatStore((s) => s.closeSearchPanel);
+  const jumpToMessage = useChatStore((s) => s.jumpToMessage);
+  const clearHighlight = useChatStore((s) => s.clearHighlight);
+  const isConnected = useConnectionStore((s) => s.isConnected);
+  const hasConnectedBefore = useConnectionStore((s) => s.hasConnectedBefore);
+  const reconnectedAt = useConnectionStore((s) => s.reconnectedAt);
+
+  const dmRooms = useDMStore((s) => s.rooms);
+  const activeDmRoomId = useDMStore((s) => s.activeRoomId);
+  const unreadRoomIds = useDMStore((s) => s.unreadRoomIds);
+  const loadDmRooms = useDMStore((s) => s.loadRooms);
+  const setActiveDmRoomId = useDMStore((s) => s.setActiveRoomId);
+
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [createChannelType, setCreateChannelType] = useState<'text' | 'voice' | null>(null);
-  const [typingUsers, setTypingUsers] = useState<Record<string, string | null>>({});
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState('');
-  const [isDraggingFile, setIsDraggingFile] = useState(false);
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [createChannelRequest, setCreateChannelRequest] = useState<{
+    type: ChannelType;
+    parentId: string | null;
+  } | null>(null);
+  const { collapsedIds, toggleCategory } = useCollapsedCategories();
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesWrapperRef = useRef<HTMLDivElement>(null);
+  // Set right before a loadOlderMessages() call, to the scroll container's
+  // scrollHeight at that moment; the layout effect below uses it to keep the
+  // same message in view once the older page is prepended, instead of
+  // scrolling to the bottom (the normal new-message behavior).
+  const prevScrollHeightRef = useRef<number | null>(null);
+  const textareaRef = useAutoGrowTextarea(draft);
   const voice = useVoiceChannel(user);
 
-  // Tracks the local "am I currently flagged as typing" state so we only
-  // push a "true" once per burst of keystrokes, plus the pending timer that
-  // fires "false" after a pause.
-  const isTypingRef = useRef(false);
-  const typingStopTimerRef = useRef<number | null>(null);
-
-  function clearTypingTimer() {
-    if (typingStopTimerRef.current !== null) {
-      window.clearTimeout(typingStopTimerRef.current);
-      typingStopTimerRef.current = null;
-    }
-  }
-
-  function stopTypingNow() {
-    clearTypingTimer();
-    if (isTypingRef.current) {
-      isTypingRef.current = false;
-      sendTyping(false);
-    }
-  }
-
-  // Kept fresh every render so the long-lived notification subscription
-  // below (which only runs once) never reads stale state.
-  const activeChannelIdRef = useRef(activeChannelId);
-  activeChannelIdRef.current = activeChannelId;
-
-  // Same reasoning: the personal-notification effect below only runs once,
-  // so "channel_deleted" needs a fresh read of the channel list to compute
-  // which channel to fall back to.
-  const channelsRef = useRef(channels);
-  channelsRef.current = channels;
-
-  // Same reasoning again: "channel_created" needs to know whether the new
-  // channel belongs to the server currently being viewed before adding it
-  // to the visible list.
-  const activeServerIdRef = useRef(activeServerId);
-  activeServerIdRef.current = activeServerId;
-
-  // Set by a notification click when it targets a channel in a different
-  // server: tells the channel-fetch effect below to select that channel
-  // instead of defaulting to the new server's first text channel.
-  const pendingChannelIdRef = useRef<string | null>(null);
-
-  // Fetch the servers the user belongs to and default to the first one.
+  // Fetch the servers the user belongs to once, on mount.
   useEffect(() => {
-    fetchServers().then(({ data, error }) => {
-      if (error) {
-        setChannelError(error);
-        return;
-      }
-      setServers(data ?? []);
-      setActiveServerId((current) => current ?? data?.[0]?.id ?? null);
-    });
-  }, []);
+    loadServers();
+  }, [loadServers]);
 
-  // Fetch the active server's channels; switches straight to its first text
-  // channel, mirroring how switching text channels already behaves.
+  // Fetch the user's DM rooms once, on mount — kept loaded regardless of
+  // whether the DM view is currently showing, so the room list (and its
+  // unread badges) are ready the instant the user clicks the home button.
   useEffect(() => {
-    if (!activeServerId) {
-      setChannels([]);
-      setActiveChannelId(null);
+    loadDmRooms();
+  }, [loadDmRooms]);
+
+  // Owns every Phoenix-channel join/leave effect (text channel + personal
+  // notification topic) — see stores/useSocketStore.ts.
+  useSocketSync(user.id);
+
+  // Auto-scroll to bottom when messages change — except right after
+  // prepending an older page (loadOlderMessages), where we instead restore
+  // the scroll position so the message the user was looking at stays put.
+  useLayoutEffect(() => {
+    const container = messagesWrapperRef.current;
+    if (container && prevScrollHeightRef.current !== null) {
+      container.scrollTop = container.scrollHeight - prevScrollHeightRef.current;
+      prevScrollHeightRef.current = null;
       return;
     }
-
-    fetchServerChannels(activeServerId).then(({ data, error }) => {
-      if (error || !data) {
-        setChannelError(error ?? 'No channels available');
-        return;
-      }
-      setChannels(data);
-
-      const pendingChannelId = pendingChannelIdRef.current;
-      pendingChannelIdRef.current = null;
-
-      if (pendingChannelId && data.some((c) => c.id === pendingChannelId)) {
-        setActiveChannelId(pendingChannelId);
-      } else {
-        setActiveChannelId(data.find((c) => c.type === 'text')?.id ?? null);
-      }
-    });
-  }, [activeServerId]);
-
-  // Join the active channel's socket topic; leaves the previous one and
-  // re-joins automatically whenever the user switches channels.
-  useEffect(() => {
-    if (!activeChannelId) {
-      setMessages([]);
-      setOnlineUsers([]);
-      setTypingUsers({});
-      return;
-    }
-
-    setMessages([]);
-    setOnlineUsers([]);
-    setTypingUsers({});
-    clearTypingTimer();
-    isTypingRef.current = false;
-
-    const cleanup = joinChatChannel(activeChannelId, {
-      onJoined: (resp) => {
-        setMessages(resp.messages);
-        setChannelError('');
-      },
-      onShout: (msg) => setMessages((prev) => [...prev, msg]),
-      onError: (reason) => setChannelError(reason),
-      onPresenceChange: (users) => {
-        setOnlineUsers(users);
-        const onlineIds = new Set(users.map((u) => u.user_id));
-        setTypingUsers((prev) => {
-          const next = Object.fromEntries(
-            Object.entries(prev).filter(([id]) => onlineIds.has(id))
-          );
-          return Object.keys(next).length === Object.keys(prev).length ? prev : next;
-        });
-      },
-      onTyping: (payload: TypingNotification) => {
-        setTypingUsers((prev) => {
-          const next = { ...prev };
-          if (payload.is_typing) next[payload.user_id] = payload.username;
-          else delete next[payload.user_id];
-          return next;
-        });
-      },
-    });
-    return cleanup;
-  }, [activeChannelId]);
-
-  // Auto-scroll to bottom when messages change.
-  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  function handleMessagesScroll(e: UIEvent<HTMLDivElement>) {
+    if (e.currentTarget.scrollTop > 100) return;
+    if (!hasMoreMessages || isLoadingOlderMessages) return;
+    prevScrollHeightRef.current = e.currentTarget.scrollHeight;
+    void loadOlderMessages();
+  }
+
+  // Scrolls a search result's target message into view once jumpToMessage
+  // has confirmed it's loaded, then clears the highlight after a brief
+  // flash so it doesn't linger indefinitely.
+  useEffect(() => {
+    if (!highlightedMessageId) return;
+    document.getElementById(`message-${highlightedMessageId}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+    const timer = window.setTimeout(() => clearHighlight(), 2000);
+    return () => window.clearTimeout(timer);
+  }, [highlightedMessageId, clearHighlight]);
 
   // Make sure the microphone and peer connections are released if this
   // component ever unmounts while a voice room is active.
   const voiceLeaveRef = useRef(voice.leave);
   voiceLeaveRef.current = voice.leave;
   useEffect(() => () => voiceLeaveRef.current(), []);
-
-  useEffect(() => clearTypingTimer, []);
-
-  // Ask for desktop notification permission once, up front.
-  useEffect(() => {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      void Notification.requestPermission();
-    }
-  }, []);
-
-  // Joins the personal notification topic once for the whole session — it
-  // carries messages for every channel across every server the user is in,
-  // not just the one currently open, so desktop notifications and unread
-  // badges work regardless of what's on screen.
-  useEffect(() => {
-    const cleanup = joinUserChannel(user.id, {
-      onNewMessage: (payload: NewMessageNotification) => {
-        if (payload.channel_id === activeChannelIdRef.current) return;
-
-        setUnreadChannelIds((prev) => new Set(prev).add(payload.channel_id));
-
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          const notification = new Notification(
-            `#${payload.channel_name} — ${payload.username ?? 'Bilinmeyen'}`,
-            { body: payload.content, tag: payload.channel_id }
-          );
-          notification.onclick = () => {
-            window.focus();
-            handleNotificationNavigateRef.current(payload.server_id, payload.channel_id);
-            notification.close();
-          };
-        }
-      },
-      onChannelCreated: (payload) => {
-        if (payload.server_id !== activeServerIdRef.current) return;
-        setChannels((prev) => (prev.some((c) => c.id === payload.id) ? prev : [...prev, payload]));
-      },
-      onChannelDeleted: (payload) => {
-        const stillPresent = channelsRef.current.some((c) => c.id === payload.channel_id);
-        if (!stillPresent) return;
-
-        const remaining = channelsRef.current.filter((c) => c.id !== payload.channel_id);
-        setChannels(remaining);
-
-        setUnreadChannelIds((prev) => {
-          if (!prev.has(payload.channel_id)) return prev;
-          const next = new Set(prev);
-          next.delete(payload.channel_id);
-          return next;
-        });
-
-        if (activeChannelIdRef.current === payload.channel_id) {
-          setActiveChannelId(remaining.find((c) => c.type === 'text')?.id ?? null);
-        }
-      },
-      onServerUpdated: (payload) => {
-        setServers((prev) =>
-          prev.map((s) => (s.id === payload.server_id ? { ...s, name: payload.name } : s))
-        );
-      },
-      onServerDeleted: (payload) => {
-        setServers((prev) => prev.filter((s) => s.id !== payload.server_id));
-        setActiveServerId((prevId) => (prevId === payload.server_id ? null : prevId));
-      },
-      onMemberKicked: (payload) => {
-        if (payload.user_id !== user.id) return;
-        setServers((prev) => prev.filter((s) => s.id !== payload.server_id));
-        setActiveServerId((prevId) => (prevId === payload.server_id ? null : prevId));
-      },
-    });
-    return cleanup;
-  }, [user.id]);
 
   // If the voice room the user is currently in gets removed from the active
   // server's channel list (deleted, or the server itself got deleted/left),
@@ -306,61 +164,34 @@ export default function Chat({ user, onLogout }: Props) {
     }
   }, [channels, voice.activeRoomId]);
 
+  // If the Phoenix socket dropped and came back (a brief network blip, the
+  // laptop sleeping, etc.) while we were in a voice room, rejoin it from
+  // scratch. A plain channel rejoin (which happens automatically — see
+  // useSocketSync) isn't enough here: services/socket.ts's joinVoiceChannel
+  // hands back the room's peer list through a Promise that only ever
+  // resolves once, so a second (rejoin) reply is silently dropped and we'd
+  // never learn about peers who joined or left while we were disconnected.
+  // voice.join() already starts by calling leave() and resets to a clean,
+  // disconnected state if it fails (e.g. the mic permission needs
+  // re-granting) — covering the "or reset" fallback for free. Reads
+  // voice.join/activeRoomId through refs (updated every render) rather than
+  // depending on them directly, so this only fires on an actual reconnect
+  // and never on an unrelated render — same stale-closure-avoidance pattern
+  // as voiceLeaveRef above.
+  const voiceJoinRef = useRef(voice.join);
+  voiceJoinRef.current = voice.join;
+  const activeVoiceRoomIdRef = useRef(voice.activeRoomId);
+  activeVoiceRoomIdRef.current = voice.activeRoomId;
+  useEffect(() => {
+    if (!reconnectedAt) return;
+    const roomId = activeVoiceRoomIdRef.current;
+    if (roomId) void voiceJoinRef.current(roomId);
+  }, [reconnectedAt]);
+
   function handleLogout() {
     voice.leave();
     disconnectSocket();
     onLogout();
-  }
-
-  function handleSelectChannel(channelId: string) {
-    setUnreadChannelIds((prev) => {
-      if (!prev.has(channelId)) return prev;
-      const next = new Set(prev);
-      next.delete(channelId);
-      return next;
-    });
-    setActiveChannelId(channelId);
-  }
-
-  function handleNotificationNavigate(serverId: string, channelId: string) {
-    setUnreadChannelIds((prev) => {
-      if (!prev.has(channelId)) return prev;
-      const next = new Set(prev);
-      next.delete(channelId);
-      return next;
-    });
-
-    if (serverId === activeServerId) {
-      setActiveChannelId(channelId);
-    } else {
-      pendingChannelIdRef.current = channelId;
-      setActiveServerId(serverId);
-    }
-  }
-
-  // Same ref-indirection pattern as voiceLeaveRef above: the notification
-  // effect only runs once, so it must call through a ref to always reach
-  // the latest closure (which sees the current activeServerId).
-  const handleNotificationNavigateRef = useRef(handleNotificationNavigate);
-  handleNotificationNavigateRef.current = handleNotificationNavigate;
-
-  async function handleCreateServer(name: string): Promise<string | undefined> {
-    const { data, error } = await createServer(name);
-    if (error || !data) return error ?? 'Failed to create server';
-
-    setServers((prev) => [...prev, data]);
-    setActiveServerId(data.id);
-    return undefined;
-  }
-
-  async function handleJoinServer(code: string): Promise<string | undefined> {
-    const { data, error } = await acceptInvite(code);
-    if (error || !data) return error ?? 'Failed to join server';
-
-    const server = data;
-    setServers((prev) => (prev.some((s) => s.id === server.id) ? prev : [...prev, server]));
-    setActiveServerId(server.id);
-    return undefined;
   }
 
   function handleVoiceRoomClick(roomId: string) {
@@ -379,32 +210,6 @@ export default function Chat({ user, onLogout }: Props) {
     }
   }
 
-  function sendMessage() {
-    const content = draft.trim();
-    if (!content) return;
-    stopTypingNow();
-    shout(content);
-    setDraft('');
-  }
-
-  async function handleFileSelected(file: File) {
-    if (!activeChannelId || isUploading) return;
-
-    setIsUploading(true);
-    setUploadError('');
-    const { data, error } = await uploadFile(file);
-    setIsUploading(false);
-
-    if (error || !data) {
-      setUploadError(error ?? 'Yükleme başarısız oldu');
-      return;
-    }
-
-    stopTypingNow();
-    shout(draft.trim(), data.file_url, data.file_type);
-    setDraft('');
-  }
-
   function handleAttachClick() {
     fileInputRef.current?.click();
   }
@@ -417,223 +222,320 @@ export default function Chat({ user, onLogout }: Props) {
 
   function handleDragOver(e: DragEvent<HTMLElement>) {
     e.preventDefault();
-    if (!isDraggingFile) setIsDraggingFile(true);
+    if (!isDraggingFile) setDraggingFile(true);
   }
 
   function handleDragLeave(e: DragEvent<HTMLElement>) {
     e.preventDefault();
     if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-    setIsDraggingFile(false);
+    setDraggingFile(false);
   }
 
   function handleDrop(e: DragEvent<HTMLElement>) {
     e.preventDefault();
-    setIsDraggingFile(false);
+    setDraggingFile(false);
     const file = e.dataTransfer.files?.[0];
     if (file) void handleFileSelected(file);
   }
 
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   }
 
-  function handleDraftChange(e: ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value;
-    setDraft(value);
-
-    if (!value.trim()) {
-      stopTypingNow();
-      return;
-    }
-
-    if (!isTypingRef.current) {
-      isTypingRef.current = true;
-      sendTyping(true);
-    }
-
-    clearTypingTimer();
-    typingStopTimerRef.current = window.setTimeout(stopTypingNow, TYPING_STOP_DELAY_MS);
+  function handleDraftInputChange(e: ChangeEvent<HTMLTextAreaElement>) {
+    handleDraftChange(e.target.value);
   }
 
   const myColor = userColor(user.id);
-  const textChannels = channels.filter((c) => c.type === 'text');
-  const voiceChannels = channels.filter((c) => c.type === 'voice');
   const activeServer = servers.find((s) => s.id === activeServerId);
   const activeServerName = activeServer?.name ?? '';
-  const activeChannelName = textChannels.find((c) => c.id === activeChannelId)?.name ?? '';
+  const activeChannelName = channels.find((c) => c.id === activeChannelId)?.name ?? '';
   const isServerOwner = activeServer?.owner_id === user.id;
+  const channelGroups = groupChannelsByCategory(channels);
+  const hasCategories = channelGroups.length > 1;
+
+  function renderChannelRow(ch: Channel) {
+    if (ch.type === 'voice') {
+      const isActive = voice.activeRoomId === ch.id;
+      return (
+        <div key={ch.id}>
+          <div
+            className={`channel-item voice-channel-item${isActive ? ' active' : ''}`}
+            onClick={() => handleVoiceRoomClick(ch.id)}
+          >
+            <span className="channel-hash">🔊</span>
+            {ch.name}
+          </div>
+
+          {isActive && (
+            <div className="voice-participant-list">
+              {voice.participants.map((p) => {
+                const color = userColor(p.user_id);
+                const name = p.username ?? 'Unknown';
+                const speaking = voice.speakingUserIds.has(p.user_id);
+                const reconnecting = voice.reconnectingPeerIds.has(p.user_id);
+                const statusText = reconnecting
+                  ? '🔄 Yeniden Bağlanıyor...'
+                  : p.deafened
+                    ? 'Sağırlaştırıldı'
+                    : p.muted
+                      ? 'Mikrofon Kapalı'
+                      : speaking
+                        ? 'Konuşuyor'
+                        : 'Ses Bağlantısı Aktif';
+                return (
+                  <div key={p.user_id} className="voice-participant">
+                    <div
+                      className={`voice-participant-avatar${speaking ? ' speaking' : ''}`}
+                      style={{ background: color }}
+                      title={name}
+                    >
+                      {initials(name)}
+                    </div>
+                    <div className="voice-participant-info">
+                      <span className="voice-participant-name">
+                        {name}
+                        {p.muted && (
+                          <span className="voice-status-icon mute-icon" title="Mikrofon Kapalı">
+                            🔇
+                          </span>
+                        )}
+                        {p.deafened && (
+                          <span className="voice-status-icon deafen-icon" title="Sağırlaştırıldı">
+                            🔕
+                          </span>
+                        )}
+                      </span>
+                      <span className={`voice-participant-status${reconnecting ? ' reconnecting' : ''}`}>
+                        {statusText}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="voice-controls-row">
+                <button
+                  className={`voice-control-btn${voice.isMuted ? ' active' : ''}`}
+                  onClick={voice.toggleMute}
+                  title={voice.isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
+                  aria-label={voice.isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
+                >
+                  {voice.isMuted ? '🔇' : '🎤'}
+                </button>
+                <button
+                  className={`voice-control-btn${voice.isDeafened ? ' active' : ''}`}
+                  onClick={voice.toggleDeafen}
+                  title={voice.isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
+                  aria-label={voice.isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
+                >
+                  {voice.isDeafened ? '🔕' : '🎧'}
+                </button>
+              </div>
+
+              <button
+                className={`screen-share-btn${voice.isScreenSharing ? ' active' : ''}`}
+                onClick={handleToggleScreenShare}
+              >
+                🖥️ {voice.isScreenSharing ? 'Ekranı Durdur' : 'Ekranı Paylaş'}
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const unread = unreadChannelIds.has(ch.id);
+    return (
+      <div
+        key={ch.id}
+        className={`channel-item${ch.id === activeChannelId ? ' active' : ''}`}
+        onClick={() => selectChannel(ch.id)}
+      >
+        <span className="channel-hash">#</span>
+        <span className={unread ? 'channel-name-unread' : undefined}>{ch.name}</span>
+        {unread && <span className="unread-dot" />}
+      </div>
+    );
+  }
 
   return (
     <div className="chat-layout">
-      <ServerSidebar
-        servers={servers}
-        activeServerId={activeServerId}
-        onSelect={setActiveServerId}
-        onCreate={handleCreateServer}
-        onJoin={handleJoinServer}
-      />
+      {/* Only after we've actually been connected before — never during the
+          initial page-load handshake, where this would be a misleading
+          flash rather than a real "you got disconnected" signal. */}
+      {!isConnected && hasConnectedBefore && (
+        <div className="reconnect-banner" role="status">
+          <span className="reconnect-banner-dot" />
+          Yeniden bağlanmaya çalışılıyor...
+        </div>
+      )}
+
+      <ServerSidebar />
 
       {/* ── Left sidebar ── */}
       <aside className="channel-sidebar">
-        <div className="server-header">
-          <span className="server-header-name">{activeServerName || 'VoiceProgram'}</span>
-          {activeServerId && (
-            <button
-              className="invite-people-btn"
-              onClick={() => setShowInviteModal(true)}
-              title="İnsanları Davet Et"
-              aria-label="İnsanları Davet Et"
-            >
-              👤+
-            </button>
-          )}
-          {isServerOwner && (
-            <button
-              className="invite-people-btn"
-              onClick={() => setShowSettingsModal(true)}
-              title="Sunucu Ayarları"
-              aria-label="Sunucu Ayarları"
-            >
-              ⚙️
-            </button>
-          )}
-        </div>
-
-        <nav className="channel-list">
-          <div className="channel-category-row">
-            <span className="channel-category-label">Text Channels</span>
-            {isServerOwner && (
+        {activeServerId ? (
+          <>
+            <div className="server-header">
+              <span className="server-header-name">{activeServerName}</span>
               <button
-                className="channel-category-add-btn"
-                onClick={() => setCreateChannelType('text')}
-                title="Metin Kanalı Oluştur"
-                aria-label="Metin Kanalı Oluştur"
+                className="invite-people-btn"
+                onClick={() => setShowInviteModal(true)}
+                title="İnsanları Davet Et"
+                aria-label="İnsanları Davet Et"
               >
-                +
+                👤+
               </button>
-            )}
-          </div>
-          {textChannels.map((ch) => {
-            const unread = unreadChannelIds.has(ch.id);
-            return (
-              <div
-                key={ch.id}
-                className={`channel-item${ch.id === activeChannelId ? ' active' : ''}`}
-                onClick={() => handleSelectChannel(ch.id)}
-              >
-                <span className="channel-hash">#</span>
-                <span className={unread ? 'channel-name-unread' : undefined}>{ch.name}</span>
-                {unread && <span className="unread-dot" />}
-              </div>
-            );
-          })}
-
-          <div className="channel-category-row">
-            <span className="channel-category-label">Voice Channels</span>
-            {isServerOwner && (
-              <button
-                className="channel-category-add-btn"
-                onClick={() => setCreateChannelType('voice')}
-                title="Ses Kanalı Oluştur"
-                aria-label="Ses Kanalı Oluştur"
-              >
-                +
-              </button>
-            )}
-          </div>
-          {voiceChannels.map((room) => {
-            const isActive = voice.activeRoomId === room.id;
-            return (
-              <div key={room.id}>
-                <div
-                  className={`channel-item voice-channel-item${isActive ? ' active' : ''}`}
-                  onClick={() => handleVoiceRoomClick(room.id)}
+              {isServerOwner && (
+                <button
+                  className="invite-people-btn"
+                  onClick={() => setShowSettingsModal(true)}
+                  title="Sunucu Ayarları"
+                  aria-label="Sunucu Ayarları"
                 >
-                  <span className="channel-hash">🔊</span>
-                  {room.name}
+                  ⚙️
+                </button>
+              )}
+              {!isServerOwner && (
+                <button
+                  className="invite-people-btn leave-server-btn"
+                  onClick={() => setShowLeaveModal(true)}
+                  title="Sunucudan Ayrıl"
+                  aria-label="Sunucudan Ayrıl"
+                >
+                  🚪
+                </button>
+              )}
+            </div>
+
+            <nav className="channel-list">
+              {isServerOwner && (
+                <div className="channel-list-toolbar">
+                  <button
+                    className="channel-category-add-btn"
+                    onClick={() => setCreateChannelRequest({ type: 'text', parentId: null })}
+                    title="Metin Kanalı Oluştur"
+                    aria-label="Metin Kanalı Oluştur"
+                  >
+                    #+
+                  </button>
+                  <button
+                    className="channel-category-add-btn"
+                    onClick={() => setCreateChannelRequest({ type: 'voice', parentId: null })}
+                    title="Ses Kanalı Oluştur"
+                    aria-label="Ses Kanalı Oluştur"
+                  >
+                    🔊+
+                  </button>
+                  <button
+                    className="channel-category-add-btn"
+                    onClick={() => setCreateChannelRequest({ type: 'category', parentId: null })}
+                    title="Kategori Oluştur"
+                    aria-label="Kategori Oluştur"
+                  >
+                    📁+
+                  </button>
                 </div>
+              )}
 
-                {isActive && (
-                  <div className="voice-participant-list">
-                    {voice.participants.map((p) => {
-                      const color = userColor(p.user_id);
-                      const name = p.username ?? 'Unknown';
-                      const speaking = voice.speakingUserIds.has(p.user_id);
-                      const statusText = p.deafened
-                        ? 'Sağırlaştırıldı'
-                        : p.muted
-                          ? 'Mikrofon Kapalı'
-                          : speaking
-                            ? 'Konuşuyor'
-                            : 'Ses Bağlantısı Aktif';
-                      return (
-                        <div key={p.user_id} className="voice-participant">
-                          <div
-                            className={`voice-participant-avatar${speaking ? ' speaking' : ''}`}
-                            style={{ background: color }}
-                            title={name}
-                          >
-                            {initials(name)}
+              {channelGroups.map((group) => {
+                const collapsed = group.category ? collapsedIds.has(group.category.id) : false;
+                return (
+                  <div key={group.category?.id ?? 'uncategorized'} className="channel-category-group">
+                    {group.category ? (
+                      <div className="channel-category-row">
+                        <button
+                          type="button"
+                          className="channel-category-toggle"
+                          onClick={() => toggleCategory(group.category!.id)}
+                        >
+                          <span className={`category-chevron${collapsed ? ' collapsed' : ''}`}>▾</span>
+                          <span className="channel-category-label">{group.category.name}</span>
+                        </button>
+                        {isServerOwner && (
+                          <div className="channel-category-add-actions">
+                            <button
+                              className="channel-category-add-btn"
+                              onClick={() =>
+                                setCreateChannelRequest({ type: 'text', parentId: group.category!.id })
+                              }
+                              title="Bu kategoriye metin kanalı ekle"
+                              aria-label="Bu kategoriye metin kanalı ekle"
+                            >
+                              #+
+                            </button>
+                            <button
+                              className="channel-category-add-btn"
+                              onClick={() =>
+                                setCreateChannelRequest({ type: 'voice', parentId: group.category!.id })
+                              }
+                              title="Bu kategoriye ses kanalı ekle"
+                              aria-label="Bu kategoriye ses kanalı ekle"
+                            >
+                              🔊+
+                            </button>
                           </div>
-                          <div className="voice-participant-info">
-                            <span className="voice-participant-name">
-                              {name}
-                              {p.muted && (
-                                <span className="voice-status-icon mute-icon" title="Mikrofon Kapalı">
-                                  🔇
-                                </span>
-                              )}
-                              {p.deafened && (
-                                <span className="voice-status-icon deafen-icon" title="Sağırlaştırıldı">
-                                  🔕
-                                </span>
-                              )}
-                            </span>
-                            <span className="voice-participant-status">{statusText}</span>
-                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      hasCategories &&
+                      group.channels.length > 0 && (
+                        <div className="channel-category-row">
+                          <span className="channel-category-label channel-category-label-plain">Kategorisiz</span>
                         </div>
-                      );
-                    })}
-
-                    <div className="voice-controls-row">
-                      <button
-                        className={`voice-control-btn${voice.isMuted ? ' active' : ''}`}
-                        onClick={voice.toggleMute}
-                        title={voice.isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
-                        aria-label={voice.isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
-                      >
-                        {voice.isMuted ? '🔇' : '🎤'}
-                      </button>
-                      <button
-                        className={`voice-control-btn${voice.isDeafened ? ' active' : ''}`}
-                        onClick={voice.toggleDeafen}
-                        title={voice.isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
-                        aria-label={voice.isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
-                      >
-                        {voice.isDeafened ? '🔕' : '🎧'}
-                      </button>
-                    </div>
-
-                    <button
-                      className={`screen-share-btn${voice.isScreenSharing ? ' active' : ''}`}
-                      onClick={handleToggleScreenShare}
-                    >
-                      🖥️ {voice.isScreenSharing ? 'Ekranı Durdur' : 'Ekranı Paylaş'}
-                    </button>
+                      )
+                    )}
+                    {!collapsed && group.channels.map(renderChannelRow)}
                   </div>
-                )}
-              </div>
-            );
-          })}
-          {voice.error && <div className="channel-status error">⚠ {voice.error}</div>}
-        </nav>
+                );
+              })}
+              {voice.error && <div className="channel-status error">⚠ {voice.error}</div>}
+            </nav>
+          </>
+        ) : (
+          <>
+            <div className="server-header">
+              <span className="server-header-name">Direkt Mesajlar</span>
+            </div>
+
+            <nav className="channel-list">
+              {dmRooms.map((room) => {
+                const unread = unreadRoomIds.has(room.id);
+                const color = userColor(room.user_id);
+                const name = room.username ?? 'Bilinmeyen';
+                return (
+                  <div
+                    key={room.id}
+                    className={`channel-item dm-room-item${room.id === activeDmRoomId ? ' active' : ''}`}
+                    onClick={() => setActiveDmRoomId(room.id)}
+                  >
+                    <div className="dm-room-avatar-wrapper">
+                      <div className="dm-room-avatar" style={{ background: color }} title={name}>
+                        {initials(name)}
+                      </div>
+                      <span className={`dm-room-status-dot${room.user_status === 'online' ? ' online' : ''}`} />
+                    </div>
+                    <span className={unread ? 'channel-name-unread' : undefined}>{name}</span>
+                    {unread && <span className="unread-dot" />}
+                  </div>
+                );
+              })}
+              {dmRooms.length === 0 && (
+                <div className="channel-status">
+                  Henüz bir sohbetin yok — Arkadaşlar panelinden birine mesaj gönder!
+                </div>
+              )}
+            </nav>
+          </>
+        )}
 
         <div className="user-panel">
           <div
-            className="user-avatar-sm"
+            className={`user-avatar-sm${voice.activeRoomId && voice.speakingUserIds.has(user.id) ? ' speaking' : ''}`}
             style={{ background: myColor }}
             title={user.username}
           >
@@ -641,7 +543,9 @@ export default function Chat({ user, onLogout }: Props) {
           </div>
           <div className="user-info">
             <div className="user-name-sm">{user.username}</div>
-            <div className="user-status-sm">● Online</div>
+            <div className={`user-status-sm${isConnected ? '' : ' user-status-offline'}`}>
+              ● {isConnected ? 'Çevrimiçi' : 'Bağlantı Kesildi'}
+            </div>
           </div>
           <button
             className="logout-btn"
@@ -654,152 +558,159 @@ export default function Chat({ user, onLogout }: Props) {
         </div>
       </aside>
 
-      {/* ── Main area ── */}
-      <main
-        className="chat-main"
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <header className="chat-header">
-          <span className="chat-header-hash">#</span>
-          <span className="chat-header-name">{activeChannelName}</span>
-        </header>
+      {/* ── Main area — exactly one of the three renders at a time, each
+          owning its own <main> (server chat keeps drag/drop bound to the
+          channel store here; DMChatView binds its own to the DM store) ── */}
+      {activeServerId ? (
+        <>
+        <main
+          className="chat-main"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+            <header className="chat-header">
+              <span className="chat-header-hash">#</span>
+              <span className="chat-header-name">{activeChannelName}</span>
+              {activeChannelId && (
+                <SearchBar
+                  isSearching={isSearching}
+                  onSearch={(filters) => void searchChannelMessages(activeChannelId, filters)}
+                />
+              )}
+            </header>
 
-        {isDraggingFile && (
-          <div className="drag-drop-overlay">
-            <div className="drag-drop-message">📎 Fotoğrafı buraya bırak</div>
-          </div>
-        )}
+            {isDraggingFile && (
+              <div className="drag-drop-overlay">
+                <div className="drag-drop-message">📎 Fotoğrafı buraya bırak</div>
+              </div>
+            )}
 
-        {Object.keys(voice.screenShares).length > 0 && (
-          <div className="screen-share-panel">
-            {Object.entries(voice.screenShares).map(([peerId, stream]) => {
-              const sharerName =
-                peerId === user.id
-                  ? user.username
-                  : voice.participants.find((p) => p.user_id === peerId)?.username ?? 'Unknown';
-              return (
-                <div key={peerId} className="screen-share-tile">
-                  <video
-                    autoPlay
-                    playsInline
-                    muted={peerId === user.id}
-                    className="screen-share-video"
-                    ref={(el) => {
-                      if (el) el.srcObject = stream;
-                    }}
-                  />
-                  <div className="screen-share-label">{sharerName}</div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="messages-wrapper">
-          <div className="messages-list">
-            <div className="channel-intro">
-              <h2># {activeChannelName}</h2>
-              <p>Bu, #{activeChannelName} kanalının başlangıcı. Merhaba de!</p>
-            </div>
-
-            {messages.map((msg) => {
-              const color = userColor(msg.user_id);
-              const name = msg.username ?? 'Unknown';
-              return (
-                <div key={msg.id} className="message">
-                  <div
-                    className="message-avatar"
-                    style={{ background: color }}
-                    title={name}
-                  >
-                    {initials(name)}
-                  </div>
-                  <div className="message-body">
-                    <div className="message-header">
-                      <span className="message-author" style={{ color }}>
-                        {name}
-                      </span>
-                      <span className="message-timestamp">
-                        {formatTime(msg.inserted_at)}
-                      </span>
-                    </div>
-                    {msg.content && <div className="message-content">{msg.content}</div>}
-                    {msg.file_url && msg.file_type?.startsWith('image/') && (
-                      <img
-                        src={resolveFileUrl(msg.file_url)}
-                        alt="ek"
-                        className="message-attachment-image"
-                        onClick={() => setLightboxUrl(msg.file_url)}
+            {Object.keys(voice.screenShares).length > 0 && (
+              <div className="screen-share-panel">
+                {Object.entries(voice.screenShares).map(([peerId, stream]) => {
+                  const sharerName =
+                    peerId === user.id
+                      ? user.username
+                      : voice.participants.find((p) => p.user_id === peerId)?.username ?? 'Unknown';
+                  return (
+                    <div key={peerId} className="screen-share-tile">
+                      <video
+                        autoPlay
+                        playsInline
+                        muted={peerId === user.id}
+                        className="screen-share-video"
+                        ref={(el) => {
+                          if (el) el.srcObject = stream;
+                        }}
                       />
-                    )}
-                  </div>
+                      <div className="screen-share-label">{sharerName}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="messages-wrapper" ref={messagesWrapperRef} onScroll={handleMessagesScroll}>
+              <div className="messages-list">
+                {isLoadingOlderMessages && (
+                  <div className="channel-status">Eski mesajlar yükleniyor…</div>
+                )}
+                <div className="channel-intro">
+                  <h2># {activeChannelName}</h2>
+                  <p>Bu, #{activeChannelName} kanalının başlangıcı. Merhaba de!</p>
                 </div>
-              );
-            })}
-            <div ref={bottomRef} />
-          </div>
-        </div>
 
-        {channelError && (
-          <div className="channel-status error">⚠ {channelError}</div>
-        )}
-
-        <div className="message-input-area">
-          <div className="message-input-box">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/gif,image/webp"
-              style={{ display: 'none' }}
-              onChange={handleFileInputChange}
-            />
-            <button
-              className="attach-btn"
-              onClick={handleAttachClick}
-              disabled={!activeChannelId || isUploading}
-              title="Dosya Ekle"
-              aria-label="Dosya Ekle"
-            >
-              📎
-            </button>
-            <input
-              className="message-input"
-              type="text"
-              placeholder={`Message #${activeChannelName}`}
-              value={draft}
-              onChange={handleDraftChange}
-              onKeyDown={handleKeyDown}
-              maxLength={4000}
-              disabled={!activeChannelId}
-            />
-            <button
-              className="send-btn"
-              onClick={sendMessage}
-              disabled={!draft.trim() || !activeChannelId}
-              aria-label="Send message"
-              title="Send (Enter)"
-            >
-              ➤
-            </button>
-          </div>
-
-          {isUploading && <div className="upload-status">Yükleniyor…</div>}
-          {uploadError && <div className="upload-status upload-status-error">⚠ {uploadError}</div>}
-
-          {Object.keys(typingUsers).length > 0 && (
-            <div className="typing-indicator">
-              <span className="typing-dots">
-                <span />
-                <span />
-                <span />
-              </span>
-              {typingIndicatorText(Object.values(typingUsers))}
+                {messages.map((msg) => (
+                  <MessageItem
+                    key={msg.id}
+                    message={msg}
+                    currentUserId={user.id}
+                    onToggleReaction={(emoji) => toggleReaction(msg.id, emoji)}
+                    onEditMessage={(content) => editMessage(msg.id, content)}
+                    onImageClick={setLightboxUrl}
+                    isHighlighted={msg.id === highlightedMessageId}
+                  />
+                ))}
+                <div ref={bottomRef} />
+              </div>
             </div>
-          )}
-        </div>
-      </main>
+
+            {channelError && (
+              <div className="channel-status error">⚠ {channelError}</div>
+            )}
+
+            <div className="message-input-area">
+              <div className="message-input-box">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  style={{ display: 'none' }}
+                  onChange={handleFileInputChange}
+                />
+                <button
+                  className="attach-btn"
+                  onClick={handleAttachClick}
+                  disabled={!activeChannelId || isUploading}
+                  title="Dosya Ekle"
+                  aria-label="Dosya Ekle"
+                >
+                  📎
+                </button>
+                <textarea
+                  ref={textareaRef}
+                  className="message-input"
+                  rows={1}
+                  placeholder={`Message #${activeChannelName}`}
+                  value={draft}
+                  onChange={handleDraftInputChange}
+                  onKeyDown={handleKeyDown}
+                  maxLength={4000}
+                  disabled={!activeChannelId}
+                />
+                <button
+                  className="send-btn"
+                  onClick={sendMessage}
+                  disabled={!draft.trim() || !activeChannelId}
+                  aria-label="Send message"
+                  title="Send (Enter)"
+                >
+                  ➤
+                </button>
+              </div>
+
+              {isUploading && <div className="upload-status">Yükleniyor…</div>}
+              {uploadError && <div className="upload-status upload-status-error">⚠ {uploadError}</div>}
+
+              {Object.keys(typingUsers).length > 0 && (
+                <div className="typing-indicator">
+                  <span className="typing-dots">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                  {typingIndicatorText(Object.values(typingUsers))}
+                </div>
+              )}
+            </div>
+        </main>
+        {isSearchPanelOpen && (
+          <SearchResultsPanel
+            results={searchResults}
+            isSearching={isSearching}
+            onSelectMessage={(messageId) => void jumpToMessage(messageId)}
+            onClose={closeSearchPanel}
+          />
+        )}
+        </>
+      ) : activeDmRoomId ? (
+        <DMChatView currentUserId={user.id} />
+      ) : (
+        <main className="chat-main">
+          <FriendsPanel />
+        </main>
+      )}
 
       {lightboxUrl && (
         <div className="image-lightbox-overlay" onClick={() => setLightboxUrl(null)}>
@@ -851,23 +762,23 @@ export default function Chat({ user, onLogout }: Props) {
       ))}
 
       {showInviteModal && activeServerId && (
-        <InviteModal serverId={activeServerId} onClose={() => setShowInviteModal(false)} />
+        <InviteModal onClose={() => setShowInviteModal(false)} />
       )}
 
-      {showSettingsModal && activeServer && isServerOwner && (
-        <ServerSettingsModal
-          server={activeServer}
-          channels={channels}
-          onClose={() => setShowSettingsModal(false)}
-        />
+      {showSettingsModal && isServerOwner && (
+        <ServerSettingsModal onClose={() => setShowSettingsModal(false)} />
       )}
 
-      {createChannelType && activeServerId && isServerOwner && (
+      {createChannelRequest && isServerOwner && (
         <CreateChannelModal
-          serverId={activeServerId}
-          type={createChannelType}
-          onClose={() => setCreateChannelType(null)}
+          type={createChannelRequest.type}
+          parentId={createChannelRequest.parentId}
+          onClose={() => setCreateChannelRequest(null)}
         />
+      )}
+
+      {showLeaveModal && activeServerId && !isServerOwner && (
+        <LeaveServerModal onClose={() => setShowLeaveModal(false)} />
       )}
     </div>
   );

@@ -12,10 +12,16 @@ defmodule Backend.Chat.Message do
     field :content, :string
     field :file_url, :string
     field :file_type, :string
+    field :is_edited, :boolean, default: false
+    field :reactions, {:array, :map}, virtual: true, default: []
+    # DB-assigned monotonic sequence — the authoritative send order for
+    # cursor pagination (see Backend.Chat.list_messages/2). Never
+    # client-settable, so it's not part of the changeset's cast fields.
+    field :seq, :integer, read_after_writes: true
     belongs_to :user, User
     belongs_to :channel, Channel
 
-    timestamps(type: :utc_datetime, updated_at: false)
+    timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 
   def changeset(message, attrs) do
@@ -26,6 +32,15 @@ defmodule Backend.Chat.Message do
     |> validate_content_or_file()
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:channel_id)
+  end
+
+  @doc "Changeset for editing an existing message's content — always marks it as edited."
+  def edit_changeset(message, attrs) do
+    message
+    |> cast(attrs, [:content])
+    |> validate_length(:content, max: 4000)
+    |> validate_content_or_file()
+    |> put_change(:is_edited, true)
   end
 
   # A message needs text, an attachment, or both — but not neither.
