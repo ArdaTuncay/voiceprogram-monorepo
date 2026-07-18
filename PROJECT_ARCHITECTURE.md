@@ -1038,6 +1038,17 @@ it('bumps useSessionStore so App.tsx can fall back to the Auth screen', () => {
 
 **Frontend test suite sonucu (bu oturumda doğrulanmıştır):** `npm run test` → **26 test, 26 geçti** (3 dosya, düzeltmelerden sonra 3 kere art arda çalıştırıldı, flaky değil). `npm run build` (`tsc -b` + `vite build`) → 0 TypeScript hatası.
 
+### 5.2 CI/CD (GitHub Actions)
+
+`.github/workflows/ci.yml` — `main`'e her push'ta ve `main`'e açılan her pull request'te tetiklenir, **iki bağımsız paralel job**:
+
+- **`backend`** — `erlef/setup-beam` ile `backend/Dockerfile`'daki gerçek toolchain'e pinlenmiş (Elixir 1.20.2 / OTP 29.0.3, `mix.exs`'in `elixir: "~> 1.15"` alt sınırından değil), `services:` bloğuyla resmi `postgres:17` image'ından bir servis container'ı (`config/test.exs`'teki `postgres`/`postgres`/`backend_test` bilgileriyle birebir), sonra **yerelde kullanılan `mix precommit` alias'ının aynısı** (`compile --warnings-as-errors` → `credo --strict` → `deps.audit` → `hex.audit` → `deps.unlock --unused` → `format` → `dialyzer` → `test`) — CI'a özel, yerelden farklı ayrı bir adım yok.
+- **`frontend`** — `actions/setup-node` yerel dev Node sürümüne pinlenmiş (24.15.0 — repoda `.nvmrc` yok), `npm ci` (lockfile'a sadık, `npm install` değil), `npm run test`, `npm run build`.
+
+**Dialyzer PLT cache stratejisi:** `actions/cache` ile `backend/_build/dev/dialyxir_*.plt*` cache'lenir, key `backend/mix.lock`'un hash'ine bağlıdır (`${{ hashFiles('backend/mix.lock') }}`) — `mix.lock` değişmediği sürece sonraki her koşu, yerelde ölçülen ~53 saniyelik soğuk PLT inşasını atlar. Bilinçli olarak `restore-keys` fallback'i **yok**: farklı bir `mix.lock`'a ait bir PLT farklı bir bağımlılık setini temsil eder, bayat bir PLT'ye düşmek yeni bağımlılıkları sessizce gözden kaçırma riski taşır. İlk koşu (veya her `mix.lock` değişikliğinden sonraki ilk koşu) cache'te bulamaz ve soğuk inşayı normal şekilde yapar, sonra cache'ler — **bu, ilk gerçek CI koşusunda doğrulandı: backend job'ı 7m43s sürdü (çoğunluğu soğuk PLT inşası), her iki job da (`frontend` 25s) hatasız geçti.**
+
+**Branch protection henüz ayarlanmadı** — bu workflow dosyası `backend`/`frontend` job'larını çalıştırır ve başarısız olurlarsa job kendiliğinden kırmızı görünür, ama `main`'e merge'i bu iki job'ın geçmesi şartına **bağlamak** GitHub UI'dan (Settings → Branches → Branch protection rules → "Require status checks to pass before merging") ayrıca, elle yapılması gereken bir adımdır — bu dosya bunu kendi kendine yapılandıramaz.
+
 ---
 
 ## 6. Faz 10 — Yeni Eklenen Özellikler
