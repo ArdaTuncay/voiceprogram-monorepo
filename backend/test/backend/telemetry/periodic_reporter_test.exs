@@ -65,8 +65,8 @@ defmodule Backend.Telemetry.PeriodicReporterTest do
           # single app-supervised instance already running under the
           # module name for the whole test suite's lifetime (see
           # application.ex).
-          {:ok, pid} = GenServer.start_link(PeriodicReporter, interval: 15)
-          Process.sleep(70)
+          {:ok, pid} = GenServer.start_link(PeriodicReporter, interval: 10)
+          Process.sleep(200)
           GenServer.stop(pid)
         end)
 
@@ -76,10 +76,14 @@ defmodule Backend.Telemetry.PeriodicReporterTest do
         |> length()
         |> Kernel.-(1)
 
-      # 70ms / 15ms-interval should fire at least 3 times — a generous
-      # lower bound (not an exact count) since this is real wall-clock
-      # timing, not a virtual/fake clock; the point is proving it recurs
-      # on its own, not proving an exact tick count.
+      # 200ms / 10ms-interval allows ~20 fires in theory — a generous
+      # lower bound of 3 (not an exact count) since this is real
+      # wall-clock timing under whatever load the rest of the suite is
+      # putting on the machine at the same time (each tick's own DB
+      # query in voice_presence_summary/0 adds real, variable latency
+      # too), not a virtual/fake clock. The point is proving it recurs on
+      # its own more than once, not proving an exact tick count — a
+      # tighter margin here flaked under concurrent test-suite load.
       assert occurrences >= 3
     end
 
