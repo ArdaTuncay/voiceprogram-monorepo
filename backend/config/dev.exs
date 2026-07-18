@@ -92,3 +92,15 @@ config :phoenix, :plug_init_mode, :runtime
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# Local-only dev secrets (e.g. a managed TURN provider's API key for
+# testing useVoiceChannel.ts's dynamic-TURN path locally — see
+# PROJECT_ARCHITECTURE.md 4.4/4.4.1) — gitignored, never committed, safe
+# to be entirely absent (everything in dev/test so far has run without
+# needing any env var at all — see PROJECT_ARCHITECTURE.md's note on
+# this). Copy config/dev.secret.exs.example to config/dev.secret.exs and
+# fill in real values to use this; `mix phx.server` picks up changes to
+# it like any other config file (recompiles automatically).
+if File.exists?(Path.join(__DIR__, "dev.secret.exs")) do
+  import_config "dev.secret.exs"
+end

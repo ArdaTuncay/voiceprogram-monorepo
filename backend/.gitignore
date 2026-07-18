@@ -32,6 +32,8 @@ backend-*.tar
 .env
 .env.*
 !.env.example
+config/dev.secret.exs
+!config/dev.secret.exs.example
 
 # User-uploaded media (local disk storage — see Backend.Uploads).
 /priv/static/uploads/*
