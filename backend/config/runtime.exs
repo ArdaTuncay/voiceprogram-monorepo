@@ -146,6 +146,20 @@ if config_env() == :prod do
     enable_source_code_context: true,
     root_source_code_paths: [File.cwd!()]
 
+  # Structured JSON logs — prod only, deliberately not dev/test (see
+  # config.exs's :default_formatter/dev.exs, both untouched, still the
+  # human-readable text format there; JSON is unpleasant to read in a dev
+  # terminal). Existing Logger.info/warning/error call sites (rate
+  # limiting, RequireCloudflarePlug, the voice ICE diagnostics, ...) don't
+  # need any changes — LoggerJSON.Formatters.Basic reformats whatever they
+  # already log, same message text, just as a JSON object's "message"
+  # field instead of interpolated into a plain-text line. `metadata: :all`
+  # (not just [:request_id], config.exs's default) so a Render/Railway log
+  # viewer's JSON search/filter (e.g. by request_id, module, or any other
+  # metadata a call site attaches) actually has something to search across
+  # — the whole point of switching to JSON in the first place.
+  config :logger, :default_handler, formatter: {LoggerJSON.Formatters.Basic, metadata: :all}
+
   # Chat attachment storage. Local disk (the dev default, see config.exs)
   # doesn't survive across instances/redeploys on most PaaS providers, so
   # production should point at an S3-compatible bucket instead — AWS S3,

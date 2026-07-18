@@ -57,6 +57,7 @@ defmodule Backend.MixProject do
       {:hammer, "~> 7.0"},
       {:remote_ip, "~> 1.2"},
       {:sentry, "~> 13.2"},
+      {:logger_json, "~> 7.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
