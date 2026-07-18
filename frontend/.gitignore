@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # Local secrets — never commit real values. Mode files like .env.development
 # are fine to commit (Vite convention: they hold non-secret, team-shared
 # defaults); .local variants are always per-developer/secret, via *.local above.
