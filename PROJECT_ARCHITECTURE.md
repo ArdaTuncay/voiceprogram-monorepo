@@ -445,6 +445,32 @@ Bu netleştirme, CSP kararının temelini oluşturuyor: `BackendWeb.SecurityHead
 
 Test: `backend/test/backend_web/plugs/security_headers_plug_test.exs` — plug'ı izole `call/2` ile (HSTS'in `:dev`'de yokluğunu, `:prod`'da varlığını `Application.put_env(:backend, :environment, ...)` ile simüle ederek) ve gerçek endpoint pipeline'ı üzerinden hem bir JSON API isteği (`GET /api/servers`, 401) hem de `Plug.Static`'ten servis edilen bir dosya (`GET /robots.txt`, 200) için doğruluyor.
 
+### 2.7 Health Check ve Container Sertleştirme
+
+**Denetim sonucu — Dockerfile zaten iki kriteri karşılıyordu, sıfırdan yazılmadı:**
+- **Multi-stage build:** zaten vardı (`builder`/`runner` iki ayrı `FROM`, satır 15/47) — final image'a sadece `mix release`'in derlediği release kopyalanıyor (`COPY --from=builder ... /app/_build/${MIX_ENV}/rel/backend`), `mix`/`hex`/`rebar`/kaynak kod/`deps` cache'i taşınmıyor.
+- **Non-root user:** zaten vardı (`USER nobody`, satır 67) — `chown nobody /app` + `COPY --chown=nobody:root` ile.
+- **`.dockerignore`:** zaten vardı, `_build/`, `deps/`, `.git/`, `test/`, `*.md` gibi build-dışı içerikleri zaten dışlıyordu.
+- **Eksik olan tek şey — HEALTHCHECK direktifi:** yoktu, bu turda eklendi.
+
+**Frontend için ayrı bir Docker image'ı yok — doğrulandı.** `DEPLOYMENT.md`'nin Adım 5'i frontend'in (`Root Directory: frontend`, `Build Command: npm run build`, `Output Directory: dist`) doğrudan **Vercel**'e statik build olarak deploy edildiğini net biçimde söylüyor; backend (Docker) ise Render/Railway'de. Repoda `docker-compose.yml` veya benzeri bir orkestrasyon dosyası da yok.
+
+**Yeni endpoint — `GET /api/healthz` (`BackendWeb.HealthController`):**
+- **Kimlik doğrulama gerektirmiyor** — `router.ex`'te `:authenticated` pipeline'ı OLMAYAN scope'a eklendi (register/login ile aynı scope).
+- **`RequireCloudflarePlug`'un dışında tutuldu** — bu plug `endpoint.ex` seviyesinde HER isteğe (router'dan önce) uygulanıyor, router-seviyesinde bir "skip" yeterli değildi. `RequireCloudflarePlug`'a `@exempt_paths ["/api/healthz"]` eklendi: Render/Railway'in kendi health check'i Cloudflare'i hiç görmeden konteynere doğrudan istek atar — bu istisna olmasaydı, `CLOUDFLARE_ORIGIN_SECRET` prod'da set edildiği an her health check 403 alır, "unhealthy" görünüp instance'ın döngüsel olarak öldürülüp yeniden başlatılmasına yol açardı.
+- **Rate limiting'in dışında** — basitçe hiçbir `BackendWeb.RateLimiterPlug` bu route'a hiç eklenmedi (route-bazlı, opt-in bir mekanizma olduğu için "dışında tutmak" otomatik).
+- **Sadece "process ayakta" değil, gerçek DB kontrolü:** `Backend.Repo.query("SELECT 1")` — başarılıysa `200 {"status":"ok","database":"ok"}`, başarısızsa (hata döndürürse VEYA exception fırlatırsa — `rescue` ile ikisi de yakalanıyor, connection pool'da hiç bağlantı yoksa `Repo.query` bir tuple değil exception fırlatabilir) `503 {"status":"error","database":"error"}`.
+
+**Test — gerçek bir "DB koptu" simülasyonu, mock değil:** `Ecto.Adapters.SQL.Sandbox.checkin/1`'in `shared: true` modda (bu proje `async: false` testlerde bunu kullanıyor) hiçbir etkisi olmadığı görüldü — checked-out bağlantı çağıran test process'ine değil, `ConnCase`'in kurduğu ayrı bir **owner** process'ine ait, `checkin` çağıran process'in kendi (var olmayan) checkout'unu iptal ediyor, owner'ınkini değil. Çözüm: `Backend.DataCase.setup_sandbox/1` artık owner pid'ini döndürüyor (`BackendWeb.ConnCase`'in context'ine `sandbox_owner` olarak ekleniyor — geriye dönük uyumlu bir ek, mevcut hiçbir testi bozmadı, `mix precommit` ile doğrulandı), test bu pid'i `Sandbox.stop_owner/1` ile erken durdurup gerçekten "bu process için kullanılabilir bağlantı yok" durumunu üretiyor. `on_exit`'teki ikinci `stop_owner` çağrısı `Process.alive?/1` ile korunuyor (aksi halde test geçse bile `on_exit` zaten-durmuş bir process'i durdurmaya çalışıp hata verirdi).
+
+**HEALTHCHECK — curl/wget YOK, gereksiz paket eklenmedi.** Minimal `debian:bookworm-slim` runtime image'ında ne curl ne wget var, ikisi de eklenmedi (saldırı yüzeyini büyütmemek için). Bunun yerine `Backend.Release.health_check/0` (`rel/overlays/bin/healthcheck` ile çağrılıyor — proje zaten `bin/migrate` için aynı deseni kullanıyordu) `:gen_tcp` (Erlang/OTP'nin `:kernel` uygulamasının parçası, HER zaman mevcut, ekstra dep/paket gerektirmiyor) ile konteynerin kendi `GET /api/healthz`'ine ham bir HTTP isteği atıyor ve yanıtın `"HTTP/1.1 200"` ile başlayıp başlamadığına bakıyor.
+
+**Kritik güvenlik detayı — `eval` vs `rpc`:** `Backend.Release.health_check/0`, `bin/healthcheck` scripti üzerinden **`RELEASE_NAME eval`** ile çağrılıyor, `rpc` ile DEĞİL. `eval` her çağrıda kendi kısa ömürlü, ayrı bir BEAM instance'ı başlatır (çalışan sunucuya hiç dokunmaz); `rpc` ise ifadeyi ÇALIŞAN production node'unun içinde çalıştırır. Fonksiyon içindeki `System.halt/1`'in `eval` ile çağrıldığında sadece bu geçici health-check process'ini kapattığı, `rpc` ile çağrılsaydı **gerçek production sunucusunu anında öldüreceği** — kodun kendi `@doc`'unda açıkça belirtildi, ileride biri "aynı görünüyor" diyip `rpc`'ye çevirmesin diye.
+
+**`mix compile --warnings-as-errors` ve `mix precommit`:** İkisi de temiz geçti — `credo --strict` 0 bulgu, `dialyzer` 0 hata (`health_check/0`'ın hiç geri dönmediğini `@spec health_check() :: no_return()` ile açıkça belirtmek gerekti, yoksa dialyzer'ın `no_local_return` uyarısı `mix precommit`'i kırıyordu), `mix test` **87 passed** (85 eskiden + 2 yeni health check testi).
+
+**Docker build — bu makinede Docker kurulu değil, doğrulandı (`docker --version` hem Bash hem PowerShell'de "command not found"), bu yüzden imaj gerçekten build edilemedi.** Dockerfile ve `bin/healthcheck` syntax'ı elle, satır satır gözden geçirildi: `HEALTHCHECK`'in çok satırlı `\` devamı satır sonu boşluğu içermiyor (`grep -n ' $'` ile doğrulandı — bir Dockerfile'da satır sonu boşluğu devam karakterini bozar), `bin/healthcheck` `bin/migrate` ile birebir aynı, zaten-kanıtlanmış desende (`cat -A` ile LF-only satır sonları doğrulandı), `chmod +x rel/overlays/bin/*` wildcard'ı yeni dosyayı da otomatik kapsıyor (dosya adı eklemeye gerek yok). Yüksek güven var ama **gerçek bir `docker build` ile doğrulanmadı** — bu, bu turun tek eksik doğrulama adımı.
+
 ---
 
 ## 3. Veritabanı İş Mantıkları & Performans
