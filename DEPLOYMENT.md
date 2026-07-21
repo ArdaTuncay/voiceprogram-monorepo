@@ -4,14 +4,7 @@ Bu rehber, backend'i (Phoenix, Docker ile) Render veya Railway'e, frontend'i (Re
 
 ## Ön Koşullar
 
-- Proje bir GitHub deposunda olmalı (Render/Railway/Vercel hepsi git tabanlı deploy yapar). Proje şu an git deposu değil — önce şunu yapın:
-  ```bash
-  cd VoiceProgram
-  git init
-  git add .
-  git commit -m "Initial commit"
-  ```
-  Sonra GitHub'da boş bir repo oluşturup `git remote add origin <url>` + `git push -u origin main` ile gönderin.
+- Proje bir GitHub deposunda olmalı (Render/Railway/Vercel hepsi git tabanlı deploy yapar) — proje zaten bir git deposu ve GitHub'a bağlı (`git remote -v` ile doğrulayın), bu adımı atlayabilirsiniz.
 - Render **veya** Railway hesabı (backend için) — bu rehber ikisini de kapsar, birini seçin.
 - Vercel hesabı (frontend için).
 - Bir PostgreSQL veritabanı (Render/Railway'in kendi managed Postgres'i yeterli).
@@ -68,6 +61,8 @@ Backend klasöründe (`/backend`) hazır bir `Dockerfile` var — multi-stage bu
 | `POOL_SIZE` | (opsiyonel) Veritabanı bağlantı havuzu boyutu | `10` |
 | `CLOUDFLARE_ORIGIN_SECRET` | (opsiyonel ama Cloudflare kullanıyorsanız **kritik**) Cloudflare Transform Rule ile eklenen `X-Origin-Secret` header'ıyla eşleşmesi gereken gizli değer — bkz. `BackendWeb.RequireCloudflarePlug` | `openssl rand -hex 32` ile üretin |
 | `SENTRY_DSN` | (opsiyonel) Beklenmedik hataları/çökmeleri Sentry'e göndermek için | sentry.io projenizin DSN'i |
+| `METERED_TURN_USERNAME` / `METERED_TURN_CREDENTIAL` | (opsiyonel ama gerçek dünya güvenilirliği için **önerilir**) Metered.ca'nın TURN sunucusu için statik kimlik bilgisi çifti — bkz. `Backend.Turn` ve PROJECT_ARCHITECTURE.md 2.9. İkisi de set edilmezse (veya biri eksikse) backend sessizce STUN-only'ye düşer, tek başına set edilen bir tanesi de yok sayılır | Metered.ca panelinizden alın |
+| `S3_BUCKET` (+ `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL_BASE`) | (opsiyonel ama **kalıcı dosya yüklemeleri için gerekli**) Set edilmezse `Backend.Uploads` yerel diske yazar — Render/Railway'in çoğu planında konteyner yeniden başladığında/yeniden deploy edildiğinde bu diskteki dosyalar kaybolur. AWS S3, Cloudflare R2 veya DigitalOcean Spaces desteklenir (bkz. aşağıdaki "Depolama" bölümü ve `config/runtime.exs`) | R2 örneği aşağıda |
 
 **Not:** `FRONTEND_URL` girilmezse backend `CORS`'u herkese açık (`*`) bırakır ve WebSocket origin kontrolünü tamamen kapatır (`check_origin: false`) — geliştirme/test için çalışır ama üretimde **mutlaka** gerçek frontend adresinizi girin, aksi halde herhangi bir site sizin API'nize istek atabilir.
 
@@ -238,7 +233,6 @@ Bir araç/panel JSON değil ham XML istiyorsa aynı iki kural:
 
 ## Bilinen Sınırlamalar / Sıradaki Adımlar
 
-- **TURN sunucusu yok.** Şu an sadece herkese açık bir STUN sunucusu (`stun.l.google.com:19302`) kullanılıyor. Aynı yerel ağdaki veya "kolay" NAT'lar arkasındaki kullanıcılar arasında WebRTC (ses/ekran paylaşımı) sorunsuz çalışır, ama simetrik NAT veya kısıtlayıcı kurumsal/mobil ağlar arkasındaki kullanıcılar arasında bağlantı kurulamayabilir. Gerçek dünya güvenilirliği için bir TURN sunucusu (örn. [Twilio STUN/TURN](https://www.twilio.com/docs/stun-turn), veya kendi barındırdığınız [coturn](https://github.com/coturn/coturn)) eklenmesi önerilir — bu ayrı bir sonraki adım olarak planlanabilir.
-- **Davet linkleri yok** — kullanıcılar sadece kendi sunucularını oluşturabiliyor, başka birinin sunucusuna katılma mekanizması yok.
+- **TURN sunucusu opsiyonel, set edilmezse yok.** Backend Metered.ca'nın statik TURN kimlik bilgisi çiftini destekliyor (bkz. yukarıdaki `METERED_TURN_USERNAME`/`METERED_TURN_CREDENTIAL`, `Backend.Turn`, PROJECT_ARCHITECTURE.md 2.9) — bu ikisi deploy'da set edilirse gerçek bir TURN relay'i devreye girer. Set edilmezse sadece herkese açık bir STUN sunucusu (`stun.l.google.com:19302`) kullanılır: aynı yerel ağdaki veya "kolay" NAT'lar arkasındaki kullanıcılar arasında WebRTC (ses/ekran paylaşımı) sorunsuz çalışır, ama simetrik NAT veya kısıtlayıcı kurumsal/mobil ağlar arkasındaki kullanıcılar arasında bağlantı kurulamayabilir.
 - **Token yenileme yok** — oturum token'ı 24 saat sonra geçersiz olur, kullanıcı tekrar giriş yapmalı.
 - İlk deploy'da veritabanı boş olacağı için (seed script'i opsiyonel), her kullanıcı kendi sunucusunu "+" ile oluşturarak başlar.
