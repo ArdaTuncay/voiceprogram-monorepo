@@ -22,6 +22,7 @@ import DMChatView from './DMChatView';
 import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
+import StatusIndicator from './StatusIndicator';
 import {
   Volume2,
   Mic,
@@ -539,7 +540,11 @@ export default function Chat({ user, onLogout }: Props) {
                       <div className="dm-room-avatar" style={{ background: color }} title={name}>
                         {initials(name)}
                       </div>
-                      <span className={`dm-room-status-dot${room.user_status === 'online' ? ' online' : ''}`} />
+                      <StatusIndicator
+                        status={room.user_status === 'online' ? 'online' : 'offline'}
+                        size={9}
+                        className="dm-room-status-dot"
+                      />
                     </div>
                     <span className={unread ? 'channel-name-unread' : undefined}>{name}</span>
                     {unread && <span className="unread-dot" />}
@@ -760,7 +765,7 @@ export default function Chat({ user, onLogout }: Props) {
                     >
                       {initials(name)}
                     </div>
-                    <span className="online-status-dot" />
+                    <StatusIndicator status="online" size={11} className="online-status-dot" />
                   </div>
                   <span className="online-user-name">{name}</span>
                 </div>

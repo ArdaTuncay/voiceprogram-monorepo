@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Volume2, Hash, Trash2, UserX } from 'lucide-react';
+import StatusIndicator from './StatusIndicator';
 import type { Channel, Server, ServerMember, Invite } from '../types';
 import {
   updateServer,
@@ -260,9 +261,10 @@ function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }
           return (
             <li key={member.user_id} className="settings-list-item">
               <span>
-                <span
-                  className={`member-status-dot${status === 'online' ? ' online' : ''}`}
-                  title={status === 'online' ? 'Çevrimiçi' : 'Çevrimdışı'}
+                <StatusIndicator
+                  status={status === 'online' ? 'online' : 'offline'}
+                  size={8}
+                  className="member-status-dot"
                 />
                 {member.username ?? 'Bilinmeyen'}
                 {member.user_id === ownerId && <span className="settings-owner-badge">Sahip</span>}

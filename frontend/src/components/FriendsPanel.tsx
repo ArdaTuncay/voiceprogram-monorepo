@@ -5,6 +5,7 @@ import type { Friendship } from '../types';
 import { useFriendStore } from '../stores/useFriendStore';
 import { useDMStore } from '../stores/useDMStore';
 import { userColor, initials } from '../utils';
+import StatusIndicator from './StatusIndicator';
 import './FriendsPanel.css';
 
 type SubTab = 'online' | 'all' | 'pending' | 'add';
@@ -131,7 +132,11 @@ function FriendAvatar({ friendship }: { friendship: Friendship }) {
       <div className="friends-list-avatar" style={{ background: color }} title={name}>
         {initials(name)}
       </div>
-      <span className={`friends-status-dot${friendship.user_status === 'online' ? ' online' : ''}`} />
+      <StatusIndicator
+        status={friendship.user_status === 'online' ? 'online' : 'offline'}
+        size={11}
+        className="friends-status-dot"
+      />
     </div>
   );
 }

@@ -1,0 +1,36 @@
+.status-indicator {
+  display: inline-block;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border-radius: 50%;
+}
+
+.status-indicator-online {
+  background: var(--success);
+}
+
+.status-indicator-idle {
+  background: transparent;
+  border: 1.5px dashed var(--text-muted);
+}
+
+.status-indicator-in_voice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1.5px solid var(--success);
+}
+
+.status-indicator-dot {
+  width: 40%;
+  height: 40%;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.status-indicator-offline {
+  background: transparent;
+  border: 1.5px solid var(--text-muted);
+  opacity: 0.45;
+}

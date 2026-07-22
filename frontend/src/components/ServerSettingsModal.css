@@ -198,17 +198,8 @@
 }
 
 .member-status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-muted);
   margin-right: 8px;
   vertical-align: middle;
-}
-
-.member-status-dot.online {
-  background: var(--success);
 }
 
 .invite-code {

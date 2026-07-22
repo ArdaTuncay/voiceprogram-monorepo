@@ -248,15 +248,6 @@
   position: absolute;
   bottom: -2px;
   right: -2px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  border: 2px solid var(--bg-secondary);
-}
-
-.dm-room-status-dot.online {
-  background: var(--success);
 }
 
 /* ── User panel ── */
@@ -1135,11 +1126,6 @@
   position: absolute;
   bottom: -2px;
   right: -2px;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--success);
-  border: 2.5px solid var(--bg-secondary);
 }
 
 .online-user-name {
