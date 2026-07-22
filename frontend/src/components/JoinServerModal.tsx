@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
 import './JoinServerModal.css';
@@ -45,7 +46,7 @@ export default function JoinServerModal({ onClose }: Props) {
           placeholder="Davet kodu"
           disabled={submitting}
         />
-        {error && <div className="join-error">⚠ {error}</div>}
+        {error && <div className="join-error"><AlertTriangle size={14} /> {error}</div>}
         <button className="join-submit-btn" type="submit" disabled={submitting || !code.trim()}>
           {submitting ? 'Katılınıyor…' : 'Katıl'}
         </button>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { createInvite } from '../services/api';
 import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
@@ -46,7 +47,7 @@ export default function InviteModal({ onClose }: Props) {
       </p>
 
       {loading && <div className="invite-status">Davet kodu oluşturuluyor…</div>}
-      {error && <div className="invite-status invite-error">⚠ {error}</div>}
+      {error && <div className="invite-status invite-error"><AlertTriangle size={14} /> {error}</div>}
 
       {!loading && !error && (
         <div className="invite-code-row">

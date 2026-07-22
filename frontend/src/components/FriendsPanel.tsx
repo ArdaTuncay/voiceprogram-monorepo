@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
+import { AlertTriangle, MessageCircle, Trash2, Check, X } from 'lucide-react';
 import type { Friendship } from '../types';
 import { useFriendStore } from '../stores/useFriendStore';
 import { useDMStore } from '../stores/useDMStore';
@@ -80,8 +81,8 @@ export default function FriendsPanel() {
       </div>
 
       <div className="friends-content">
-        {error && <div className="friends-error">⚠ {error}</div>}
-        {messageError && <div className="friends-error">⚠ {messageError}</div>}
+        {error && <div className="friends-error"><AlertTriangle size={14} /> {error}</div>}
+        {messageError && <div className="friends-error"><AlertTriangle size={14} /> {messageError}</div>}
 
         {loading ? (
           <div className="friends-loading">Yükleniyor…</div>
@@ -169,7 +170,7 @@ function FriendList({
             title="Mesaj Gönder"
             aria-label={`${f.username ?? 'kullanıcıya'} mesaj gönder`}
           >
-            💬
+            <MessageCircle size={16} />
           </button>
           <button
             className="friends-remove-btn"
@@ -178,7 +179,7 @@ function FriendList({
             title="Arkadaşlıktan Çıkar"
             aria-label={`${f.username ?? 'kullanıcıyı'} arkadaşlıktan çıkar`}
           >
-            🗑️
+            <Trash2 size={14} />
           </button>
         </li>
       ))}
@@ -222,7 +223,7 @@ function PendingList({
                   title="Kabul Et"
                   aria-label={`${f.username ?? 'kullanıcının'} isteğini kabul et`}
                 >
-                  ✓
+                  <Check size={14} />
                 </button>
                 <button
                   className="friends-remove-btn"
@@ -231,7 +232,7 @@ function PendingList({
                   title="Reddet"
                   aria-label={`${f.username ?? 'kullanıcının'} isteğini reddet`}
                 >
-                  ✕
+                  <X size={14} />
                 </button>
               </li>
             ))}
@@ -257,7 +258,7 @@ function PendingList({
                   title="İsteği İptal Et"
                   aria-label={`${f.username ?? 'kullanıcıya'} gönderilen isteği iptal et`}
                 >
-                  ✕
+                  <X size={14} />
                 </button>
               </li>
             ))}
@@ -312,8 +313,8 @@ function AddFriendForm() {
           {submitting ? 'Gönderiliyor…' : 'İstek Gönder'}
         </button>
       </form>
-      {error && <div className="friends-error">⚠ {error}</div>}
-      {success && <div className="add-friend-success">✓ {success}</div>}
+      {error && <div className="friends-error"><AlertTriangle size={14} /> {error}</div>}
+      {success && <div className="add-friend-success"><Check size={14} /> {success}</div>}
     </div>
   );
 }

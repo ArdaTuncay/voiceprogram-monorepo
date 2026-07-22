@@ -77,7 +77,7 @@
   background: var(--accent);
   border: none;
   border-radius: 4px;
-  color: var(--interactive-active);
+  color: var(--on-accent);
   cursor: pointer;
   font-size: 16px;
   font-weight: 600;

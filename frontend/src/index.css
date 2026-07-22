@@ -16,10 +16,15 @@
   /* Accent is now tonal, not chromatic: highest-contrast neutral, not a color */
   --accent:       #f5f5f5;  /* neutral-100 */
   --accent-hover: #e5e5e5;  /* neutral-200 */
+  /* Accent surfaces are now light, so foreground content on them needs a dark
+     token instead of the light --interactive-active/--text-heading used
+     everywhere else — 16.4:1 contrast against --accent, 14.2:1 against --accent-hover */
+  --on-accent: var(--bg-primary);
 
   /* Functional colors stay desaturated/matte but keep their hue for meaning */
   --success: #5c9a72;
   --danger:  #cc655c;
+  --danger-hover: #c0473c;  /* --danger, HSL lightness -15% (58% -> 49.3%), same hue/saturation */
   --warning: #c9974a;
 
   font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, system-ui, -apple-system, sans-serif;

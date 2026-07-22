@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
+import { Search, Paperclip } from 'lucide-react';
 import type { SearchFilters } from '../types';
 
 interface Props {
@@ -33,7 +34,7 @@ export default function SearchBar({ isSearching, onSearch }: Props) {
 
   return (
     <div className="search-bar">
-      <span className="search-bar-icon">🔍</span>
+      <span className="search-bar-icon"><Search size={14} /></span>
       <input
         type="text"
         className="search-bar-input"
@@ -50,7 +51,7 @@ export default function SearchBar({ isSearching, onSearch }: Props) {
         aria-label="Sadece dosyalı mesajlar"
         aria-pressed={hasFileOnly}
       >
-        📎
+        <Paperclip size={13} />
       </button>
       {isSearching && <span className="search-bar-spinner" aria-hidden="true" />}
     </div>

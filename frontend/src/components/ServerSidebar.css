@@ -63,13 +63,13 @@
 .server-icon:hover {
   border-radius: 16px;
   background: var(--accent);
-  color: var(--interactive-active);
+  color: var(--on-accent);
 }
 
 .server-icon.active {
   border-radius: 16px;
   background: var(--accent);
-  color: var(--interactive-active);
+  color: var(--on-accent);
 }
 
 .server-create-area {
@@ -99,5 +99,5 @@
 
 .server-icon-join:hover {
   background: var(--accent);
-  color: var(--interactive-active);
+  color: var(--on-accent);
 }

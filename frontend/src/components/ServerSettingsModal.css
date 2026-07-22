@@ -59,7 +59,7 @@
   background: var(--accent);
   border: none;
   border-radius: 4px;
-  color: var(--interactive-active);
+  color: var(--on-accent);
   font-size: 14px;
   font-weight: 600;
   padding: 0 16px;
@@ -160,7 +160,7 @@
 .settings-owner-badge {
   display: inline-block;
   background: var(--accent);
-  color: var(--interactive-active);
+  color: var(--on-accent);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;

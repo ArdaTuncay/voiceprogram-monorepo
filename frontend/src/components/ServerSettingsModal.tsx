@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AlertTriangle, Volume2, Hash, Trash2, UserX } from 'lucide-react';
 import type { Channel, Server, ServerMember, Invite } from '../types';
 import {
   updateServer,
@@ -131,7 +132,7 @@ function GeneralTab({ server, onClose }: { server: Server; onClose: () => void }
         </button>
       </div>
 
-      {error && <div className="settings-error">⚠ {error}</div>}
+      {error && <div className="settings-error"><AlertTriangle size={14} /> {error}</div>}
 
       <div className="settings-danger-zone">
         <h4 className="settings-danger-title">Tehlikeli Bölge</h4>
@@ -182,12 +183,12 @@ function ChannelsTab({ channels }: { channels: Channel[] }) {
 
   return (
     <div className="settings-section">
-      {error && <div className="settings-error">⚠ {error}</div>}
+      {error && <div className="settings-error"><AlertTriangle size={14} /> {error}</div>}
       <ul className="settings-list">
         {channels.map((channel) => (
           <li key={channel.id} className="settings-list-item">
             <span>
-              {channel.type === 'voice' ? '🔊' : '#'} {channel.name}
+              {channel.type === 'voice' ? <Volume2 size={14} /> : <Hash size={14} />} {channel.name}
             </span>
             <button
               className="settings-icon-btn"
@@ -196,7 +197,7 @@ function ChannelsTab({ channels }: { channels: Channel[] }) {
               title="Kanalı Sil"
               aria-label={`${channel.name} kanalını sil`}
             >
-              🗑️
+              <Trash2 size={14} />
             </button>
           </li>
         ))}
@@ -252,7 +253,7 @@ function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }
 
   return (
     <div className="settings-section">
-      {error && <div className="settings-error">⚠ {error}</div>}
+      {error && <div className="settings-error"><AlertTriangle size={14} /> {error}</div>}
       <ul className="settings-list">
         {members.map((member) => {
           const status = memberStatuses[member.user_id] ?? member.status;
@@ -274,7 +275,7 @@ function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }
                   title="Sunucudan At"
                   aria-label={`${member.username ?? 'kullanıcıyı'} sunucudan at`}
                 >
-                  🚫
+                  <UserX size={14} />
                 </button>
               )}
             </li>
@@ -343,7 +344,7 @@ function InvitesTab({ serverId }: { serverId: string }) {
 
   return (
     <div className="settings-section">
-      {error && <div className="settings-error">⚠ {error}</div>}
+      {error && <div className="settings-error"><AlertTriangle size={14} /> {error}</div>}
       <ul className="settings-list">
         {invites.map((invite) => {
           const expired = isInviteExpired(invite);
@@ -373,7 +374,7 @@ function InvitesTab({ serverId }: { serverId: string }) {
                 title="Daveti İptal Et"
                 aria-label={`${invite.code} kodlu daveti iptal et`}
               >
-                🗑️
+                <Trash2 size={14} />
               </button>
             </li>
           );

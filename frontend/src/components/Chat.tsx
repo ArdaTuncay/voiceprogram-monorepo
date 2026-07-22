@@ -22,6 +22,27 @@ import DMChatView from './DMChatView';
 import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
+import {
+  Volume2,
+  Mic,
+  MicOff,
+  Headphones,
+  VolumeX,
+  ScreenShare,
+  ScreenShareOff,
+  Hash,
+  UserPlus,
+  Settings,
+  DoorOpen,
+  LogOut,
+  ChevronDown,
+  AlertTriangle,
+  Circle,
+  Paperclip,
+  Send,
+  FolderPlus,
+  RefreshCw,
+} from 'lucide-react';
 import './Chat.css';
 
 interface Props {
@@ -266,7 +287,7 @@ export default function Chat({ user, onLogout }: Props) {
             className={`channel-item voice-channel-item${isActive ? ' active' : ''}`}
             onClick={() => handleVoiceRoomClick(ch.id)}
           >
-            <span className="channel-hash">🔊</span>
+            <span className="channel-hash"><Volume2 size={18} /></span>
             {ch.name}
           </div>
 
@@ -278,7 +299,7 @@ export default function Chat({ user, onLogout }: Props) {
                 const speaking = voice.speakingUserIds.has(p.user_id);
                 const reconnecting = voice.reconnectingPeerIds.has(p.user_id);
                 const statusText = reconnecting
-                  ? '🔄 Yeniden Bağlanıyor...'
+                  ? 'Yeniden Bağlanıyor...'
                   : p.deafened
                     ? 'Sağırlaştırıldı'
                     : p.muted
@@ -300,17 +321,17 @@ export default function Chat({ user, onLogout }: Props) {
                         {name}
                         {p.muted && (
                           <span className="voice-status-icon mute-icon" title="Mikrofon Kapalı">
-                            🔇
+                            <MicOff size={10} />
                           </span>
                         )}
                         {p.deafened && (
                           <span className="voice-status-icon deafen-icon" title="Sağırlaştırıldı">
-                            🔕
+                            <VolumeX size={10} />
                           </span>
                         )}
                       </span>
                       <span className={`voice-participant-status${reconnecting ? ' reconnecting' : ''}`}>
-                        {statusText}
+                        {reconnecting && <RefreshCw size={10} />} {statusText}
                       </span>
                     </div>
                   </div>
@@ -324,7 +345,7 @@ export default function Chat({ user, onLogout }: Props) {
                   title={voice.isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
                   aria-label={voice.isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
                 >
-                  {voice.isMuted ? '🔇' : '🎤'}
+                  {voice.isMuted ? <MicOff size={16} /> : <Mic size={16} />}
                 </button>
                 <button
                   className={`voice-control-btn${voice.isDeafened ? ' active' : ''}`}
@@ -332,7 +353,7 @@ export default function Chat({ user, onLogout }: Props) {
                   title={voice.isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
                   aria-label={voice.isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
                 >
-                  {voice.isDeafened ? '🔕' : '🎧'}
+                  {voice.isDeafened ? <VolumeX size={16} /> : <Headphones size={16} />}
                 </button>
               </div>
 
@@ -340,7 +361,8 @@ export default function Chat({ user, onLogout }: Props) {
                 className={`screen-share-btn${voice.isScreenSharing ? ' active' : ''}`}
                 onClick={handleToggleScreenShare}
               >
-                🖥️ {voice.isScreenSharing ? 'Ekranı Durdur' : 'Ekranı Paylaş'}
+                {voice.isScreenSharing ? <ScreenShareOff size={14} /> : <ScreenShare size={14} />}{' '}
+                {voice.isScreenSharing ? 'Ekranı Durdur' : 'Ekranı Paylaş'}
               </button>
             </div>
           )}
@@ -355,7 +377,7 @@ export default function Chat({ user, onLogout }: Props) {
         className={`channel-item${ch.id === activeChannelId ? ' active' : ''}`}
         onClick={() => selectChannel(ch.id)}
       >
-        <span className="channel-hash">#</span>
+        <span className="channel-hash"><Hash size={18} /></span>
         <span className={unread ? 'channel-name-unread' : undefined}>{ch.name}</span>
         {unread && <span className="unread-dot" />}
       </div>
@@ -388,7 +410,7 @@ export default function Chat({ user, onLogout }: Props) {
                 title="İnsanları Davet Et"
                 aria-label="İnsanları Davet Et"
               >
-                👤+
+                <UserPlus size={16} />
               </button>
               {isServerOwner && (
                 <button
@@ -397,7 +419,7 @@ export default function Chat({ user, onLogout }: Props) {
                   title="Sunucu Ayarları"
                   aria-label="Sunucu Ayarları"
                 >
-                  ⚙️
+                  <Settings size={16} />
                 </button>
               )}
               {!isServerOwner && (
@@ -407,7 +429,7 @@ export default function Chat({ user, onLogout }: Props) {
                   title="Sunucudan Ayrıl"
                   aria-label="Sunucudan Ayrıl"
                 >
-                  🚪
+                  <DoorOpen size={16} />
                 </button>
               )}
             </div>
@@ -421,7 +443,7 @@ export default function Chat({ user, onLogout }: Props) {
                     title="Metin Kanalı Oluştur"
                     aria-label="Metin Kanalı Oluştur"
                   >
-                    #+
+                    <Hash size={14} />
                   </button>
                   <button
                     className="channel-category-add-btn"
@@ -429,7 +451,7 @@ export default function Chat({ user, onLogout }: Props) {
                     title="Ses Kanalı Oluştur"
                     aria-label="Ses Kanalı Oluştur"
                   >
-                    🔊+
+                    <Volume2 size={14} />
                   </button>
                   <button
                     className="channel-category-add-btn"
@@ -437,7 +459,7 @@ export default function Chat({ user, onLogout }: Props) {
                     title="Kategori Oluştur"
                     aria-label="Kategori Oluştur"
                   >
-                    📁+
+                    <FolderPlus size={14} />
                   </button>
                 </div>
               )}
@@ -453,7 +475,7 @@ export default function Chat({ user, onLogout }: Props) {
                           className="channel-category-toggle"
                           onClick={() => toggleCategory(group.category!.id)}
                         >
-                          <span className={`category-chevron${collapsed ? ' collapsed' : ''}`}>▾</span>
+                          <ChevronDown size={12} className={`category-chevron${collapsed ? ' collapsed' : ''}`} />
                           <span className="channel-category-label">{group.category.name}</span>
                         </button>
                         {isServerOwner && (
@@ -466,7 +488,7 @@ export default function Chat({ user, onLogout }: Props) {
                               title="Bu kategoriye metin kanalı ekle"
                               aria-label="Bu kategoriye metin kanalı ekle"
                             >
-                              #+
+                              <Hash size={12} />
                             </button>
                             <button
                               className="channel-category-add-btn"
@@ -476,7 +498,7 @@ export default function Chat({ user, onLogout }: Props) {
                               title="Bu kategoriye ses kanalı ekle"
                               aria-label="Bu kategoriye ses kanalı ekle"
                             >
-                              🔊+
+                              <Volume2 size={12} />
                             </button>
                           </div>
                         )}
@@ -493,7 +515,7 @@ export default function Chat({ user, onLogout }: Props) {
                   </div>
                 );
               })}
-              {voice.error && <div className="channel-status error">⚠ {voice.error}</div>}
+              {voice.error && <div className="channel-status error"><AlertTriangle size={14} /> {voice.error}</div>}
             </nav>
           </>
         ) : (
@@ -544,7 +566,7 @@ export default function Chat({ user, onLogout }: Props) {
           <div className="user-info">
             <div className="user-name-sm">{user.username}</div>
             <div className={`user-status-sm${isConnected ? '' : ' user-status-offline'}`}>
-              ● {isConnected ? 'Çevrimiçi' : 'Bağlantı Kesildi'}
+              <Circle size={8} fill="currentColor" stroke="none" /> {isConnected ? 'Çevrimiçi' : 'Bağlantı Kesildi'}
             </div>
           </div>
           <button
@@ -553,7 +575,7 @@ export default function Chat({ user, onLogout }: Props) {
             title="Log out"
             aria-label="Log out"
           >
-            ↪
+            <LogOut size={16} />
           </button>
         </div>
       </aside>
@@ -570,7 +592,7 @@ export default function Chat({ user, onLogout }: Props) {
           onDrop={handleDrop}
         >
             <header className="chat-header">
-              <span className="chat-header-hash">#</span>
+              <span className="chat-header-hash"><Hash size={20} /></span>
               <span className="chat-header-name">{activeChannelName}</span>
               {activeChannelId && (
                 <SearchBar
@@ -582,7 +604,7 @@ export default function Chat({ user, onLogout }: Props) {
 
             {isDraggingFile && (
               <div className="drag-drop-overlay">
-                <div className="drag-drop-message">📎 Fotoğrafı buraya bırak</div>
+                <div className="drag-drop-message"><Paperclip size={18} /> Fotoğrafı buraya bırak</div>
               </div>
             )}
 
@@ -617,7 +639,7 @@ export default function Chat({ user, onLogout }: Props) {
                   <div className="channel-status">Eski mesajlar yükleniyor…</div>
                 )}
                 <div className="channel-intro">
-                  <h2># {activeChannelName}</h2>
+                  <h2><Hash size={28} /> {activeChannelName}</h2>
                   <p>Bu, #{activeChannelName} kanalının başlangıcı. Merhaba de!</p>
                 </div>
 
@@ -637,7 +659,7 @@ export default function Chat({ user, onLogout }: Props) {
             </div>
 
             {channelError && (
-              <div className="channel-status error">⚠ {channelError}</div>
+              <div className="channel-status error"><AlertTriangle size={14} /> {channelError}</div>
             )}
 
             <div className="message-input-area">
@@ -656,7 +678,7 @@ export default function Chat({ user, onLogout }: Props) {
                   title="Dosya Ekle"
                   aria-label="Dosya Ekle"
                 >
-                  📎
+                  <Paperclip size={18} />
                 </button>
                 <textarea
                   ref={textareaRef}
@@ -676,12 +698,12 @@ export default function Chat({ user, onLogout }: Props) {
                   aria-label="Send message"
                   title="Send (Enter)"
                 >
-                  ➤
+                  <Send size={18} />
                 </button>
               </div>
 
               {isUploading && <div className="upload-status">Yükleniyor…</div>}
-              {uploadError && <div className="upload-status upload-status-error">⚠ {uploadError}</div>}
+              {uploadError && <div className="upload-status upload-status-error"><AlertTriangle size={14} /> {uploadError}</div>}
 
               {Object.keys(typingUsers).length > 0 && (
                 <div className="typing-indicator">

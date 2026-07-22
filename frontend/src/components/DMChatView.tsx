@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { KeyboardEvent, ChangeEvent, DragEvent, UIEvent } from 'react';
+import { AtSign, Paperclip, Send, AlertTriangle } from 'lucide-react';
 import { resolveFileUrl } from '../config';
 import { useDMStore } from '../stores/useDMStore';
 import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
@@ -136,7 +137,7 @@ export default function DMChatView({ currentUserId }: Props) {
       onDrop={handleDrop}
     >
       <header className="chat-header">
-        <span className="chat-header-hash">@</span>
+        <span className="chat-header-hash"><AtSign size={20} /></span>
         <span className="chat-header-name">{otherName}</span>
         {activeRoomId && (
           <SearchBar isSearching={isSearching} onSearch={(filters) => void searchDmMessages(activeRoomId, filters)} />
@@ -145,7 +146,7 @@ export default function DMChatView({ currentUserId }: Props) {
 
       {isDraggingFile && (
         <div className="drag-drop-overlay">
-          <div className="drag-drop-message">📎 Fotoğrafı buraya bırak</div>
+          <div className="drag-drop-message"><Paperclip size={18} /> Fotoğrafı buraya bırak</div>
         </div>
       )}
 
@@ -155,7 +156,7 @@ export default function DMChatView({ currentUserId }: Props) {
             <div className="channel-status">Eski mesajlar yükleniyor…</div>
           )}
           <div className="channel-intro">
-            <h2>@ {otherName}</h2>
+            <h2><AtSign size={28} /> {otherName}</h2>
             <p>Bu, {otherName} ile olan özel sohbetinin başlangıcı. Merhaba de!</p>
           </div>
 
@@ -190,7 +191,7 @@ export default function DMChatView({ currentUserId }: Props) {
             title="Dosya Ekle"
             aria-label="Dosya Ekle"
           >
-            📎
+            <Paperclip size={18} />
           </button>
           <textarea
             ref={textareaRef}
@@ -209,12 +210,12 @@ export default function DMChatView({ currentUserId }: Props) {
             aria-label="Send message"
             title="Send (Enter)"
           >
-            ➤
+            <Send size={18} />
           </button>
         </div>
 
         {isUploading && <div className="upload-status">Yükleniyor…</div>}
-        {uploadError && <div className="upload-status upload-status-error">⚠ {uploadError}</div>}
+        {uploadError && <div className="upload-status upload-status-error"><AlertTriangle size={14} /> {uploadError}</div>}
 
         {typingUsername && (
           <div className="typing-indicator">

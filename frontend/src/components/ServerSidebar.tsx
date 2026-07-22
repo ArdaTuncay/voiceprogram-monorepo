@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Home, Plus, LogIn } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
 import JoinServerModal from './JoinServerModal';
 import CreateServerModal from './CreateServerModal';
@@ -31,7 +32,7 @@ export default function ServerSidebar() {
         title="Direkt Mesajlar"
         aria-label="Direkt Mesajlar"
       >
-        🏠
+        <Home size={20} />
       </button>
 
       <div className="server-sidebar-divider" />
@@ -57,7 +58,7 @@ export default function ServerSidebar() {
           title="Sunucu Oluştur"
           aria-label="Sunucu Oluştur"
         >
-          +
+          <Plus size={24} />
         </button>
 
         <button
@@ -66,7 +67,7 @@ export default function ServerSidebar() {
           title="Bir Sunucuya Katıl"
           aria-label="Bir Sunucuya Katıl"
         >
-          ➜
+          <LogIn size={18} />
         </button>
       </div>
 

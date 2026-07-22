@@ -410,6 +410,7 @@
 .search-bar-filter-btn.active {
   opacity: 1;
   background: var(--accent);
+  color: var(--on-accent);
 }
 
 .search-bar-spinner {
@@ -688,7 +689,7 @@
 
 .message-edit-save-btn {
   background: var(--accent);
-  color: var(--interactive-active);
+  color: var(--on-accent);
 }
 
 .message-edit-save-btn:disabled {
@@ -1277,7 +1278,7 @@
 }
 
 .voice-control-btn.active:hover {
-  background: #d84040;
+  background: var(--danger-hover);
 }
 
 /* ── Unread channel indicator ── */
@@ -1322,7 +1323,7 @@
 }
 
 .screen-share-btn.active:hover {
-  background: #d84040;
+  background: var(--danger-hover);
 }
 
 .screen-share-panel {
@@ -1334,6 +1335,7 @@
   flex-shrink: 0;
 }
 
+/* background: #000 below is bilinçli olarak tema token'larından bağımsız — video letterbox zemini */
 .screen-share-tile {
   position: relative;
   width: 320px;
