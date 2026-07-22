@@ -94,7 +94,7 @@
 }
 
 .leave-server-btn:hover {
-  color: #fff;
+  color: var(--interactive-active);
   background: var(--danger);
 }
 
@@ -240,7 +240,7 @@
   justify-content: center;
   font-size: 11px;
   font-weight: 700;
-  color: #fff;
+  color: var(--interactive-active);
   text-transform: uppercase;
 }
 
@@ -279,7 +279,7 @@
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
-  color: #fff;
+  color: var(--interactive-active);
   flex-shrink: 0;
   text-transform: uppercase;
 }
@@ -584,7 +584,7 @@
   justify-content: center;
   font-size: 16px;
   font-weight: 700;
-  color: #fff;
+  color: var(--interactive-active);
   flex-shrink: 0;
   margin-top: 4px;
   text-transform: uppercase;
@@ -688,7 +688,7 @@
 
 .message-edit-save-btn {
   background: var(--accent);
-  color: #fff;
+  color: var(--interactive-active);
 }
 
 .message-edit-save-btn:disabled {
@@ -1026,7 +1026,7 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 600;
-  color: #fff;
+  color: var(--interactive-active);
 }
 
 .search-result-body {
@@ -1126,7 +1126,7 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  color: #fff;
+  color: var(--interactive-active);
   text-transform: uppercase;
 }
 
@@ -1178,7 +1178,7 @@
   justify-content: center;
   font-size: 10px;
   font-weight: 700;
-  color: #fff;
+  color: var(--interactive-active);
   text-transform: uppercase;
   flex-shrink: 0;
   box-shadow: 0 0 0 2px var(--success);
@@ -1273,7 +1273,7 @@
 
 .voice-control-btn.active {
   background: var(--danger);
-  color: #fff;
+  color: var(--interactive-active);
 }
 
 .voice-control-btn.active:hover {
@@ -1318,7 +1318,7 @@
 
 .screen-share-btn.active {
   background: var(--danger);
-  color: #fff;
+  color: var(--interactive-active);
 }
 
 .screen-share-btn.active:hover {
@@ -1359,7 +1359,7 @@
   padding: 2px 8px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.6);
-  color: #fff;
+  color: var(--interactive-active);
   font-size: 12px;
   font-weight: 600;
 }

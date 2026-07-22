@@ -35,7 +35,7 @@
   background: var(--accent);
   border: none;
   border-radius: 4px;
-  color: #fff;
+  color: var(--interactive-active);
   font-size: 14px;
   font-weight: 600;
   padding: 0 16px;

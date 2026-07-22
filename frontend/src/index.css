@@ -1,24 +1,26 @@
 :root {
-  /* Discord dark theme palette */
-  --bg-primary:   #36393f;
-  --bg-secondary: #2f3136;
-  --bg-tertiary:  #202225;
-  --bg-input:     #40444b;
+  /* Monochrome matte gray palette (neutral scale, no blue/slate tint) */
+  --bg-primary:   #171717;  /* neutral-900 */
+  --bg-secondary: #262626;  /* neutral-800 */
+  --bg-tertiary:  #0a0a0a;  /* neutral-950 */
+  --bg-input:     #404040;  /* neutral-700 */
 
-  --text-normal:  #dcddde;
-  --text-muted:   #72767d;
-  --text-heading: #ffffff;
+  --text-normal:  #e5e5e5;  /* neutral-200 */
+  --text-muted:   #a3a3a3;  /* neutral-400 */
+  --text-heading: #fafafa;  /* neutral-50 */
 
-  --interactive-normal: #b9bbbe;
-  --interactive-hover:  #dcddde;
-  --interactive-active: #ffffff;
+  --interactive-normal: #d4d4d4;  /* neutral-300 */
+  --interactive-hover:  #e5e5e5;  /* neutral-200 */
+  --interactive-active: #fafafa;  /* neutral-50 */
 
-  --accent:       #7289da;
-  --accent-hover: #677bc4;
+  /* Accent is now tonal, not chromatic: highest-contrast neutral, not a color */
+  --accent:       #f5f5f5;  /* neutral-100 */
+  --accent-hover: #e5e5e5;  /* neutral-200 */
 
-  --success: #43b581;
-  --danger:  #f04747;
-  --warning: #faa61a;
+  /* Functional colors stay desaturated/matte but keep their hue for meaning */
+  --success: #5c9a72;
+  --danger:  #cc655c;
+  --warning: #c9974a;
 
   font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, system-ui, -apple-system, sans-serif;
   font-size: 16px;
