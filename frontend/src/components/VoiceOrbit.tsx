@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { MicOff, VolumeX, RefreshCw } from 'lucide-react';
+import { circularLayout } from '../utils/circularLayout';
 import './VoiceOrbit.css';
 
 export interface OrbitParticipant {
@@ -64,16 +65,11 @@ export default function VoiceOrbit({ participants, maxOrbitSize = 8 }: Props) {
   const n = participants.length;
 
   const positions = useMemo(() => {
-    if (n <= 1) return [];
-    const angleStep = (2 * Math.PI) / n;
     const center = ORBIT_CONTAINER_SIZE / 2;
-    return Array.from({ length: n }, (_, i) => {
-      const angle = i * angleStep - Math.PI / 2; // start at the top, go clockwise
-      return {
-        x: center + ORBIT_RADIUS * Math.cos(angle),
-        y: center + ORBIT_RADIUS * Math.sin(angle),
-      };
-    });
+    return circularLayout({ count: n, radius: ORBIT_RADIUS }).map(({ x, y }) => ({
+      x: center + x,
+      y: center + y,
+    }));
   }, [n]);
 
   if (n <= 1) {

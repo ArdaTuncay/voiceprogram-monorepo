@@ -1,19 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Home, Plus, LogIn } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
+import { serverInitials } from '../utils';
 import JoinServerModal from './JoinServerModal';
 import CreateServerModal from './CreateServerModal';
+import RadialServerSwitcher from './RadialServerSwitcher';
 import './ServerSidebar.css';
-
-function serverInitials(name: string): string {
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join('');
-  return (initials || '?').toUpperCase();
-}
 
 export default function ServerSidebar() {
   const servers = useServerStore((s) => s.servers);
@@ -23,10 +15,12 @@ export default function ServerSidebar() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const homeButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
     <aside className="server-sidebar">
       <button
+        ref={homeButtonRef}
         className={`server-icon home-icon${activeServerId === null ? ' active' : ''}`}
         onClick={() => setActiveServerId(null)}
         title="Direkt Mesajlar"
@@ -74,6 +68,16 @@ export default function ServerSidebar() {
       {showCreateModal && <CreateServerModal onClose={() => setShowCreateModal(false)} />}
 
       {showJoinModal && <JoinServerModal onClose={() => setShowJoinModal(false)} />}
+
+      {/* Optional layer on top of the plain rail above — long-press the
+          home button to quick-switch servers radially. Doesn't touch any
+          of the rail's own rendering/behavior. */}
+      <RadialServerSwitcher
+        servers={servers}
+        activeServerId={activeServerId}
+        onSelectServer={setActiveServerId}
+        triggerRef={homeButtonRef}
+      />
     </aside>
   );
 }

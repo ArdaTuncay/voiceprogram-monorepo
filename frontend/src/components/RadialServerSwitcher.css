@@ -1,0 +1,59 @@
+.radial-switcher-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.radial-switcher-panel {
+  position: fixed;
+  transform: translate(-50%, -50%);
+}
+
+.radial-switcher-item {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-normal);
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: background 0.12s, color 0.12s, transform 0.12s;
+}
+
+.radial-switcher-panel > .radial-switcher-item {
+  position: absolute;
+}
+
+.radial-switcher-item:hover,
+.radial-switcher-item:focus-visible {
+  background: var(--accent);
+  color: var(--on-accent);
+  outline: none;
+  transform: scale(1.08);
+}
+
+.radial-switcher-item.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 0 0 2px var(--accent-hover), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.radial-switcher-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 48px);
+  gap: 10px;
+  max-width: 232px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
