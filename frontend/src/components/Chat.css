@@ -1178,7 +1178,8 @@
  * class, not just the voice-room participant list (see `.user-avatar-sm`
  * below, for the local user's own avatar in the bottom profile panel). */
 .voice-participant-avatar.speaking,
-.user-avatar-sm.speaking {
+.user-avatar-sm.speaking,
+.voice-orbit-avatar.speaking {
   animation: voice-activity-glow 1.4s ease-in-out infinite;
 }
 

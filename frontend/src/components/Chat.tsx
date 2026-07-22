@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { KeyboardEvent, ChangeEvent, DragEvent, UIEvent } from 'react';
-import type { User, Channel, ChannelType } from '../types';
+import type { User, Channel, ChannelType, PresenceUser } from '../types';
 import { resolveFileUrl } from '../config';
 import { disconnectSocket } from '../services/socket';
 import { useVoiceChannel } from '../hooks/useVoiceChannel';
@@ -23,6 +23,8 @@ import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
 import StatusIndicator from './StatusIndicator';
+import VoiceOrbit from './VoiceOrbit';
+import type { OrbitParticipant } from './VoiceOrbit';
 import {
   Volume2,
   Mic,
@@ -42,7 +44,6 @@ import {
   Paperclip,
   Send,
   FolderPlus,
-  RefreshCw,
 } from 'lucide-react';
 import './Chat.css';
 
@@ -55,6 +56,38 @@ function typingIndicatorText(usernames: (string | null)[]): string {
   const names = usernames.map((name) => name || 'Bilinmeyen');
   if (names.length <= 2) return `${names.join(', ')} yazıyor...`;
   return `${names.slice(0, 2).join(', ')} ve ${names.length - 2} kişi daha yazıyor...`;
+}
+
+function buildOrbitParticipants(
+  participants: PresenceUser[],
+  speakingUserIds: Set<string>,
+  reconnectingPeerIds: Set<string>,
+): OrbitParticipant[] {
+  return participants.map((p) => {
+    const speaking = speakingUserIds.has(p.user_id);
+    const reconnecting = reconnectingPeerIds.has(p.user_id);
+    const name = p.username ?? 'Unknown';
+    const statusText = reconnecting
+      ? 'Yeniden Bağlanıyor...'
+      : p.deafened
+        ? 'Sağırlaştırıldı'
+        : p.muted
+          ? 'Mikrofon Kapalı'
+          : speaking
+            ? 'Konuşuyor'
+            : 'Ses Bağlantısı Aktif';
+    return {
+      id: p.user_id,
+      displayName: name,
+      initials: initials(name),
+      avatarColor: userColor(p.user_id),
+      isSpeaking: speaking,
+      isMuted: !!p.muted,
+      isDeafened: !!p.deafened,
+      isReconnecting: reconnecting,
+      statusText,
+    };
+  });
 }
 
 export default function Chat({ user, onLogout }: Props) {
@@ -294,50 +327,7 @@ export default function Chat({ user, onLogout }: Props) {
 
           {isActive && (
             <div className="voice-participant-list">
-              {voice.participants.map((p) => {
-                const color = userColor(p.user_id);
-                const name = p.username ?? 'Unknown';
-                const speaking = voice.speakingUserIds.has(p.user_id);
-                const reconnecting = voice.reconnectingPeerIds.has(p.user_id);
-                const statusText = reconnecting
-                  ? 'Yeniden Bağlanıyor...'
-                  : p.deafened
-                    ? 'Sağırlaştırıldı'
-                    : p.muted
-                      ? 'Mikrofon Kapalı'
-                      : speaking
-                        ? 'Konuşuyor'
-                        : 'Ses Bağlantısı Aktif';
-                return (
-                  <div key={p.user_id} className="voice-participant">
-                    <div
-                      className={`voice-participant-avatar${speaking ? ' speaking' : ''}`}
-                      style={{ background: color }}
-                      title={name}
-                    >
-                      {initials(name)}
-                    </div>
-                    <div className="voice-participant-info">
-                      <span className="voice-participant-name">
-                        {name}
-                        {p.muted && (
-                          <span className="voice-status-icon mute-icon" title="Mikrofon Kapalı">
-                            <MicOff size={10} />
-                          </span>
-                        )}
-                        {p.deafened && (
-                          <span className="voice-status-icon deafen-icon" title="Sağırlaştırıldı">
-                            <VolumeX size={10} />
-                          </span>
-                        )}
-                      </span>
-                      <span className={`voice-participant-status${reconnecting ? ' reconnecting' : ''}`}>
-                        {reconnecting && <RefreshCw size={10} />} {statusText}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+              <VoiceOrbit participants={buildOrbitParticipants(voice.participants, voice.speakingUserIds, voice.reconnectingPeerIds)} />
 
               <div className="voice-controls-row">
                 <button
