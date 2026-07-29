@@ -23,6 +23,7 @@ import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
 import StatusIndicator from './StatusIndicator';
+import ChannelAddMenu from './ChannelAddMenu';
 import VoiceOrbit from './VoiceOrbit';
 import type { OrbitParticipant } from './VoiceOrbit';
 import {
@@ -43,7 +44,6 @@ import {
   Circle,
   Paperclip,
   Send,
-  FolderPlus,
 } from 'lucide-react';
 import './Chat.css';
 
@@ -375,6 +375,32 @@ export default function Chat({ user, onLogout }: Props) {
     );
   }
 
+  const userPanel = (
+    <div className="user-panel">
+      <div
+        className={`user-avatar-sm${voice.activeRoomId && voice.speakingUserIds.has(user.id) ? ' speaking' : ''}`}
+        style={{ background: myColor }}
+        title={user.username}
+      >
+        {initials(user.username)}
+      </div>
+      <div className="user-info">
+        <div className="user-name-sm">{user.username}</div>
+        <div className={`user-status-sm${isConnected ? '' : ' user-status-offline'}`}>
+          <Circle size={8} fill="currentColor" stroke="none" /> {isConnected ? 'Çevrimiçi' : 'Bağlantı Kesildi'}
+        </div>
+      </div>
+      <button
+        className="logout-btn"
+        onClick={handleLogout}
+        title="Log out"
+        aria-label="Log out"
+      >
+        <LogOut size={16} />
+      </button>
+    </div>
+  );
+
   return (
     <div className="chat-layout">
       {/* Only after we've actually been connected before — never during the
@@ -425,33 +451,15 @@ export default function Chat({ user, onLogout }: Props) {
               )}
             </div>
 
+            {userPanel}
+
             <nav className="channel-list">
               {isServerOwner && (
                 <div className="channel-list-toolbar">
-                  <button
-                    className="channel-category-add-btn"
-                    onClick={() => setCreateChannelRequest({ type: 'text', parentId: null })}
-                    title="Metin Kanalı Oluştur"
-                    aria-label="Metin Kanalı Oluştur"
-                  >
-                    <Hash size={14} />
-                  </button>
-                  <button
-                    className="channel-category-add-btn"
-                    onClick={() => setCreateChannelRequest({ type: 'voice', parentId: null })}
-                    title="Ses Kanalı Oluştur"
-                    aria-label="Ses Kanalı Oluştur"
-                  >
-                    <Volume2 size={14} />
-                  </button>
-                  <button
-                    className="channel-category-add-btn"
-                    onClick={() => setCreateChannelRequest({ type: 'category', parentId: null })}
-                    title="Kategori Oluştur"
-                    aria-label="Kategori Oluştur"
-                  >
-                    <FolderPlus size={14} />
-                  </button>
+                  <ChannelAddMenu
+                    label="Kanal Oluştur"
+                    onSelect={(type) => setCreateChannelRequest({ type, parentId: null })}
+                  />
                 </div>
               )}
 
@@ -471,26 +479,13 @@ export default function Chat({ user, onLogout }: Props) {
                         </button>
                         {isServerOwner && (
                           <div className="channel-category-add-actions">
-                            <button
-                              className="channel-category-add-btn"
-                              onClick={() =>
-                                setCreateChannelRequest({ type: 'text', parentId: group.category!.id })
+                            <ChannelAddMenu
+                              label="Bu kategoriye kanal ekle"
+                              includeCategory={false}
+                              onSelect={(type) =>
+                                setCreateChannelRequest({ type, parentId: group.category!.id })
                               }
-                              title="Bu kategoriye metin kanalı ekle"
-                              aria-label="Bu kategoriye metin kanalı ekle"
-                            >
-                              <Hash size={12} />
-                            </button>
-                            <button
-                              className="channel-category-add-btn"
-                              onClick={() =>
-                                setCreateChannelRequest({ type: 'voice', parentId: group.category!.id })
-                              }
-                              title="Bu kategoriye ses kanalı ekle"
-                              aria-label="Bu kategoriye ses kanalı ekle"
-                            >
-                              <Volume2 size={12} />
-                            </button>
+                            />
                           </div>
                         )}
                       </div>
@@ -514,6 +509,8 @@ export default function Chat({ user, onLogout }: Props) {
             <div className="server-header">
               <span className="server-header-name">Direkt Mesajlar</span>
             </div>
+
+            {userPanel}
 
             <nav className="channel-list">
               {dmRooms.map((room) => {
@@ -549,30 +546,6 @@ export default function Chat({ user, onLogout }: Props) {
             </nav>
           </>
         )}
-
-        <div className="user-panel">
-          <div
-            className={`user-avatar-sm${voice.activeRoomId && voice.speakingUserIds.has(user.id) ? ' speaking' : ''}`}
-            style={{ background: myColor }}
-            title={user.username}
-          >
-            {initials(user.username)}
-          </div>
-          <div className="user-info">
-            <div className="user-name-sm">{user.username}</div>
-            <div className={`user-status-sm${isConnected ? '' : ' user-status-offline'}`}>
-              <Circle size={8} fill="currentColor" stroke="none" /> {isConnected ? 'Çevrimiçi' : 'Bağlantı Kesildi'}
-            </div>
-          </div>
-          <button
-            className="logout-btn"
-            onClick={handleLogout}
-            title="Log out"
-            aria-label="Log out"
-          >
-            <LogOut size={16} />
-          </button>
-        </div>
       </aside>
 
       {/* ── Main area — exactly one of the three renders at a time, each
@@ -589,13 +562,16 @@ export default function Chat({ user, onLogout }: Props) {
             <header className="chat-header">
               <span className="chat-header-hash"><Hash size={20} /></span>
               <span className="chat-header-name">{activeChannelName}</span>
-              {activeChannelId && (
+            </header>
+
+            {activeChannelId && (
+              <div className="chat-search-row">
                 <SearchBar
                   isSearching={isSearching}
                   onSearch={(filters) => void searchChannelMessages(activeChannelId, filters)}
                 />
-              )}
-            </header>
+              </div>
+            )}
 
             {isDraggingFile && (
               <div className="drag-drop-overlay">

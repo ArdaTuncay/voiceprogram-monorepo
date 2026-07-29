@@ -139,10 +139,13 @@ export default function DMChatView({ currentUserId }: Props) {
       <header className="chat-header">
         <span className="chat-header-hash"><AtSign size={20} /></span>
         <span className="chat-header-name">{otherName}</span>
-        {activeRoomId && (
-          <SearchBar isSearching={isSearching} onSearch={(filters) => void searchDmMessages(activeRoomId, filters)} />
-        )}
       </header>
+
+      {activeRoomId && (
+        <div className="chat-search-row">
+          <SearchBar isSearching={isSearching} onSearch={(filters) => void searchDmMessages(activeRoomId, filters)} />
+        </div>
+      )}
 
       {isDraggingFile && (
         <div className="drag-drop-overlay">

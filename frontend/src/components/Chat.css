@@ -119,32 +119,10 @@
   text-transform: uppercase;
 }
 
-.channel-category-add-btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.channel-category-add-btn:hover {
-  color: var(--text-normal);
-  background: var(--bg-primary);
-}
-
 .channel-list-toolbar {
   display: flex;
   gap: 4px;
   padding: 0 4px 10px 8px;
-}
-
-.channel-list-toolbar .channel-category-add-btn,
-.channel-category-add-actions .channel-category-add-btn {
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .channel-category-group {
@@ -250,15 +228,18 @@
   right: -2px;
 }
 
-/* ── User panel ── */
+/* ── User panel — sits between the workspace header and the channel list,
+   not at the bottom of the sidebar, so it reads as "who you are" rather
+   than a footer. */
 .user-panel {
   background: rgba(0, 0, 0, 0.22);
-  padding: 8px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   gap: 8px;
   height: 52px;
   flex-shrink: 0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .user-avatar-sm {
@@ -348,21 +329,40 @@
   font-weight: 700;
 }
 
-/* ── Search bar (in chat-header) ── */
+/* ── Search bar — its own centered row directly under the header, instead
+   of squeezed into the header next to the channel name. That header row is
+   already busy (name + invite/settings icons) and only had room for a
+   ~220px sliver, which read as a decorative placeholder rather than a
+   usable search field. Giving it a dedicated, centered, wider pill makes it
+   discoverable without competing with the header for space. ── */
+.chat-search-row {
+  display: flex;
+  justify-content: center;
+  padding: 10px 16px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
 .search-bar {
-  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: var(--bg-primary);
-  border-radius: 4px;
-  padding: 0 8px;
-  height: 28px;
-  width: 220px;
+  gap: 8px;
+  background: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: 18px;
+  padding: 0 14px;
+  height: 36px;
+  width: 100%;
+  max-width: 480px;
+  transition: border-color 0.1s;
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent);
 }
 
 .search-bar-icon {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--text-muted);
   flex-shrink: 0;
 }
@@ -374,7 +374,7 @@
   border: none;
   outline: none;
   color: var(--text-normal);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .search-bar-input::placeholder {
@@ -446,6 +446,9 @@
   justify-content: flex-end;
   padding: 16px 0 8px;
   min-height: min-content;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .channel-intro {
@@ -750,10 +753,15 @@
   margin-bottom: 6px;
 }
 
-/* ── Input area ── */
+/* ── Input area — same ~720px reading column as the message list above it,
+   centered, instead of stretching edge-to-edge in wide windows. ── */
 .message-input-area {
   padding: 0 16px 24px;
   flex-shrink: 0;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .message-input-box {
