@@ -3,10 +3,12 @@ import {
   applyTheme,
   getCurrentTheme,
   getPreferredTheme,
+  getStoredPreference,
   initTheme,
-  setStoredTheme,
+  resolveTheme,
+  setStoredPreference,
+  setThemePreference,
   THEME_STORAGE_KEY,
-  toggleTheme,
 } from '../theme';
 
 function mockSystemPreference(prefersLight: boolean) {
@@ -27,15 +29,41 @@ describe('theme', () => {
     vi.restoreAllMocks();
   });
 
-  describe('getPreferredTheme', () => {
-    it('returns the stored preference when one exists', () => {
+  describe('getStoredPreference', () => {
+    it('returns the stored explicit override when one exists', () => {
       localStorage.setItem(THEME_STORAGE_KEY, 'light');
-      expect(getPreferredTheme()).toBe('light');
+      expect(getStoredPreference()).toBe('light');
     });
 
-    it('ignores a corrupted/unexpected stored value', () => {
+    it('returns "system" when nothing is stored', () => {
+      expect(getStoredPreference()).toBe('system');
+    });
+
+    it('returns "system" for a corrupted/unexpected stored value', () => {
       localStorage.setItem(THEME_STORAGE_KEY, 'sepia');
-      expect(getPreferredTheme()).toBe('dark');
+      expect(getStoredPreference()).toBe('system');
+    });
+  });
+
+  describe('resolveTheme', () => {
+    it('passes explicit themes through unchanged', () => {
+      expect(resolveTheme('light')).toBe('light');
+      expect(resolveTheme('dark')).toBe('dark');
+    });
+
+    it('resolves "system" via the OS preference', () => {
+      mockSystemPreference(true);
+      expect(resolveTheme('system')).toBe('light');
+
+      mockSystemPreference(false);
+      expect(resolveTheme('system')).toBe('dark');
+    });
+  });
+
+  describe('getPreferredTheme', () => {
+    it('returns the stored override when one exists', () => {
+      localStorage.setItem(THEME_STORAGE_KEY, 'light');
+      expect(getPreferredTheme()).toBe('light');
     });
 
     it('falls back to the system preference when nothing is stored', () => {
@@ -64,10 +92,16 @@ describe('theme', () => {
     });
   });
 
-  describe('setStoredTheme', () => {
-    it('writes the theme under the zircle-theme key', () => {
-      setStoredTheme('light');
+  describe('setStoredPreference', () => {
+    it('writes an explicit preference under the zircle-theme key', () => {
+      setStoredPreference('light');
       expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
+    });
+
+    it('clears the key when set back to "system"', () => {
+      setStoredPreference('light');
+      setStoredPreference('system');
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
     });
   });
 
@@ -79,23 +113,24 @@ describe('theme', () => {
     });
   });
 
-  describe('toggleTheme', () => {
-    it('flips dark to light, persisting and applying it', () => {
-      applyTheme('dark');
-      const result = toggleTheme();
+  describe('setThemePreference', () => {
+    it('persists an explicit preference and applies it', () => {
+      const result = setThemePreference('light');
 
       expect(result).toBe('light');
       expect(document.documentElement.getAttribute('data-theme')).toBe('light');
       expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
     });
 
-    it('flips light back to dark', () => {
-      applyTheme('light');
-      const result = toggleTheme();
+    it('switching to "system" clears the stored override and resolves via the OS preference', () => {
+      setThemePreference('dark');
+      mockSystemPreference(true);
 
-      expect(result).toBe('dark');
-      expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+      const result = setThemePreference('system');
+
+      expect(result).toBe('light');
+      expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
     });
   });
 });

@@ -24,7 +24,7 @@ import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
 import StatusIndicator from './StatusIndicator';
 import ChannelAddMenu from './ChannelAddMenu';
-import ThemeToggle from './ThemeToggle';
+import UserSettingsModal from './UserSettingsModal';
 import VoiceOrbit from './VoiceOrbit';
 import type { OrbitParticipant } from './VoiceOrbit';
 import {
@@ -140,6 +140,7 @@ export default function Chat({ user, onLogout }: Props) {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showUserSettingsModal, setShowUserSettingsModal] = useState(false);
   const [createChannelRequest, setCreateChannelRequest] = useState<{
     type: ChannelType;
     parentId: string | null;
@@ -391,7 +392,14 @@ export default function Chat({ user, onLogout }: Props) {
           <Circle size={8} fill="currentColor" stroke="none" /> {isConnected ? 'Çevrimiçi' : 'Bağlantı Kesildi'}
         </div>
       </div>
-      <ThemeToggle />
+      <button
+        className="user-settings-btn"
+        onClick={() => setShowUserSettingsModal(true)}
+        title="Kullanıcı Ayarları"
+        aria-label="Kullanıcı Ayarları"
+      >
+        <Settings size={15} />
+      </button>
       <button
         className="logout-btn"
         onClick={handleLogout}
@@ -775,6 +783,10 @@ export default function Chat({ user, onLogout }: Props) {
 
       {showLeaveModal && activeServerId && !isServerOwner && (
         <LeaveServerModal onClose={() => setShowLeaveModal(false)} />
+      )}
+
+      {showUserSettingsModal && (
+        <UserSettingsModal onClose={() => setShowUserSettingsModal(false)} />
       )}
     </div>
   );

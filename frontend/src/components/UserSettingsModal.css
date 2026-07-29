@@ -1,0 +1,132 @@
+.user-settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.user-settings-close-btn {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  background: none;
+  border: 2px solid var(--text-muted);
+  border-radius: 50%;
+  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.user-settings-close-btn:hover {
+  color: var(--text-heading);
+  border-color: var(--text-heading);
+}
+
+.user-settings-panel {
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.user-settings-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 60px 12px 24px;
+  overflow-y: auto;
+}
+
+.user-settings-category {
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.user-settings-category:hover {
+  color: var(--text-normal);
+  background: rgba(79, 84, 92, 0.24);
+}
+
+.user-settings-category.active {
+  color: var(--text-heading);
+  background: var(--bg-input);
+  font-weight: 600;
+}
+
+.user-settings-content {
+  flex: 1;
+  min-width: 0;
+  padding: 60px 40px;
+  overflow-y: auto;
+}
+
+.user-settings-section {
+  max-width: 600px;
+}
+
+.user-settings-heading {
+  color: var(--text-heading);
+  font-size: 20px;
+  margin: 0 0 20px;
+}
+
+.user-settings-placeholder {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.user-settings-label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
+}
+
+.theme-segmented-control {
+  display: inline-flex;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.theme-segmented-option {
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.theme-segmented-option:hover {
+  color: var(--text-normal);
+}
+
+.theme-segmented-option.active {
+  background: var(--accent);
+  color: var(--on-accent);
+}

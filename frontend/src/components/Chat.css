@@ -289,8 +289,7 @@
   color: var(--text-muted);
 }
 
-/* Temporary — see ThemeToggle.tsx's comment; moves into Settings later. */
-.theme-toggle-btn {
+.user-settings-btn {
   background: none;
   border: none;
   color: var(--text-muted);
@@ -305,7 +304,7 @@
   flex-shrink: 0;
 }
 
-.theme-toggle-btn:hover {
+.user-settings-btn:hover {
   color: var(--text-normal);
   background: rgba(79, 84, 92, 0.24);
 }
