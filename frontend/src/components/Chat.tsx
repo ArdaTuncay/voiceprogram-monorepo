@@ -456,6 +456,7 @@ export default function Chat({ user, onLogout }: Props) {
             <nav className="channel-list">
               {isServerOwner && (
                 <div className="channel-list-toolbar">
+                  <span className="channel-category-label">Kanallar</span>
                   <ChannelAddMenu
                     label="Kanal Oluştur"
                     onSelect={(type) => setCreateChannelRequest({ type, parentId: null })}

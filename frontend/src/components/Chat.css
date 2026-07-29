@@ -119,10 +119,16 @@
   text-transform: uppercase;
 }
 
+/* Mirrors .channel-category-row's layout/padding (label left, add-action
+   right) so the top-level "+" reads as "belongs to the channel list below"
+   instead of a floating, unlabeled icon — and so the gap before the first
+   channel row matches the gap between category groups rather than being
+   its own, larger one. */
 .channel-list-toolbar {
   display: flex;
-  gap: 4px;
-  padding: 0 4px 10px 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 4px 8px;
 }
 
 .channel-category-group {
@@ -1067,9 +1073,18 @@
   margin-top: 2px;
 }
 
-/* ── Right sidebar: online users ── */
+/* ── Right sidebar: online users — bg-tertiary (not bg-secondary, which
+   search-results-panel already uses and which sits too close to
+   bg-primary to read as a distinct surface) so it visually bookends the
+   layout the same way the server rail does on the far left. The
+   border-left gives it a crisp edge against chat-main since dark-on-dark
+   backgrounds alone don't leave a hard boundary. Stays a direct flex
+   child of .chat-layout (height: 100vh, flex row, default
+   align-items: stretch), so it's already full-height header-to-input;
+   nothing here overrides that. ── */
 .online-sidebar {
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
   width: 240px;
   flex-shrink: 0;
   display: flex;
