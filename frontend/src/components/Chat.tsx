@@ -24,6 +24,7 @@ import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
 import StatusIndicator from './StatusIndicator';
 import ChannelAddMenu from './ChannelAddMenu';
+import ThemeToggle from './ThemeToggle';
 import VoiceOrbit from './VoiceOrbit';
 import type { OrbitParticipant } from './VoiceOrbit';
 import {
@@ -390,6 +391,7 @@ export default function Chat({ user, onLogout }: Props) {
           <Circle size={8} fill="currentColor" stroke="none" /> {isConnected ? 'Çevrimiçi' : 'Bağlantı Kesildi'}
         </div>
       </div>
+      <ThemeToggle />
       <button
         className="logout-btn"
         onClick={handleLogout}

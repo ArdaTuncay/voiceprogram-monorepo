@@ -1,3 +1,12 @@
+/* Theme tokens: :root holds the dark palette directly (not gated behind
+   [data-theme="dark"]) so every existing var(--token) reference keeps
+   working even if the data-theme attribute is ever missing or fails to
+   apply (test environments, a JS error before paint, etc.) — the app just
+   silently stays dark instead of losing its color tokens entirely.
+   [data-theme="light"] below overrides the same custom properties when
+   services/theme.ts sets that attribute on <html>; a plain attribute
+   selector on the root element ties in specificity with :root, so source
+   order (this file, light block second) decides who wins. */
 :root {
   /* Monochrome matte gray palette (neutral scale, no blue/slate tint) */
   --bg-primary:   #171717;  /* neutral-900 */
@@ -11,6 +20,13 @@
 
   --interactive-normal: #d4d4d4;  /* neutral-300 */
   --interactive-hover:  #e5e5e5;  /* neutral-200 */
+  /* Deliberately NOT re-defined per theme (see the light block below) —
+     its ~15 call sites are all foreground text/icons on top of colored
+     avatar backgrounds or --danger/--success button fills, never plain
+     text on a neutral surface, so it needs to stay a constant light color
+     regardless of overall theme. The one place that used to reuse it for
+     a genuine neutral-surface case (.channel-item.active) now reads
+     --text-heading instead, which does invert per theme. */
   --interactive-active: #fafafa;  /* neutral-50 */
 
   /* Accent is now tonal, not chromatic: highest-contrast neutral, not a color */
@@ -27,6 +43,12 @@
   --danger-hover: #c0473c;  /* --danger, HSL lightness -15% (58% -> 49.3%), same hue/saturation */
   --warning: #c9974a;
 
+  /* Hairline separator between adjacent surfaces of near-identical
+     background (e.g. the online-users panel against chat-main) — a solid
+     neutral wouldn't adapt across the two very different bg scales below,
+     so this stays a semi-transparent white/black pair instead. */
+  --border: rgba(255, 255, 255, 0.08);
+
   font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, system-ui, -apple-system, sans-serif;
   font-size: 16px;
   color: var(--text-normal);
@@ -35,6 +57,56 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Light theme — same neutral scale, light end. Every value below was
+   checked against WCAG AA (4.5:1 for normal text, 3:1 for large/UI
+   elements) using the real relative-luminance formula, not eyeballed:
+     --text-normal   (#262626 on #fafafa):  14.5:1
+     --text-muted    (#525252 on #fafafa):   7.5:1
+     --text-heading  (#171717 on #fafafa):  17.2:1
+     --interactive-normal (#404040 on --bg-secondary #f5f5f5): 9.5:1
+     --interactive-hover  (#262626 on --bg-secondary #f5f5f5): 13.9:1
+     --accent        (#171717 on #fafafa):  17.2:1 (and --on-accent, which
+                       resolves to --bg-primary, gets the same ratio back
+                       against --accent as its background)
+     --success  (#256b40 on #fafafa): 6.2:1
+     --danger   (#b3261e on #fafafa): 6.3:1  (white-on-it, for the
+                 danger-filled buttons that pair it with --interactive-active: 6.5:1)
+     --danger-hover (#8c1e18 on #fafafa): 8.7:1
+     --warning  (#7a4e00 on --bg-tertiary #e5e5e5): 5.7:1
+   success/danger/warning are new hex values, not the dark theme's — reusing
+   those would be far too light to read as text on a light background. */
+[data-theme="light"] {
+  --bg-primary:   #fafafa;  /* neutral-50 */
+  --bg-secondary: #f5f5f5;  /* neutral-100 */
+  --bg-tertiary:  #e5e5e5;  /* neutral-200 — one step grayer than secondary,
+                                continuing the same direction away from
+                                white so the server rail / online panel
+                                still read as a framing surface rather
+                                than flipping to "brighter than content" */
+  --bg-input:     #e5e5e5;  /* neutral-200 */
+
+  --text-normal:  #262626;  /* neutral-800 */
+  --text-muted:   #525252;  /* neutral-600 */
+  --text-heading: #171717;  /* neutral-900 */
+
+  --interactive-normal: #404040;  /* neutral-700 */
+  --interactive-hover:  #262626;  /* neutral-800 */
+  /* --interactive-active intentionally NOT overridden — see the :root comment above. */
+
+  --accent:       #171717;  /* neutral-900 */
+  --accent-hover: #262626;  /* neutral-800 */
+  /* --on-accent stays the var(--bg-primary) reference — it resolves to this
+     theme's light --bg-primary automatically, which is exactly what's
+     needed as foreground text on the now-dark --accent background. */
+
+  --success: #256b40;
+  --danger:  #b3261e;
+  --danger-hover: #8c1e18;
+  --warning: #7a4e00;
+
+  --border: rgba(0, 0, 0, 0.08);
 }
 
 *,

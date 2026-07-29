@@ -192,7 +192,11 @@
 
 .channel-item.active {
   background: rgba(114, 137, 218, 0.2);
-  color: var(--interactive-active);
+  /* Not --interactive-active — that token is pinned to a constant light
+     color for the (unrelated) colored-avatar/danger-button text it mostly
+     serves, so it doesn't invert for the light theme. --text-heading is
+     the token that actually means "brightest neutral text" per theme. */
+  color: var(--text-heading);
 }
 
 .channel-hash {
@@ -283,6 +287,27 @@
 
 .user-status-sm.user-status-offline {
   color: var(--text-muted);
+}
+
+/* Temporary — see ThemeToggle.tsx's comment; moves into Settings later. */
+.theme-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.1s, background 0.1s;
+  flex-shrink: 0;
+}
+
+.theme-toggle-btn:hover {
+  color: var(--text-normal);
+  background: rgba(79, 84, 92, 0.24);
 }
 
 .logout-btn {
@@ -1084,7 +1109,7 @@
    nothing here overrides that. ── */
 .online-sidebar {
   background: var(--bg-tertiary);
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 1px solid var(--border);
   width: 240px;
   flex-shrink: 0;
   display: flex;

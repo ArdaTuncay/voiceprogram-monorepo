@@ -5,6 +5,26 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>frontend</title>
+    <!-- Applies the theme before the page paints. Must be a plain,
+         synchronous classic script (not type="module", which defers until
+         after parsing) — a module script or React effect would run too
+         late here, since the browser can paint index.css's :root (dark)
+         background as soon as the stylesheet loads, independent of when
+         any JS executes. Kept in sync by hand with
+         src/services/theme.ts's getPreferredTheme/THEME_STORAGE_KEY. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('zircle-theme');
+          var theme = stored === 'light' || stored === 'dark'
+            ? stored
+            : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
