@@ -33,6 +33,11 @@ defmodule BackendWeb.Router do
     patch "/account/username", AccountController, :update_username
     patch "/account/email", AccountController, :update_email
     patch "/account/password", AccountController, :update_password
+    patch "/account/friend-request-privacy", AccountController, :update_friend_request_privacy
+    get "/account/blocked-users", AccountController, :list_blocked_users
+
+    post "/users/:id/block", BlockController, :create
+    delete "/users/:id/block", BlockController, :delete
 
     get "/servers", ServerController, :index
     post "/servers", ServerController, :create

@@ -119,4 +119,33 @@ defmodule Backend.AccountsTest do
       assert {:error, :invalid} = Accounts.authenticate_token(old_token)
     end
   end
+
+  describe "update_friend_request_privacy/2" do
+    test "defaults to \"everyone\" for a freshly registered user" do
+      user = user_fixture()
+      assert user.friend_request_privacy == "everyone"
+    end
+
+    test "updates to \"nobody\" and back" do
+      user = user_fixture()
+
+      assert {:ok, updated} = Accounts.update_friend_request_privacy(user, "nobody")
+      assert updated.friend_request_privacy == "nobody"
+
+      assert {:ok, updated} = Accounts.update_friend_request_privacy(updated, "everyone")
+      assert updated.friend_request_privacy == "everyone"
+    end
+
+    test "rejects a value other than everyone/nobody" do
+      user = user_fixture()
+      assert {:error, changeset} = Accounts.update_friend_request_privacy(user, "friends_only")
+      assert %{friend_request_privacy: [_ | _]} = errors_on(changeset)
+    end
+
+    test "does not touch token_version" do
+      user = user_fixture()
+      assert {:ok, updated} = Accounts.update_friend_request_privacy(user, "nobody")
+      assert updated.token_version == user.token_version
+    end
+  end
 end

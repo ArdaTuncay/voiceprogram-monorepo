@@ -80,6 +80,9 @@ defmodule BackendWeb.DmController do
         |> put_status(:forbidden)
         |> json(%{error: "Sadece arkadaşlarınıza mesaj gönderebilirsiniz"})
 
+      {:error, :blocked} ->
+        conn |> put_status(:forbidden) |> json(%{error: "Bu kullanıcıyla mesajlaşamazsınız"})
+
       {:error, %Ecto.Changeset{} = changeset} ->
         conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
     end

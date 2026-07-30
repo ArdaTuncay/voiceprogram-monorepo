@@ -28,6 +28,7 @@ defmodule Backend.DirectMessages do
   def open_room(user_id, attrs) do
     with {:ok, target} <- resolve_target(attrs),
          :ok <- validate_not_self(user_id, target.id),
+         :ok <- validate_not_blocked(user_id, target.id),
          :ok <- validate_friends(user_id, target.id),
          {:ok, room} <- get_or_create_room(user_id, target.id) do
       {:ok, Repo.preload(room, [:user_one, :user_two])}
@@ -329,6 +330,17 @@ defmodule Backend.DirectMessages do
 
   defp validate_friends(user_id, target_id) do
     if Friends.friends?(user_id, target_id), do: :ok, else: {:error, :not_friends}
+  end
+
+  # Redundant with validate_friends/2 in one sense — a block already
+  # demotes the friendship row away from "accepted" (see
+  # Backend.Friends.block_user/2), so validate_friends/2 alone would
+  # already reject this. Checked separately anyway so the controller can
+  # tell a caller "you're blocked" instead of the more confusing "you're
+  # not friends" when a block is the actual reason (they may well still
+  # look like friends to a stale client that hasn't refreshed yet).
+  defp validate_not_blocked(user_id, target_id) do
+    if Friends.blocked_either_way?(user_id, target_id), do: {:error, :blocked}, else: :ok
   end
 
   defp validate_not_self(user_id, user_id), do: {:error, :cannot_dm_self}

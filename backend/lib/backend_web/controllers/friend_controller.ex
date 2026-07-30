@@ -24,33 +24,50 @@ defmodule BackendWeb.FriendController do
         |> put_status(:created)
         |> json(Friends.to_view(friendship, user_id))
 
-      {:error, :user_not_found} ->
-        conn |> put_status(:not_found) |> json(%{error: "Kullanıcı bulunamadı"})
-
-      {:error, :cannot_friend_self} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: "Kendinize arkadaşlık isteği gönderemezsiniz"})
-
-      {:error, :already_pending} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: "Zaten bekleyen bir isteğiniz var"})
-
-      {:error, :already_friends} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{error: "Zaten arkadaşsınız"})
-
-      {:error, :blocked_by_you} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{error: "Bu kullanıcıyı engellediniz"})
-
-      {:error, :blocked_by_them} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: "Bu istek gönderilemedi"})
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
+      {:error, reason} ->
+        render_request_error(conn, reason)
     end
+  end
+
+  # Split out of request/2 purely to keep its own cyclomatic complexity
+  # down — each clause here is a trivial one-liner, request/2 itself is
+  # just the ok/error split.
+  defp render_request_error(conn, :user_not_found) do
+    conn |> put_status(:not_found) |> json(%{error: "Kullanıcı bulunamadı"})
+  end
+
+  defp render_request_error(conn, :cannot_friend_self) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{error: "Kendinize arkadaşlık isteği gönderemezsiniz"})
+  end
+
+  defp render_request_error(conn, :already_pending) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{error: "Zaten bekleyen bir isteğiniz var"})
+  end
+
+  defp render_request_error(conn, :already_friends) do
+    conn |> put_status(:unprocessable_entity) |> json(%{error: "Zaten arkadaşsınız"})
+  end
+
+  defp render_request_error(conn, :blocked_by_you) do
+    conn |> put_status(:unprocessable_entity) |> json(%{error: "Bu kullanıcıyı engellediniz"})
+  end
+
+  defp render_request_error(conn, :blocked_by_them) do
+    conn |> put_status(:unprocessable_entity) |> json(%{error: "Bu istek gönderilemedi"})
+  end
+
+  defp render_request_error(conn, :requests_disabled) do
+    conn
+    |> put_status(:forbidden)
+    |> json(%{error: "Bu kullanıcı arkadaşlık isteklerini kapatmış"})
+  end
+
+  defp render_request_error(conn, %Ecto.Changeset{} = changeset) do
+    conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
   end
 
   @doc "POST /api/friends/accept — accepts a pending request by its friendship \"id\"."

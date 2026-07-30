@@ -358,3 +358,33 @@
   background: var(--success);
   transition: width 0.05s linear;
 }
+
+/* ── Gizlilik & Güvenlik ── */
+.privacy-blocked-title {
+  margin-top: 28px;
+}
+
+.blocked-user-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.blocked-user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.blocked-user-item:last-child {
+  border-bottom: none;
+}
+
+.blocked-user-name {
+  color: var(--text-normal);
+  font-size: 14px;
+  font-weight: 500;
+}

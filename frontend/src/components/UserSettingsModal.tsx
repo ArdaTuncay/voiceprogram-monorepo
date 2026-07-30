@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
-import type { User } from '../types';
+import type { FriendRequestPrivacy, User } from '../types';
 import type { ThemePreference } from '../services/theme';
 import { getStoredPreference, setThemePreference } from '../services/theme';
-import { updateEmail, updatePassword, updateUsername } from '../services/api';
+import {
+  updateEmail,
+  updateFriendRequestPrivacy,
+  updatePassword,
+  updateUsername,
+} from '../services/api';
+import { useFriendStore } from '../stores/useFriendStore';
 import { disconnectSocket } from '../services/socket';
 import { forceLogout } from '../services/session';
 import type { NotificationPreferences } from '../services/notificationPreferences';
@@ -97,6 +103,8 @@ export default function UserSettingsModal({ user, onClose }: Props) {
             <ShortcutsSettings />
           ) : category === 'voice' ? (
             <VoiceSettings />
+          ) : category === 'privacy' ? (
+            <PrivacySettings user={user} />
           ) : (
             <PlaceholderSettings label={activeLabel} />
           )}
@@ -728,6 +736,94 @@ function MicTestButton({ onPermissionGranted }: { onPermissionGranted: () => voi
       )}
 
       {error && <StatusMessage type="error" message={error} />}
+    </div>
+  );
+}
+
+const PRIVACY_OPTIONS: { value: FriendRequestPrivacy; label: string }[] = [
+  { value: 'everyone', label: 'Herkes' },
+  { value: 'nobody', label: 'Kimse' },
+];
+
+/** Gizlilik & Güvenlik — who can send a friend request (entirely
+ * server-enforced, see Backend.Friends.send_request/2, not just hidden in
+ * the UI), plus the block list (see Backend.Friends.block_user/2 — history
+ * with a blocked user is untouched, only new interaction is stopped). */
+function PrivacySettings({ user }: { user: User }) {
+  const [privacy, setPrivacy] = useState<FriendRequestPrivacy>(
+    user.friend_request_privacy ?? 'everyone'
+  );
+  const blockedUsers = useFriendStore((s) => s.blockedUsers);
+  const loadBlockedUsers = useFriendStore((s) => s.loadBlockedUsers);
+  const unblockUser = useFriendStore((s) => s.unblockUser);
+  const [unblockingId, setUnblockingId] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    void loadBlockedUsers();
+  }, [loadBlockedUsers]);
+
+  async function selectPrivacy(value: FriendRequestPrivacy) {
+    setPrivacy(value);
+    await updateFriendRequestPrivacy(value);
+  }
+
+  async function handleUnblock(userId: string) {
+    setUnblockingId(userId);
+    setMessage('');
+    const error = await unblockUser(userId);
+    setUnblockingId(null);
+    if (error) setMessage(error);
+  }
+
+  return (
+    <div className="user-settings-section">
+      <h3 className="user-settings-heading">Gizlilik & Güvenlik</h3>
+
+      <label className="user-settings-label" id="friend-privacy-label">
+        Arkadaşlık isteklerini kimler gönderebilir
+      </label>
+      <div
+        className="theme-segmented-control"
+        role="radiogroup"
+        aria-labelledby="friend-privacy-label"
+      >
+        {PRIVACY_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            role="radio"
+            aria-checked={privacy === opt.value}
+            className={`theme-segmented-option${privacy === opt.value ? ' active' : ''}`}
+            onClick={() => void selectPrivacy(opt.value)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      <h4 className="account-form-title privacy-blocked-title">Engellenen Kullanıcılar</h4>
+
+      {message && <StatusMessage type="error" message={message} />}
+
+      {blockedUsers.length === 0 ? (
+        <p className="user-settings-placeholder">Kimseyi engellemedin.</p>
+      ) : (
+        <ul className="blocked-user-list">
+          {blockedUsers.map((u) => (
+            <li key={u.user_id} className="blocked-user-item">
+              <span className="blocked-user-name">{u.username ?? 'Bilinmeyen'}</span>
+              <button
+                className="account-form-submit-btn"
+                onClick={() => void handleUnblock(u.user_id)}
+                disabled={unblockingId === u.user_id}
+              >
+                {unblockingId === u.user_id ? 'Kaldırılıyor…' : 'Engeli Kaldır'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ defmodule Backend.Accounts.User do
     field :password_hash, :string, redact: true
     field :status, :string, default: "offline"
     field :token_version, :integer, default: 0
+    field :friend_request_privacy, :string, default: "everyone"
 
     timestamps(type: :utc_datetime)
   end
@@ -71,6 +72,19 @@ defmodule Backend.Accounts.User do
     |> validate_required([:password])
     |> validate_length(:password, min: 8, message: "must be at least 8 characters")
     |> hash_password()
+  end
+
+  @doc """
+  Used by Backend.Accounts.update_friend_request_privacy/2 — "everyone"
+  (default) or "nobody", checked by Backend.Friends.send_request/2 before
+  a request is even created. Deliberately only these two options, no
+  "friends of friends" tier — see PROJECT_ARCHITECTURE.md's note on why.
+  """
+  def friend_request_privacy_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:friend_request_privacy])
+    |> validate_required([:friend_request_privacy])
+    |> validate_inclusion(:friend_request_privacy, ["everyone", "nobody"])
   end
 
   # Runs whenever a password is being set (registration) or, in the future,

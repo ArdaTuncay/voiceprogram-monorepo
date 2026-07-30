@@ -194,6 +194,18 @@ defmodule Backend.Accounts do
   end
 
   @doc """
+  Updates whether `user` accepts friend requests from everyone or no one
+  (see `Backend.Accounts.User.friend_request_privacy_changeset/2`) — no
+  current-password re-auth, unlike update_username/2's callers: this is a
+  privacy preference, not a sensitive identity field.
+  """
+  def update_friend_request_privacy(%User{} = user, privacy) do
+    user
+    |> User.friend_request_privacy_changeset(%{"friend_request_privacy" => privacy})
+    |> Repo.update()
+  end
+
+  @doc """
   Updates the online/offline status of a user by id.
 
   Returns `{:error, :not_found}` if `user_id` doesn't exist (shouldn't

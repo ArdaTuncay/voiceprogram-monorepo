@@ -41,10 +41,16 @@ defmodule Backend.Friends do
   """
   def send_request(user_id, attrs) do
     with {:ok, target} <- resolve_target(attrs),
-         :ok <- validate_not_self(user_id, target.id) do
+         :ok <- validate_not_self(user_id, target.id),
+         :ok <- validate_accepts_requests(target) do
       resolve_request(user_id, target.id, find_between(user_id, target.id))
     end
   end
+
+  defp validate_accepts_requests(%{friend_request_privacy: "nobody"}),
+    do: {:error, :requests_disabled}
+
+  defp validate_accepts_requests(_target), do: :ok
 
   # Split out of send_request/2 so create_pending/2 can re-run it after
   # losing a race against a concurrent send_request/2 for the same pair —
@@ -139,6 +145,98 @@ defmodule Backend.Friends do
     |> Repo.preload([:user, :friend])
     |> Enum.reject(&hidden_from?(&1, user_id))
     |> Enum.map(&to_view(&1, user_id))
+  end
+
+  @doc """
+  Blocks `blocked_id` on behalf of `user_id` — overwrites the friendship
+  row between them (any status: none, pending, or accepted) so its
+  `status` becomes "blocked" and `user_id`/`friend_id` point from blocker
+  to blocked, the same direction convention `resolve_request/3`'s
+  `:blocked_by_you`/`:blocked_by_them` branches already rely on (this is
+  the first function that actually produces a `"blocked"` row — those
+  branches were written in anticipation of it).
+
+  Does NOT touch DM rooms/messages or delete anything else — existing
+  conversation history is a separate table entirely (see
+  `Backend.DirectMessages`) and stays exactly as it was. An existing
+  "accepted" friendship becomes unable to open new DM rooms or send new
+  requests (see `Backend.DirectMessages.open_room/2`'s own block check
+  and `send_request/2` above) purely because it's no longer `"accepted"`.
+
+  Returns `{:ok, friendship}`, `{:error, :cannot_block_self}`,
+  `{:error, :user_not_found}`, or `{:error, changeset}`.
+  """
+  def block_user(user_id, blocked_id) do
+    cond do
+      user_id == blocked_id ->
+        {:error, :cannot_block_self}
+
+      is_nil(Accounts.get_user(blocked_id)) ->
+        {:error, :user_not_found}
+
+      true ->
+        upsert_block(user_id, blocked_id)
+    end
+  end
+
+  defp upsert_block(user_id, blocked_id) do
+    attrs = %{user_id: user_id, friend_id: blocked_id, status: "blocked"}
+
+    case find_between(user_id, blocked_id) do
+      nil -> %Friendship{} |> Friendship.changeset(attrs) |> Repo.insert()
+      friendship -> friendship |> Friendship.changeset(attrs) |> Repo.update()
+    end
+  end
+
+  @doc """
+  Removes the block `user_id` placed on `blocked_id` — a clean slate, not
+  a restore of whatever relationship (if any) existed before the block, so
+  either side can send a fresh friend request afterward. Only the actual
+  blocker can unblock (checked via the row's `user_id`, same direction
+  convention as everywhere else here) — the blocked party has no lever to
+  remove a block placed on them.
+
+  Returns `{:ok, friendship}` or `{:error, :not_blocked}`.
+  """
+  def unblock_user(user_id, blocked_id) do
+    case find_between(user_id, blocked_id) do
+      %Friendship{status: "blocked", user_id: ^user_id} = friendship -> Repo.delete(friendship)
+      _ -> {:error, :not_blocked}
+    end
+  end
+
+  @doc "True if `user_id` has blocked `other_id` — direction matters, being blocked doesn't count."
+  def blocked?(user_id, other_id) do
+    Friendship
+    |> where([f], f.status == "blocked" and f.user_id == ^user_id and f.friend_id == ^other_id)
+    |> Repo.exists?()
+  end
+
+  @doc """
+  True if either user has blocked the other, in either direction — the
+  check `Backend.DirectMessages.open_room/2` and `BackendWeb.DmChannel`'s
+  `"shout"` handler use to gate new interaction between an existing pair,
+  as opposed to `blocked?/2`'s single-direction check (which is what a
+  "did I block this person" UI question actually wants).
+  """
+  def blocked_either_way?(user_id, other_id) do
+    Friendship
+    |> where([f], f.status == "blocked")
+    |> where(
+      [f],
+      (f.user_id == ^user_id and f.friend_id == ^other_id) or
+        (f.user_id == ^other_id and f.friend_id == ^user_id)
+    )
+    |> Repo.exists?()
+  end
+
+  @doc "Lists every user `user_id` has blocked (not who has blocked `user_id`)."
+  def list_blocked_users(user_id) do
+    Friendship
+    |> where([f], f.status == "blocked" and f.user_id == ^user_id)
+    |> Repo.all()
+    |> Repo.preload(:friend)
+    |> Enum.map(&%{user_id: &1.friend.id, username: &1.friend.username})
   end
 
   @doc """

@@ -198,4 +198,58 @@ defmodule BackendWeb.AccountControllerTest do
       assert conn.status == 401
     end
   end
+
+  describe "PATCH /api/account/friend-request-privacy" do
+    test "updates the preference", %{conn: conn} do
+      user = user_fixture()
+
+      conn =
+        conn
+        |> authed(user)
+        |> patch(~p"/api/account/friend-request-privacy", %{"friend_request_privacy" => "nobody"})
+
+      assert json_response(conn, 200) == %{"friend_request_privacy" => "nobody"}
+    end
+
+    test "rejects an invalid value", %{conn: conn} do
+      user = user_fixture()
+
+      conn =
+        conn
+        |> authed(user)
+        |> patch(~p"/api/account/friend-request-privacy", %{
+          "friend_request_privacy" => "friends_only"
+        })
+
+      assert %{"errors" => %{"friend_request_privacy" => [_ | _]}} = json_response(conn, 422)
+    end
+
+    test "requires authentication", %{conn: conn} do
+      conn =
+        patch(conn, ~p"/api/account/friend-request-privacy", %{
+          "friend_request_privacy" => "nobody"
+        })
+
+      assert conn.status == 401
+    end
+  end
+
+  describe "GET /api/account/blocked-users" do
+    test "lists users the caller has blocked", %{conn: conn} do
+      user = user_fixture()
+      target = user_fixture()
+      {:ok, _} = Backend.Friends.block_user(user.id, target.id)
+
+      conn = conn |> authed(user) |> get(~p"/api/account/blocked-users")
+
+      assert json_response(conn, 200) == [
+               %{"user_id" => target.id, "username" => target.username}
+             ]
+    end
+
+    test "requires authentication", %{conn: conn} do
+      conn = get(conn, ~p"/api/account/blocked-users")
+      assert conn.status == 401
+    end
+  end
 end

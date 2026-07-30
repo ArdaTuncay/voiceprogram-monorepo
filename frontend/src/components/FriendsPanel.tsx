@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
-import { AlertTriangle, MessageCircle, Trash2, Check, X } from 'lucide-react';
+import { AlertTriangle, Ban, MessageCircle, Trash2, Check, X } from 'lucide-react';
 import type { Friendship } from '../types';
 import { useFriendStore } from '../stores/useFriendStore';
 import { useDMStore } from '../stores/useDMStore';
@@ -17,6 +17,7 @@ export default function FriendsPanel() {
   const loadFriendships = useFriendStore((s) => s.loadFriendships);
   const acceptRequest = useFriendStore((s) => s.acceptRequest);
   const removeFriendship = useFriendStore((s) => s.removeFriendship);
+  const blockUser = useFriendStore((s) => s.blockUser);
 
   const openRoomWithUser = useDMStore((s) => s.openRoomWithUser);
 
@@ -43,6 +44,14 @@ export default function FriendsPanel() {
     setActioningId(id);
     await removeFriendship(id);
     setActioningId(null);
+  }
+
+  async function handleBlock(userId: string) {
+    setActioningId(userId);
+    setMessageError('');
+    const errorMessage = await blockUser(userId);
+    setActioningId(null);
+    if (errorMessage) setMessageError(errorMessage);
   }
 
   async function handleMessage(userId: string) {
@@ -96,6 +105,7 @@ export default function FriendsPanel() {
                 actioningId={actioningId}
                 onRemove={handleRemove}
                 onMessage={handleMessage}
+                onBlock={handleBlock}
               />
             )}
             {subTab === 'all' && (
@@ -105,6 +115,7 @@ export default function FriendsPanel() {
                 actioningId={actioningId}
                 onRemove={handleRemove}
                 onMessage={handleMessage}
+                onBlock={handleBlock}
               />
             )}
             {subTab === 'pending' && (
@@ -114,6 +125,7 @@ export default function FriendsPanel() {
                 actioningId={actioningId}
                 onAccept={handleAccept}
                 onRemove={handleRemove}
+                onBlock={handleBlock}
               />
             )}
             {subTab === 'add' && <AddFriendForm />}
@@ -147,12 +159,14 @@ function FriendList({
   actioningId,
   onRemove,
   onMessage,
+  onBlock,
 }: {
   friendships: Friendship[];
   emptyText: string;
   actioningId: string | null;
   onRemove: (id: string) => void;
   onMessage: (userId: string) => void;
+  onBlock: (userId: string) => void;
 }) {
   if (friendships.length === 0) {
     return <div className="friends-empty">{emptyText}</div>;
@@ -186,6 +200,15 @@ function FriendList({
           >
             <Trash2 size={14} />
           </button>
+          <button
+            className="friends-remove-btn"
+            onClick={() => onBlock(f.user_id)}
+            disabled={actioningId === f.user_id}
+            title="Engelle"
+            aria-label={`${f.username ?? 'kullanıcıyı'} engelle`}
+          >
+            <Ban size={14} />
+          </button>
         </li>
       ))}
     </ul>
@@ -198,12 +221,14 @@ function PendingList({
   actioningId,
   onAccept,
   onRemove,
+  onBlock,
 }: {
   incoming: Friendship[];
   outgoing: Friendship[];
   actioningId: string | null;
   onAccept: (id: string) => void;
   onRemove: (id: string) => void;
+  onBlock: (userId: string) => void;
 }) {
   if (incoming.length === 0 && outgoing.length === 0) {
     return <div className="friends-empty">Bekleyen bir istek yok.</div>;
@@ -238,6 +263,15 @@ function PendingList({
                   aria-label={`${f.username ?? 'kullanıcının'} isteğini reddet`}
                 >
                   <X size={14} />
+                </button>
+                <button
+                  className="friends-remove-btn"
+                  onClick={() => onBlock(f.user_id)}
+                  disabled={actioningId === f.user_id}
+                  title="Engelle"
+                  aria-label={`${f.username ?? 'kullanıcıyı'} engelle`}
+                >
+                  <Ban size={14} />
                 </button>
               </li>
             ))}

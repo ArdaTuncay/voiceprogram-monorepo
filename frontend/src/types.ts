@@ -2,6 +2,10 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  /** Optional — only present on the login/register response, not every
+   * place a `User` gets constructed (e.g. tests). Absent means "everyone"
+   * (the backend's own default for a freshly registered user). */
+  friend_request_privacy?: FriendRequestPrivacy;
 }
 
 export interface AuthResponse extends User {
@@ -185,6 +189,14 @@ export interface ApiError {
 
 export type FriendshipStatus = 'pending' | 'accepted' | 'blocked';
 export type FriendshipDirection = 'incoming' | 'outgoing';
+export type FriendRequestPrivacy = 'everyone' | 'nobody';
+
+/** One entry in the "who have I blocked" list (see
+ * Backend.Friends.list_blocked_users/1) — never who has blocked *me*. */
+export interface BlockedUser {
+  user_id: string;
+  username: string | null;
+}
 
 /** A friendship/request row, already shaped from the viewing user's point of
  * view by the backend (see Backend.Friends.to_view/2) — `user_id`/`username`/

@@ -15,6 +15,8 @@ import type {
   SearchResultsPage,
   TurnCredentialsResponse,
   User,
+  BlockedUser,
+  FriendRequestPrivacy,
 } from '../types';
 import { API_BASE_URL } from '../config';
 import { getStoredToken, storeToken } from './tokenStorage';
@@ -361,4 +363,28 @@ export function updatePassword(
     current_password: currentPassword,
     new_password: newPassword,
   });
+}
+
+/** "everyone" (default) or "nobody" — checked by the backend before a
+ * friend request is even created (see BackendWeb.AccountController). */
+export function updateFriendRequestPrivacy(
+  privacy: FriendRequestPrivacy
+): Promise<ApiResult<{ friend_request_privacy: FriendRequestPrivacy }>> {
+  return authedPatch('/account/friend-request-privacy', { friend_request_privacy: privacy });
+}
+
+/** Lists every user the current account has blocked (never who has blocked them). */
+export function fetchBlockedUsers(): Promise<ApiResult<BlockedUser[]>> {
+  return authedGet<BlockedUser[]>('/account/blocked-users');
+}
+
+/** Blocks a user by id — they can no longer send a friend request, open a
+ * new DM, or send a message in an existing DM room; existing message
+ * history is untouched (see Backend.Friends.block_user/2). */
+export function blockUser(userId: string): Promise<ApiResult<void>> {
+  return authedPost<void>(`/users/${userId}/block`, {});
+}
+
+export function unblockUser(userId: string): Promise<ApiResult<void>> {
+  return authedDelete<void>(`/users/${userId}/block`);
 }

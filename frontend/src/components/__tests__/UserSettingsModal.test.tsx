@@ -9,6 +9,10 @@ vi.mock('../../services/api', () => ({
   updateUsername: vi.fn(),
   updateEmail: vi.fn(),
   updatePassword: vi.fn(),
+  updateFriendRequestPrivacy: vi.fn(),
+  fetchBlockedUsers: vi.fn().mockResolvedValue({ data: [] }),
+  blockUser: vi.fn(),
+  unblockUser: vi.fn(),
 }));
 
 vi.mock('../../services/socket', () => ({
@@ -19,9 +23,17 @@ vi.mock('../../services/session', () => ({
   forceLogout: vi.fn(),
 }));
 
-import { updateEmail, updatePassword, updateUsername } from '../../services/api';
+import {
+  fetchBlockedUsers,
+  unblockUser,
+  updateEmail,
+  updateFriendRequestPrivacy,
+  updatePassword,
+  updateUsername,
+} from '../../services/api';
 import { disconnectSocket } from '../../services/socket';
 import { forceLogout } from '../../services/session';
+import { useFriendStore } from '../../stores/useFriendStore';
 
 const testUser: User = { id: 'u1', username: 'ardatuncay', email: 'arda@example.com' };
 
@@ -38,6 +50,8 @@ describe('UserSettingsModal', () => {
     document.documentElement.removeAttribute('data-theme');
     mockSystemPreference(false);
     vi.clearAllMocks();
+    useFriendStore.getState().reset();
+    vi.mocked(fetchBlockedUsers).mockResolvedValue({ data: [] });
   });
 
   afterEach(() => {
@@ -74,9 +88,9 @@ describe('UserSettingsModal', () => {
   it('switches categories, showing a "Yakında" placeholder for the unfilled ones', () => {
     render(<UserSettingsModal user={testUser} onClose={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Gizlilik & Güvenlik' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hesap Silme / Veri Yönetimi' }));
 
-    expect(screen.getByRole('heading', { name: 'Gizlilik & Güvenlik' })).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Hesap Silme / Veri Yönetimi' })).not.toBeNull();
     expect(screen.getByText('Yakında')).not.toBeNull();
     // The theme selector only renders for the Appearance category.
     expect(screen.queryByRole('radiogroup', { name: 'Tema' })).toBeNull();
@@ -321,6 +335,80 @@ describe('UserSettingsModal', () => {
       expect(screen.getByText('Yeni satır')).not.toBeNull();
       expect(screen.getAllByText('Enter').length).toBeGreaterThan(0);
       expect(screen.getByText('Esc')).not.toBeNull();
+    });
+  });
+
+  describe('Gizlilik & Güvenlik', () => {
+    function openPrivacyTab(user: User = testUser) {
+      render(<UserSettingsModal user={user} onClose={vi.fn()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Gizlilik & Güvenlik' }));
+    }
+
+    it('defaults the segmented control to "Herkes" when the user has no stored preference', () => {
+      openPrivacyTab();
+
+      expect(screen.getByRole('radio', { name: 'Herkes' }).getAttribute('aria-checked')).toBe('true');
+      expect(screen.getByRole('radio', { name: 'Kimse' }).getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('preselects "Kimse" when the user already has friend_request_privacy: "nobody"', () => {
+      openPrivacyTab({ ...testUser, friend_request_privacy: 'nobody' });
+
+      expect(screen.getByRole('radio', { name: 'Kimse' }).getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('selecting an option calls updateFriendRequestPrivacy and updates the selection', async () => {
+      vi.mocked(updateFriendRequestPrivacy).mockResolvedValue({
+        data: { friend_request_privacy: 'nobody' },
+      });
+      openPrivacyTab();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('radio', { name: 'Kimse' }));
+      });
+
+      expect(updateFriendRequestPrivacy).toHaveBeenCalledWith('nobody');
+      expect(screen.getByRole('radio', { name: 'Kimse' }).getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('shows "Kimseyi engellemedin." when the blocked list is empty', async () => {
+      openPrivacyTab();
+
+      await screen.findByText('Kimseyi engellemedin.');
+    });
+
+    it('lists blocked users and removes one on "Engeli Kaldır"', async () => {
+      vi.mocked(fetchBlockedUsers).mockResolvedValue({
+        data: [{ user_id: 'u9', username: 'blocked_guy' }],
+      });
+      vi.mocked(unblockUser).mockResolvedValue({ data: undefined });
+      openPrivacyTab();
+
+      await screen.findByText('blocked_guy');
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Engeli Kaldır' }));
+      });
+
+      expect(unblockUser).toHaveBeenCalledWith('u9');
+      expect(screen.queryByText('blocked_guy')).toBeNull();
+      expect(screen.getByText('Kimseyi engellemedin.')).not.toBeNull();
+    });
+
+    it('shows the backend error when unblocking fails', async () => {
+      vi.mocked(fetchBlockedUsers).mockResolvedValue({
+        data: [{ user_id: 'u9', username: 'blocked_guy' }],
+      });
+      vi.mocked(unblockUser).mockResolvedValue({ error: 'Bu kullanıcıyı engellemediniz' });
+      openPrivacyTab();
+
+      await screen.findByText('blocked_guy');
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Engeli Kaldır' }));
+      });
+
+      expect(screen.getByText('Bu kullanıcıyı engellemediniz')).not.toBeNull();
     });
   });
 });

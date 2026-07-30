@@ -118,4 +118,41 @@ defmodule Backend.DirectMessagesTest do
       assert DirectMessages.list_messages(room.id, before_id: Ecto.UUID.generate()) == []
     end
   end
+
+  describe "open_room/2 with a block in place" do
+    test "rejects opening a new room when the target blocked the caller" do
+      a = user_fixture()
+      b = user_fixture()
+      {:ok, _} = Backend.Friends.block_user(b.id, a.id)
+
+      assert {:error, :blocked} = DirectMessages.open_room(a.id, %{"user_id" => b.id})
+    end
+
+    test "rejects opening a new room when the caller blocked the target" do
+      a = user_fixture()
+      b = user_fixture()
+      {:ok, _} = Backend.Friends.block_user(a.id, b.id)
+
+      assert {:error, :blocked} = DirectMessages.open_room(a.id, %{"user_id" => b.id})
+    end
+
+    test "an existing room's message history survives a block untouched" do
+      a = user_fixture()
+      b = user_fixture()
+      room = dm_room_fixture(a, b)
+
+      {:ok, message} =
+        DirectMessages.create_message(%{
+          content: "hello before the block",
+          user_id: a.id,
+          dm_room_id: room.id
+        })
+
+      {:ok, _} = Backend.Friends.block_user(a.id, b.id)
+
+      assert DirectMessages.get_room(room.id) != nil
+      messages = DirectMessages.list_messages(room.id)
+      assert Enum.map(messages, & &1.id) == [message.id]
+    end
+  end
 end
