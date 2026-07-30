@@ -12,6 +12,7 @@ import { useDMStore } from '../stores/useDMStore';
 import { useSocketSync } from '../stores/useSocketStore';
 import { useConnectionStore } from '../stores/useConnectionStore';
 import { userColor, initials } from '../utils';
+import { getMediaPreferences, supportsOutputDeviceSelection } from '../services/mediaPreferences';
 import ServerSidebar from './ServerSidebar';
 import InviteModal from './InviteModal';
 import ServerSettingsModal from './ServerSettingsModal';
@@ -760,7 +761,16 @@ export default function Chat({ user, onLogout }: Props) {
           muted={voice.isDeafened}
           style={{ display: 'none' }}
           ref={(el) => {
-            if (el) el.srcObject = stream;
+            if (!el) return;
+            el.srcObject = stream;
+            // Applies the saved output-device preference (see
+            // UserSettingsModal's Ses & Görüntü tab) — a no-op string
+            // ("") means "system default", and setSinkId isn't available
+            // at all in every browser (Firefox), hence the guards.
+            const { speakerDeviceId } = getMediaPreferences();
+            if (speakerDeviceId && supportsOutputDeviceSelection()) {
+              void el.setSinkId(speakerDeviceId).catch(() => {});
+            }
           }}
         />
       ))}

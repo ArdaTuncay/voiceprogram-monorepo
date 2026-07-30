@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 import type { User } from '../types';
@@ -9,6 +9,13 @@ import { disconnectSocket } from '../services/socket';
 import { forceLogout } from '../services/session';
 import type { NotificationPreferences } from '../services/notificationPreferences';
 import { getNotificationPreferences, updateNotificationPreference } from '../services/notificationPreferences';
+import type { MediaPreferences } from '../services/mediaPreferences';
+import {
+  getMediaPreferences,
+  resolveMicConstraint,
+  supportsOutputDeviceSelection,
+  updateMediaPreference,
+} from '../services/mediaPreferences';
 import './UserSettingsModal.css';
 
 type Category =
@@ -88,6 +95,8 @@ export default function UserSettingsModal({ user, onClose }: Props) {
             <NotificationSettings />
           ) : category === 'shortcuts' ? (
             <ShortcutsSettings />
+          ) : category === 'voice' ? (
+            <VoiceSettings />
           ) : (
             <PlaceholderSettings label={activeLabel} />
           )}
@@ -543,6 +552,182 @@ function ShortcutsSettings() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Ses & Görüntü — real input/output device lists from enumerateDevices(),
+ * persisted via services/mediaPreferences.ts (same localStorage pattern as
+ * theme.ts/notificationPreferences.ts). The output-device picker only
+ * renders when the browser actually supports HTMLMediaElement.setSinkId
+ * (Firefox doesn't) — hidden entirely rather than shown and silently
+ * doing nothing. */
+function VoiceSettings() {
+  const [prefs, setPrefs] = useState<MediaPreferences>(getMediaPreferences);
+  const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
+  const [speakers, setSpeakers] = useState<MediaDeviceInfo[]>([]);
+  const [deviceError, setDeviceError] = useState('');
+  const outputSupported = supportsOutputDeviceSelection();
+
+  const loadDevices = useCallback(async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setMics(devices.filter((d) => d.kind === 'audioinput'));
+      setSpeakers(devices.filter((d) => d.kind === 'audiooutput'));
+      setDeviceError('');
+    } catch {
+      setDeviceError('Cihaz listesi alınamadı.');
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadDevices();
+    // Devices are re-enumerated on plug/unplug, and (see MicTestButton)
+    // right after a mic permission grant — browsers only return real
+    // device labels once permission's been granted at least once, so the
+    // dropdown starts out with generic "Mikrofon 1" placeholders until then.
+    navigator.mediaDevices.addEventListener('devicechange', loadDevices);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', loadDevices);
+  }, [loadDevices]);
+
+  return (
+    <div className="user-settings-section">
+      <h3 className="user-settings-heading">Ses & Görüntü</h3>
+
+      {deviceError && <StatusMessage type="error" message={deviceError} />}
+
+      <label className="user-settings-label" htmlFor="voice-mic-select">
+        Mikrofon
+      </label>
+      <select
+        id="voice-mic-select"
+        className="account-form-input voice-device-select"
+        value={prefs.micDeviceId ?? ''}
+        onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+          setPrefs(updateMediaPreference('micDeviceId', e.target.value || null))
+        }
+      >
+        <option value="">Sistem varsayılanı</option>
+        {mics.map((d, i) => (
+          <option key={d.deviceId || i} value={d.deviceId}>
+            {d.label || `Mikrofon ${i + 1}`}
+          </option>
+        ))}
+      </select>
+
+      {outputSupported && (
+        <>
+          <label className="user-settings-label" htmlFor="voice-speaker-select">
+            Hoparlör
+          </label>
+          <select
+            id="voice-speaker-select"
+            className="account-form-input voice-device-select"
+            value={prefs.speakerDeviceId ?? ''}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+              setPrefs(updateMediaPreference('speakerDeviceId', e.target.value || null))
+            }
+          >
+            <option value="">Sistem varsayılanı</option>
+            {speakers.map((d, i) => (
+              <option key={d.deviceId || i} value={d.deviceId}>
+                {d.label || `Hoparlör ${i + 1}`}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
+
+      <MicTestButton onPermissionGranted={loadDevices} />
+    </div>
+  );
+}
+
+/** Opens its own short-lived mic stream (independent of any active voice
+ * channel call — this works whether or not you're in one) purely to drive
+ * a live volume meter, using the same AnalyserNode technique
+ * useVoiceChannel.ts's watchSpeaking does, just not wired into that hook's
+ * per-peer bookkeeping since this has nothing to do with an active call. */
+function MicTestButton({ onPermissionGranted }: { onPermissionGranted: () => void }) {
+  const [testing, setTesting] = useState(false);
+  const [level, setLevel] = useState(0);
+  const [error, setError] = useState('');
+  const streamRef = useRef<MediaStream | null>(null);
+  const ctxRef = useRef<AudioContext | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  const stopTest = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (ctxRef.current) {
+      void ctxRef.current.close();
+      ctxRef.current = null;
+    }
+    setTesting(false);
+    setLevel(0);
+  }, []);
+
+  // Release the mic/AudioContext if this tab (or category) unmounts mid-test.
+  useEffect(() => stopTest, [stopTest]);
+
+  async function startTest() {
+    setError('');
+    try {
+      const constraint = await resolveMicConstraint();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: constraint });
+      streamRef.current = stream;
+      onPermissionGranted();
+
+      const ctx = new AudioContext();
+      ctxRef.current = ctx;
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+
+      const tick = () => {
+        analyser.getByteFrequencyData(data);
+        const avg = data.reduce((sum, v) => sum + v, 0) / data.length;
+        setLevel(Math.min(100, Math.round((avg / 128) * 100)));
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      tick();
+      setTesting(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Mikrofona erişilemedi');
+      stopTest();
+    }
+  }
+
+  return (
+    <div className="mic-test">
+      <button
+        type="button"
+        className="account-form-submit-btn"
+        onClick={() => (testing ? stopTest() : void startTest())}
+      >
+        {testing ? 'Testi Durdur' : 'Mikrofonu Test Et'}
+      </button>
+
+      {testing && (
+        <div
+          className="mic-test-meter"
+          role="meter"
+          aria-label="Mikrofon seviyesi"
+          aria-valuenow={level}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div className="mic-test-meter-fill" style={{ width: `${level}%` }} />
+        </div>
+      )}
+
+      {error && <StatusMessage type="error" message={error} />}
     </div>
   );
 }

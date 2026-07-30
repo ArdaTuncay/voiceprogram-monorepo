@@ -9,6 +9,7 @@ import {
   sendIceDiagnostics,
 } from '../services/socket';
 import { fetchTurnCredentials } from '../services/api';
+import { resolveMicConstraint } from '../services/mediaPreferences';
 
 // How long to wait on a VITE_TURN_API_URL fetch before giving up on it and
 // falling back to the static/STUN-only config — a hung managed-TURN-provider
@@ -700,7 +701,23 @@ export function useVoiceChannel(user: User) {
     let stream: MediaStream | null = null;
 
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const micConstraint = await resolveMicConstraint();
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: micConstraint });
+      } catch (err) {
+        // The saved device passed resolveMicConstraint's enumerateDevices
+        // check but vanished (unplugged, permission revoked, ...) in the
+        // moment between that check and this call — narrower than, but the
+        // same "never let a stale device id block joining" fallback as,
+        // resolveMicConstraint's own check. Only retried for that specific
+        // failure; a plain permission denial should still surface as
+        // itself rather than being masked by a silent retry.
+        const isStaleDevice =
+          micConstraint !== true && err instanceof Error && err.name === 'OverconstrainedError';
+        if (!isStaleDevice) throw err;
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
 
       if (joinGenerationRef.current !== myGeneration) {
         // Superseded while awaiting mic permission — the user already

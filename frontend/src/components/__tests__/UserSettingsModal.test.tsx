@@ -74,9 +74,9 @@ describe('UserSettingsModal', () => {
   it('switches categories, showing a "Yakında" placeholder for the unfilled ones', () => {
     render(<UserSettingsModal user={testUser} onClose={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Ses & Görüntü' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gizlilik & Güvenlik' }));
 
-    expect(screen.getByRole('heading', { name: 'Ses & Görüntü' })).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Gizlilik & Güvenlik' })).not.toBeNull();
     expect(screen.getByText('Yakında')).not.toBeNull();
     // The theme selector only renders for the Appearance category.
     expect(screen.queryByRole('radiogroup', { name: 'Tema' })).toBeNull();

@@ -15,6 +15,7 @@ import {
   makeFakeStream,
   type FakeMediaStream,
 } from './webrtcTestUtils';
+import { setMediaPreferences } from '../../services/mediaPreferences';
 
 vi.mock('../../services/socket', () => ({
   joinVoiceChannel: vi.fn(),
@@ -683,5 +684,62 @@ describe.sequential('useVoiceChannel — backend-proxied Metered TURN credential
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'turn:turn.example.com:443', username: 'u', credential: 'c' },
     ]);
+  });
+});
+
+// Same .sequential/FakeRTCPeerConnection.instances constraint as every
+// other describe block above — see the first one's comment.
+describe.sequential('useVoiceChannel — saved microphone device preference', () => {
+  let getUserMedia: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    ({ getUserMedia } = installWebrtcMocks());
+    getUserMedia.mockResolvedValue(makeFakeStream());
+    // enumerateDevices isn't part of installWebrtcMocks' base fake (most
+    // tests never need it, since resolveMicConstraint short-circuits to
+    // `true` whenever no device id is saved) — added per-test here.
+    navigator.mediaDevices.enumerateDevices = vi.fn();
+    vi.mocked(joinVoiceChannel).mockReturnValue(resolvedChannel());
+  });
+
+  afterEach(() => {
+    cleanupActiveHooks();
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it('still joins successfully, falling back to the default mic, when the saved device id no longer exists', async () => {
+    setMediaPreferences({ micDeviceId: 'unplugged-device', speakerDeviceId: null });
+    vi.mocked(navigator.mediaDevices.enumerateDevices).mockResolvedValue([
+      { deviceId: 'some-other-mic', kind: 'audioinput', label: '', groupId: '', toJSON: () => ({}) },
+    ] as MediaDeviceInfo[]);
+
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    expect(result.current.error).toBe('');
+    expect(result.current.activeRoomId).toBe('roomA');
+    expect(getUserMedia).toHaveBeenCalledWith({ audio: true });
+  });
+
+  it('passes the saved device id as an exact constraint when it is still present', async () => {
+    setMediaPreferences({ micDeviceId: 'still-plugged-in', speakerDeviceId: null });
+    vi.mocked(navigator.mediaDevices.enumerateDevices).mockResolvedValue([
+      { deviceId: 'still-plugged-in', kind: 'audioinput', label: '', groupId: '', toJSON: () => ({}) },
+    ] as MediaDeviceInfo[]);
+
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    expect(result.current.error).toBe('');
+    expect(getUserMedia).toHaveBeenCalledWith({ audio: { deviceId: { exact: 'still-plugged-in' } } });
   });
 });
