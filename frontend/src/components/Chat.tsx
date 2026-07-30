@@ -786,7 +786,7 @@ export default function Chat({ user, onLogout }: Props) {
       )}
 
       {showUserSettingsModal && (
-        <UserSettingsModal onClose={() => setShowUserSettingsModal(false)} />
+        <UserSettingsModal user={user} onClose={() => setShowUserSettingsModal(false)} />
       )}
     </div>
   );

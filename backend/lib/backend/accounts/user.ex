@@ -31,6 +31,48 @@ defmodule Backend.Accounts.User do
     |> hash_password()
   end
 
+  @doc "Used by Backend.Accounts.update_username/2 — same format/length rules as registration."
+  def username_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:username])
+    |> validate_required([:username])
+    |> validate_length(:username, min: 3, max: 30)
+    |> validate_format(:username, ~r/^[a-zA-Z0-9_]+$/,
+      message: "only letters, numbers and underscores allowed"
+    )
+    |> unique_constraint(:username)
+  end
+
+  @doc """
+  Used by Backend.Accounts.update_email/2 — no confirmation link, this
+  takes effect immediately (see PROJECT_ARCHITECTURE.md's note on why:
+  no mail provider is wired up yet, and this project doesn't have a real
+  user base to protect from a mistyped/hijacked address).
+  """
+  def email_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:email])
+    |> validate_required([:email])
+    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must be a valid email")
+    |> unique_constraint(:email)
+  end
+
+  @doc """
+  Used by Backend.Accounts.update_password/3, after that function has
+  already verified the caller's current password. Goes through the same
+  `hash_password/1` hook as registration, so a successful update also
+  bumps `token_version` — every token issued before this change stops
+  authenticating (see `Backend.Accounts.authenticate_token/1`), the same
+  effect `revoke_all_tokens/1` produces, without a second write.
+  """
+  def password_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:password])
+    |> validate_required([:password])
+    |> validate_length(:password, min: 8, message: "must be at least 8 characters")
+    |> hash_password()
+  end
+
   # Runs whenever a password is being set (registration) or, in the future,
   # changed — bumping token_version here means both cases are covered by
   # this one hook, and any statically-issued token signed against an older

@@ -14,6 +14,7 @@ import type {
   SearchFilters,
   SearchResultsPage,
   TurnCredentialsResponse,
+  User,
 } from '../types';
 import { API_BASE_URL } from '../config';
 import { getStoredToken, storeToken } from './tokenStorage';
@@ -113,6 +114,14 @@ function authedPut<T>(path: string, body: Record<string, string>): Promise<ApiRe
 
 function authedDelete<T>(path: string): Promise<ApiResult<T>> {
   return authedFetch<T>(path, { method: 'DELETE' });
+}
+
+function authedPatch<T>(path: string, body: Record<string, string>): Promise<ApiResult<T>> {
+  return authedFetch<T>(path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }
 
 export async function registerUser(
@@ -324,4 +333,32 @@ export function fetchLinkPreview(url: string): Promise<ApiResult<LinkPreview>> {
  */
 export function fetchTurnCredentials(): Promise<ApiResult<TurnCredentialsResponse>> {
   return authedGet<TurnCredentialsResponse>('/voice/turn-credentials');
+}
+
+/** Changes the current user's username — requires re-entering the current
+ * password (see BackendWeb.AccountController.update_username/2). */
+export function updateUsername(username: string, currentPassword: string): Promise<ApiResult<User>> {
+  return authedPatch<User>('/account/username', { username, current_password: currentPassword });
+}
+
+/** Changes the current user's email — same current-password requirement as
+ * updateUsername. Takes effect immediately, no confirmation link (see
+ * PROJECT_ARCHITECTURE.md's note on why). */
+export function updateEmail(email: string, currentPassword: string): Promise<ApiResult<User>> {
+  return authedPatch<User>('/account/email', { email, current_password: currentPassword });
+}
+
+/** Changes the current user's password. On success, every previously
+ * issued token — including the one this very request used — stops
+ * authenticating (see BackendWeb.AccountController.update_password/3), so
+ * the caller is expected to force a fresh login afterwards rather than
+ * keep using the current session. */
+export function updatePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<ApiResult<User>> {
+  return authedPatch<User>('/account/password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
 }

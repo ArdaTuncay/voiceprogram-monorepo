@@ -30,6 +30,10 @@ defmodule BackendWeb.Router do
 
     post "/users/logout_all", UserController, :logout_all
 
+    patch "/account/username", AccountController, :update_username
+    patch "/account/email", AccountController, :update_email
+    patch "/account/password", AccountController, :update_password
+
     get "/servers", ServerController, :index
     post "/servers", ServerController, :create
     put "/servers/:id", ServerController, :update

@@ -124,6 +124,76 @@ defmodule Backend.Accounts do
   end
 
   @doc """
+  Verifies a plaintext password against a user's stored hash — the same
+  constant-time-safe pattern `authenticate_user/2` uses (a dummy hash op
+  when verification fails, so a wrong-password response takes the same
+  time whether or not it also happened to be a real user's password),
+  extracted so callers that need to gate a sensitive account change on
+  re-entering the current password (see `update_username/2`/`update_email/2`'s
+  controller) don't duplicate the `Pbkdf2` calls themselves.
+  """
+  def verify_password?(%User{password_hash: password_hash}, password) do
+    if Pbkdf2.verify_pass(password, password_hash) do
+      true
+    else
+      Pbkdf2.no_user_verify()
+      false
+    end
+  end
+
+  @doc """
+  Updates a user's username, subject to the same format/length/uniqueness
+  rules as registration. Returns `{:error, changeset}` (with a "has already
+  been taken" error on `:username`) if it collides with another user —
+  the DB's own unique index (see the `create_users` migration) is what
+  actually enforces this under a race; `unique_constraint/2` on the
+  changeset just turns that into a normal validation error instead of a
+  raised `Ecto.ConstraintError`.
+
+  Does not itself check a current password — that's the caller's
+  responsibility (see `verify_password?/2`), same division as
+  `update_email/2`.
+  """
+  def update_username(%User{} = user, new_username) do
+    user
+    |> User.username_changeset(%{"username" => new_username})
+    |> Repo.update()
+  end
+
+  @doc """
+  Updates a user's email. No confirmation step — see
+  `Backend.Accounts.User.email_changeset/2`'s moduledoc for why. Same
+  unique-collision behavior as `update_username/2`.
+  """
+  def update_email(%User{} = user, new_email) do
+    user
+    |> User.email_changeset(%{"email" => new_email})
+    |> Repo.update()
+  end
+
+  @doc """
+  Changes a user's password after verifying `current_password` against the
+  stored hash. Returns `{:error, :invalid_current_password}` (not a
+  changeset) when that check fails, so the controller can tell "wrong
+  current password" apart from "new password too short" without pattern
+  matching into changeset error details.
+
+  On success, invalidates every previously issued token for this user —
+  see `Backend.Accounts.User.password_changeset/2`'s moduledoc for how
+  (it's the same `hash_password/1` hook `registration_changeset/2` uses,
+  not a separate call to `revoke_all_tokens/1`).
+  """
+  def update_password(%User{} = user, current_password, new_password) do
+    if verify_password?(user, current_password) do
+      user
+      |> User.password_changeset(%{"password" => new_password})
+      |> Repo.update()
+    else
+      {:error, :invalid_current_password}
+    end
+  end
+
+  @doc """
   Updates the online/offline status of a user by id.
 
   Returns `{:error, :not_found}` if `user_id` doesn't exist (shouldn't

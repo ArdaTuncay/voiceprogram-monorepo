@@ -130,3 +130,76 @@
   background: var(--accent);
   color: var(--on-accent);
 }
+
+/* ── Hesabım — one .account-form per field, each independent ── */
+.account-form {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.account-form:first-of-type {
+  padding-top: 0;
+}
+
+.account-form:last-of-type {
+  border-bottom: none;
+}
+
+.account-form-title {
+  color: var(--text-heading);
+  font-size: 15px;
+  margin: 0 0 14px;
+}
+
+.account-form-input {
+  background: var(--bg-input);
+  border: none;
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  margin-bottom: 14px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.account-form-submit-btn {
+  align-self: flex-start;
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  color: var(--on-accent);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+
+.account-form-submit-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.account-form-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.account-form-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.account-form-message-error {
+  color: var(--danger);
+}
+
+.account-form-message-success {
+  color: var(--success);
+}

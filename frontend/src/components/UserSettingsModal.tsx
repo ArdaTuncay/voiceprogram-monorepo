@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { X } from 'lucide-react';
+import type { ChangeEvent, FormEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import type { User } from '../types';
 import type { ThemePreference } from '../services/theme';
 import { getStoredPreference, setThemePreference } from '../services/theme';
+import { updateEmail, updatePassword, updateUsername } from '../services/api';
+import { disconnectSocket } from '../services/socket';
+import { forceLogout } from '../services/session';
 import './UserSettingsModal.css';
 
 type Category =
@@ -25,16 +29,17 @@ const CATEGORIES: { id: Category; label: string }[] = [
 ];
 
 interface Props {
+  user: User;
   onClose: () => void;
 }
 
 /** Discord-style full-screen settings shell: a vertical category rail on
- * the left, selected category's content on the right. Only "Görünüm" is
- * actually wired up right now — the rest get a placeholder until their own
+ * the left, selected category's content on the right. "Hesabım" and
+ * "Görünüm" are wired up — the rest get a placeholder until their own
  * turns. Deliberately its own overlay/layout rather than reusing the
  * shared Modal component, which is a narrow centered dialog and not suited
  * to this wide, two-pane shape. */
-export default function UserSettingsModal({ onClose }: Props) {
+export default function UserSettingsModal({ user, onClose }: Props) {
   const [category, setCategory] = useState<Category>('appearance');
 
   useEffect(() => {
@@ -73,7 +78,9 @@ export default function UserSettingsModal({ onClose }: Props) {
         </nav>
 
         <div className="user-settings-content">
-          {category === 'appearance' ? (
+          {category === 'account' ? (
+            <AccountSettings user={user} />
+          ) : category === 'appearance' ? (
             <AppearanceSettings />
           ) : (
             <PlaceholderSettings label={activeLabel} />
@@ -90,6 +97,256 @@ function PlaceholderSettings({ label }: { label: string }) {
       <h3 className="user-settings-heading">{label}</h3>
       <p className="user-settings-placeholder">Yakında</p>
     </div>
+  );
+}
+
+type FormStatus = 'idle' | 'submitting' | 'success' | 'error';
+
+function StatusMessage({ type, message }: { type: 'error' | 'success'; message: string }) {
+  return (
+    <div className={`account-form-message account-form-message-${type}`}>
+      {type === 'error' ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
+      {message}
+    </div>
+  );
+}
+
+/** Hesabım — username, email, and password all require re-entering the
+ * current password (Discord-style re-auth for a sensitive change — see
+ * BackendWeb.AccountController), each as its own independent form with its
+ * own success/error state so changing one doesn't reset or block the
+ * others. */
+function AccountSettings({ user }: { user: User }) {
+  return (
+    <div className="user-settings-section">
+      <h3 className="user-settings-heading">Hesabım</h3>
+      <UsernameForm currentUsername={user.username} />
+      <EmailForm currentEmail={user.email} />
+      <PasswordForm />
+    </div>
+  );
+}
+
+function UsernameForm({ currentUsername }: { currentUsername: string }) {
+  const [username, setUsername] = useState(currentUsername);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [status, setStatus] = useState<FormStatus>('idle');
+  const [message, setMessage] = useState('');
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setStatus('submitting');
+    setMessage('');
+
+    const result = await updateUsername(username.trim(), currentPassword);
+    if (result.error) {
+      setStatus('error');
+      setMessage(result.error);
+      return;
+    }
+    setStatus('success');
+    setMessage('Kullanıcı adın güncellendi.');
+    setCurrentPassword('');
+  }
+
+  const trimmed = username.trim();
+  const disabled = status === 'submitting' || !trimmed || trimmed === currentUsername || !currentPassword;
+
+  return (
+    <form className="account-form" onSubmit={handleSubmit}>
+      <h4 className="account-form-title">Kullanıcı Adı</h4>
+
+      <label className="user-settings-label" htmlFor="account-username-input">
+        Yeni kullanıcı adı
+      </label>
+      <input
+        id="account-username-input"
+        className="account-form-input"
+        value={username}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+        maxLength={30}
+        disabled={status === 'submitting'}
+      />
+
+      <label className="user-settings-label" htmlFor="account-username-password">
+        Mevcut şifre
+      </label>
+      <input
+        id="account-username-password"
+        type="password"
+        className="account-form-input"
+        value={currentPassword}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentPassword(e.target.value)}
+        autoComplete="current-password"
+        disabled={status === 'submitting'}
+      />
+
+      <button className="account-form-submit-btn" type="submit" disabled={disabled}>
+        {status === 'submitting' ? 'Kaydediliyor…' : 'Kullanıcı Adını Değiştir'}
+      </button>
+
+      {status === 'error' && <StatusMessage type="error" message={message} />}
+      {status === 'success' && <StatusMessage type="success" message={message} />}
+    </form>
+  );
+}
+
+function EmailForm({ currentEmail }: { currentEmail: string }) {
+  const [email, setEmail] = useState(currentEmail);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [status, setStatus] = useState<FormStatus>('idle');
+  const [message, setMessage] = useState('');
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setStatus('submitting');
+    setMessage('');
+
+    const result = await updateEmail(email.trim(), currentPassword);
+    if (result.error) {
+      setStatus('error');
+      setMessage(result.error);
+      return;
+    }
+    setStatus('success');
+    setMessage('E-posta adresin güncellendi.');
+    setCurrentPassword('');
+  }
+
+  const trimmed = email.trim();
+  const disabled = status === 'submitting' || !trimmed || trimmed === currentEmail || !currentPassword;
+
+  return (
+    <form className="account-form" onSubmit={handleSubmit}>
+      <h4 className="account-form-title">E-posta</h4>
+
+      <label className="user-settings-label" htmlFor="account-email-input">
+        Yeni e-posta
+      </label>
+      <input
+        id="account-email-input"
+        type="email"
+        className="account-form-input"
+        value={email}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+        disabled={status === 'submitting'}
+      />
+
+      <label className="user-settings-label" htmlFor="account-email-password">
+        Mevcut şifre
+      </label>
+      <input
+        id="account-email-password"
+        type="password"
+        className="account-form-input"
+        value={currentPassword}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentPassword(e.target.value)}
+        autoComplete="current-password"
+        disabled={status === 'submitting'}
+      />
+
+      <button className="account-form-submit-btn" type="submit" disabled={disabled}>
+        {status === 'submitting' ? 'Kaydediliyor…' : 'E-postayı Değiştir'}
+      </button>
+
+      {status === 'error' && <StatusMessage type="error" message={message} />}
+      {status === 'success' && <StatusMessage type="success" message={message} />}
+    </form>
+  );
+}
+
+function PasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [status, setStatus] = useState<FormStatus>('idle');
+  const [message, setMessage] = useState('');
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setMessage('');
+
+    if (newPassword !== confirmPassword) {
+      setStatus('error');
+      setMessage('Yeni şifreler eşleşmiyor.');
+      return;
+    }
+
+    setStatus('submitting');
+    const result = await updatePassword(currentPassword, newPassword);
+    if (result.error) {
+      setStatus('error');
+      setMessage(result.error);
+      return;
+    }
+
+    setStatus('success');
+    setMessage(
+      'Şifren değiştirildi. Diğer tüm cihazlarda (ve bu oturumda da) oturum kapatıldı — birazdan yeniden giriş yapman gerekecek.'
+    );
+    // The token this very request used is now invalid too (see
+    // updatePassword's doc comment) — end the session deliberately after
+    // giving the user a moment to read the message, instead of leaving
+    // them looking logged in until some unrelated request 401s on them.
+    window.setTimeout(() => {
+      disconnectSocket();
+      forceLogout();
+    }, 2500);
+  }
+
+  const locked = status === 'submitting' || status === 'success';
+  const disabled = locked || !currentPassword || !newPassword || !confirmPassword;
+
+  return (
+    <form className="account-form" onSubmit={handleSubmit}>
+      <h4 className="account-form-title">Şifre</h4>
+
+      <label className="user-settings-label" htmlFor="account-password-current">
+        Mevcut şifre
+      </label>
+      <input
+        id="account-password-current"
+        type="password"
+        className="account-form-input"
+        value={currentPassword}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentPassword(e.target.value)}
+        autoComplete="current-password"
+        disabled={locked}
+      />
+
+      <label className="user-settings-label" htmlFor="account-password-new">
+        Yeni şifre
+      </label>
+      <input
+        id="account-password-new"
+        type="password"
+        className="account-form-input"
+        value={newPassword}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
+        autoComplete="new-password"
+        disabled={locked}
+      />
+
+      <label className="user-settings-label" htmlFor="account-password-confirm">
+        Yeni şifre (tekrar)
+      </label>
+      <input
+        id="account-password-confirm"
+        type="password"
+        className="account-form-input"
+        value={confirmPassword}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
+        autoComplete="new-password"
+        disabled={locked}
+      />
+
+      <button className="account-form-submit-btn" type="submit" disabled={disabled}>
+        {status === 'submitting' ? 'Kaydediliyor…' : 'Şifreyi Değiştir'}
+      </button>
+
+      {status === 'error' && <StatusMessage type="error" message={message} />}
+      {status === 'success' && <StatusMessage type="success" message={message} />}
+    </form>
   );
 }
 
