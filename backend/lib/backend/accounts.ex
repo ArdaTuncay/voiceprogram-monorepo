@@ -4,10 +4,26 @@ defmodule Backend.Accounts do
   online/offline status.
   """
 
-  import Ecto.Query, only: [from: 2]
+  import Ecto.Query, warn: false
 
   alias Backend.Accounts.User
+  alias Backend.Friends.Friendship
   alias Backend.Repo
+  alias Backend.Servers.{Server, ServerMember}
+  alias Ecto.Multi
+
+  # Ecto.Multi is otherwise unused anywhere in this codebase (see
+  # PROJECT_ARCHITECTURE.md's known-gaps table) — delete_account/2 below is
+  # the first caller, and it's what first surfaces a long-standing Dialyzer
+  # false positive: %Ecto.Multi{}'s :names field wraps a MapSet, whose
+  # internal representation is genuinely `@opaque`, and Dialyzer's PLT
+  # (built from this project's exact Elixir/OTP pair) reports a
+  # call_without_opaque mismatch on Multi.new/0's own result being piped
+  # into Multi.run/3 — a mismatch entirely inside Ecto's own compiled code,
+  # not anything build_deletion_multi/1 itself does. Confirmed harmless by
+  # the full Backend.AccountsTest suite (including an atomicity test that
+  # forces a real mid-transaction failure and asserts nothing committed).
+  @dialyzer {:no_opaque, build_deletion_multi: 1}
 
   @token_salt "user socket"
   @token_max_age 60 * 60 * 24
@@ -217,5 +233,191 @@ defmodule Backend.Accounts do
       nil -> {:error, :not_found}
       user -> user |> Ecto.Changeset.change(status: status) |> Repo.update()
     end
+  end
+
+  @doc """
+  The name to show for a message/DM author, or a DM room's other
+  participant — `"[silinmiş kullanıcı]"` once `User.deleted?/1` is true,
+  their real (anonymized, meaningless) `username` otherwise. This is the
+  single place that decision is made; every serializer that surfaces a
+  user's name to another user's client should call this instead of
+  reading `user.username` directly, so a deleted account can never leak
+  its pre-deletion identity through a stale cached username column.
+  """
+  def display_username(nil), do: nil
+
+  def display_username(%User{} = user),
+    do: if(User.deleted?(user), do: "[silinmiş kullanıcı]", else: user.username)
+
+  @doc """
+  Permanently and irreversibly deletes/anonymizes `user`'s account, after
+  verifying `current_password`. All-or-nothing (a single `Ecto.Multi`
+  transaction) — see PROJECT_ARCHITECTURE.md's account deletion section
+  for the full data map this implements. In order:
+
+    1. Every server `user` owns: if it has other members, ownership
+       transfers to whoever joined earliest (excluding `user`); if not,
+       the server (and its channels/messages/reactions/invites) is
+       deleted outright via the DB's own cascade.
+    2. Every server-membership row `user` still holds afterward (regular
+       memberships elsewhere, and their now-stale membership on any
+       server just transferred away) is removed — deleting the account
+       means leaving every server.
+    3. Every friendship/request/block row involving `user`, in either
+       direction, is removed.
+    4. `user` itself is anonymized (`User.deletion_changeset/1`) —
+       message/DM authorship, reactions, and DM room history are
+       deliberately left untouched (see `display_username/1`).
+
+  Broadcasts (`server_deleted`, `member_left`, `server_updated` for a
+  transferred owner, `friend_removed`) only fire *after* the transaction
+  commits, never mid-transaction — a side effect like a broadcast can't be
+  rolled back, so nothing goes out until we know the whole thing actually
+  happened.
+
+  Returns `{:ok, anonymized_user}`, `{:error, :invalid_current_password}`,
+  or `{:error, reason}` (changeset or other reason from a failed step).
+  """
+  def delete_account(%User{} = user, current_password) do
+    if verify_password?(user, current_password) do
+      user
+      |> build_deletion_multi()
+      |> Repo.transaction()
+      |> case do
+        {:ok, result} ->
+          broadcast_deletion_effects(result)
+          {:ok, result.anonymized_user}
+
+        {:error, _failed_step, reason, _changes} ->
+          {:error, reason}
+      end
+    else
+      {:error, :invalid_current_password}
+    end
+  end
+
+  defp build_deletion_multi(user) do
+    Multi.new()
+    |> Multi.run(:owned_servers, &fetch_owned_servers_step(&1, &2, user.id))
+    |> Multi.run(:server_outcomes, &resolve_server_outcomes_step/2)
+    |> Multi.run(:remaining_memberships, &fetch_remaining_memberships_step(&1, &2, user.id))
+    |> Multi.run(:remove_memberships, &remove_memberships_step/2)
+    |> Multi.run(:friendship_rows, &fetch_friendship_rows_step(&1, &2, user.id))
+    |> Multi.run(:remove_friendships, &remove_friendships_step/2)
+    |> Multi.update(:anonymized_user, User.deletion_changeset(user))
+  end
+
+  defp fetch_owned_servers_step(repo, _changes, user_id) do
+    {:ok, fetch_owned_servers(repo, user_id)}
+  end
+
+  defp resolve_server_outcomes_step(repo, %{owned_servers: owned}) do
+    resolve_server_outcomes(repo, owned)
+  end
+
+  defp fetch_remaining_memberships_step(repo, _changes, user_id) do
+    {:ok, ServerMember |> where([m], m.user_id == ^user_id) |> repo.all()}
+  end
+
+  defp remove_memberships_step(repo, %{remaining_memberships: rows}) do
+    ids = Enum.map(rows, & &1.id)
+    {_count, _} = ServerMember |> where([m], m.id in ^ids) |> repo.delete_all()
+    {:ok, rows |> Enum.map(& &1.server_id) |> Enum.uniq()}
+  end
+
+  defp fetch_friendship_rows_step(repo, _changes, user_id) do
+    rows =
+      Friendship
+      |> where([f], f.user_id == ^user_id or f.friend_id == ^user_id)
+      |> repo.all()
+
+    {:ok, rows}
+  end
+
+  defp remove_friendships_step(repo, %{friendship_rows: rows}) do
+    ids = Enum.map(rows, & &1.id)
+    {_count, _} = Friendship |> where([f], f.id in ^ids) |> repo.delete_all()
+    {:ok, rows}
+  end
+
+  defp fetch_owned_servers(repo, user_id) do
+    Server
+    |> where([s], s.owner_id == ^user_id)
+    |> repo.all()
+    |> Enum.map(fn server ->
+      other_members =
+        ServerMember
+        |> where([m], m.server_id == ^server.id and m.user_id != ^user_id)
+        |> order_by([m], asc: m.inserted_at)
+        |> repo.all()
+
+      {server, other_members}
+    end)
+  end
+
+  defp resolve_server_outcomes(repo, owned) do
+    Enum.reduce_while(owned, {:ok, []}, fn {server, other_members}, {:ok, acc} ->
+      case resolve_server_outcome(repo, server, other_members) do
+        {:ok, outcome} -> {:cont, {:ok, [outcome | acc]}}
+        {:error, _reason} = error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, outcomes} -> {:ok, Enum.reverse(outcomes)}
+      error -> error
+    end
+  end
+
+  defp resolve_server_outcome(repo, server, []) do
+    case repo.delete(server) do
+      {:ok, deleted} -> {:ok, {:deleted, deleted}}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  defp resolve_server_outcome(repo, server, [new_owner_member | _rest] = members) do
+    with {:ok, updated_server} <-
+           server |> Server.changeset(%{owner_id: new_owner_member.user_id}) |> repo.update(),
+         {:ok, _updated_member} <-
+           new_owner_member |> ServerMember.changeset(%{role: "owner"}) |> repo.update() do
+      {:ok, {:transferred, updated_server, Enum.map(members, & &1.user_id)}}
+    end
+  end
+
+  defp broadcast_deletion_effects(result) do
+    Enum.each(result.server_outcomes, &broadcast_server_outcome/1)
+    Enum.each(result.remove_memberships, &broadcast_member_left(&1, result))
+    Enum.each(result.friendship_rows, &broadcast_friend_removed(&1, result))
+  end
+
+  defp broadcast_server_outcome({:deleted, server}) do
+    BackendWeb.Endpoint.broadcast("server:#{server.id}", "server_deleted", %{
+      server_id: server.id
+    })
+  end
+
+  defp broadcast_server_outcome({:transferred, server, _member_ids}) do
+    BackendWeb.Endpoint.broadcast("server:#{server.id}", "server_updated", %{
+      server_id: server.id,
+      name: server.name,
+      owner_id: server.owner_id
+    })
+  end
+
+  # remaining_memberships' server_ids include both plain-membership servers
+  # and any just-transferred server's now-stale old-owner row — "member_left"
+  # is the right event for both, the deleting user genuinely left either way.
+  # A server that was outright deleted (no other members) never appears here:
+  # its membership rows were already gone via the DB cascade by the time the
+  # :remaining_memberships step (which runs after :server_outcomes) queried.
+  defp broadcast_member_left(server_id, _result) do
+    BackendWeb.Endpoint.broadcast("server:#{server_id}", "member_left", %{
+      server_id: server_id
+    })
+  end
+
+  defp broadcast_friend_removed(%Friendship{user_id: uid, friend_id: fid, id: id}, result) do
+    other_id = if uid == result.anonymized_user.id, do: fid, else: uid
+    BackendWeb.Endpoint.broadcast("user:#{other_id}", "friend_removed", %{id: id})
   end
 end

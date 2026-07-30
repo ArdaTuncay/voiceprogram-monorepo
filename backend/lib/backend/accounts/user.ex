@@ -13,6 +13,7 @@ defmodule Backend.Accounts.User do
     field :status, :string, default: "offline"
     field :token_version, :integer, default: 0
     field :friend_request_privacy, :string, default: "everyone"
+    field :deleted_at, :utc_datetime
 
     timestamps(type: :utc_datetime)
   end
@@ -86,6 +87,36 @@ defmodule Backend.Accounts.User do
     |> validate_required([:friend_request_privacy])
     |> validate_inclusion(:friend_request_privacy, ["everyone", "nobody"])
   end
+
+  @doc """
+  Used by Backend.Accounts.delete_account/2 — anonymizes username/email/
+  password_hash to random, unguessable values, marks `deleted_at`, and
+  bumps `token_version` (same effect as password_changeset/2's, done
+  directly here rather than through hash_password/1 since there's no
+  plaintext "password" to run through Pbkdf2, just a random hash).
+  Message/DM authorship, reactions, and DM rooms are deliberately left
+  alone by this changeset — see PROJECT_ARCHITECTURE.md's account
+  deletion section for what happens to them and why.
+  """
+  def deletion_changeset(user) do
+    suffix = :crypto.strong_rand_bytes(6) |> Base.encode16(case: :lower)
+
+    user
+    |> change(
+      username: "deleted_user_" <> suffix,
+      email: "deleted-" <> suffix <> "@deleted.invalid",
+      password_hash: Pbkdf2.hash_pwd_salt(:crypto.strong_rand_bytes(32) |> Base.encode64()),
+      status: "offline",
+      deleted_at: DateTime.truncate(DateTime.utc_now(), :second),
+      token_version: user.token_version + 1
+    )
+    |> unique_constraint(:username)
+    |> unique_constraint(:email)
+  end
+
+  @doc "True if this user has deleted their account (see deletion_changeset/1)."
+  def deleted?(%__MODULE__{deleted_at: nil}), do: false
+  def deleted?(%__MODULE__{}), do: true
 
   # Runs whenever a password is being set (registration) or, in the future,
   # changed — bumping token_version here means both cases are covered by

@@ -388,3 +388,46 @@
   font-size: 14px;
   font-weight: 500;
 }
+
+.account-delete-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  padding: 14px;
+  margin-bottom: 20px;
+  color: var(--text-normal);
+}
+
+.account-delete-warning svg {
+  flex-shrink: 0;
+  color: var(--danger);
+  margin-top: 2px;
+}
+
+.account-delete-warning p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.account-delete-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-normal);
+  margin: 16px 0;
+  cursor: pointer;
+}
+
+.account-delete-submit-btn {
+  background: var(--danger);
+  color: var(--on-accent);
+}
+
+.account-delete-submit-btn:hover:not(:disabled) {
+  background: var(--danger-hover, #b83a3a);
+}

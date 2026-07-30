@@ -5,6 +5,7 @@ import type { FriendRequestPrivacy, User } from '../types';
 import type { ThemePreference } from '../services/theme';
 import { getStoredPreference, setThemePreference } from '../services/theme';
 import {
+  deleteAccount,
   updateEmail,
   updateFriendRequestPrivacy,
   updatePassword,
@@ -65,8 +66,6 @@ export default function UserSettingsModal({ user, onClose }: Props) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const activeLabel = CATEGORIES.find((c) => c.id === category)!.label;
-
   return (
     <div className="user-settings-overlay">
       <button
@@ -106,19 +105,10 @@ export default function UserSettingsModal({ user, onClose }: Props) {
           ) : category === 'privacy' ? (
             <PrivacySettings user={user} />
           ) : (
-            <PlaceholderSettings label={activeLabel} />
+            <AccountDeletionSettings />
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function PlaceholderSettings({ label }: { label: string }) {
-  return (
-    <div className="user-settings-section">
-      <h3 className="user-settings-heading">{label}</h3>
-      <p className="user-settings-placeholder">Yakında</p>
     </div>
   );
 }
@@ -736,6 +726,116 @@ function MicTestButton({ onPermissionGranted }: { onPermissionGranted: () => voi
       )}
 
       {error && <StatusMessage type="error" message={error} />}
+    </div>
+  );
+}
+
+const DELETE_CONFIRMATION_PHRASE = 'HESABIMI SİL';
+
+/** Hesap Silme / Veri Yönetimi — the one irreversible action in this whole
+ * modal, so it's gated harder than anything else here: current password
+ * (same re-auth every other sensitive account change requires) AND a
+ * checkbox AND typing an exact confirmation phrase, on top of the button
+ * itself. See PROJECT_ARCHITECTURE.md's account deletion section and
+ * Backend.Accounts.delete_account/2 for exactly what happens to each piece
+ * of this account's data. */
+function AccountDeletionSettings() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [confirmationText, setConfirmationText] = useState('');
+  const [status, setStatus] = useState<FormStatus>('idle');
+  const [message, setMessage] = useState('');
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setStatus('submitting');
+    setMessage('');
+
+    const result = await deleteAccount(currentPassword);
+    if (result.error) {
+      setStatus('error');
+      setMessage(result.error);
+      return;
+    }
+
+    setStatus('success');
+    setMessage('Hesabın silindi. Giriş ekranına yönlendiriliyorsun…');
+    window.setTimeout(() => {
+      disconnectSocket();
+      forceLogout();
+    }, 2000);
+  }
+
+  const locked = status === 'submitting' || status === 'success';
+  const disabled =
+    locked ||
+    !currentPassword ||
+    !acknowledged ||
+    confirmationText !== DELETE_CONFIRMATION_PHRASE;
+
+  return (
+    <div className="user-settings-section">
+      <h3 className="user-settings-heading">Hesap Silme / Veri Yönetimi</h3>
+
+      <div className="account-delete-warning">
+        <AlertTriangle size={16} />
+        <p>
+          Hesabını silmek <strong>geri alınamaz</strong>. Kullanıcı adın ve e-postan
+          anonimleştirilir, tüm arkadaşlıkların/engellemelerin kaldırılır ve üyesi olduğun
+          sunuculardan çıkarılırsın. Tek başına sahibi olduğun bir sunucunun başka üyesi yoksa o
+          sunucu (kanalları ve mesajlarıyla birlikte) tamamen silinir; başka üyesi varsa
+          sahiplik en eski üyeye devredilir. Gönderdiğin mesajlar ve DM geçmişin İÇERİK olarak
+          silinmez — sadece yazarın "[silinmiş kullanıcı]" olarak görünür.
+        </p>
+      </div>
+
+      <form className="account-form" onSubmit={handleSubmit}>
+        <label className="user-settings-label" htmlFor="account-delete-password">
+          Mevcut şifre
+        </label>
+        <input
+          id="account-delete-password"
+          type="password"
+          className="account-form-input"
+          value={currentPassword}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentPassword(e.target.value)}
+          autoComplete="current-password"
+          disabled={locked}
+        />
+
+        <label className="account-delete-checkbox-row" htmlFor="account-delete-ack">
+          <input
+            id="account-delete-ack"
+            type="checkbox"
+            checked={acknowledged}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setAcknowledged(e.target.checked)}
+            disabled={locked}
+          />
+          Bu işlemin geri alınamaz olduğunu anlıyorum.
+        </label>
+
+        <label className="user-settings-label" htmlFor="account-delete-confirm-text">
+          Onaylamak için <strong>{DELETE_CONFIRMATION_PHRASE}</strong> yaz
+        </label>
+        <input
+          id="account-delete-confirm-text"
+          className="account-form-input"
+          value={confirmationText}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmationText(e.target.value)}
+          disabled={locked}
+        />
+
+        <button
+          className="account-form-submit-btn account-delete-submit-btn"
+          type="submit"
+          disabled={disabled}
+        >
+          {status === 'submitting' ? 'Siliniyor…' : 'Hesabımı Sil'}
+        </button>
+
+        {status === 'error' && <StatusMessage type="error" message={message} />}
+        {status === 'success' && <StatusMessage type="success" message={message} />}
+      </form>
     </div>
   );
 }

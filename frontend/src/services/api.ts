@@ -114,8 +114,11 @@ function authedPut<T>(path: string, body: Record<string, string>): Promise<ApiRe
   });
 }
 
-function authedDelete<T>(path: string): Promise<ApiResult<T>> {
-  return authedFetch<T>(path, { method: 'DELETE' });
+function authedDelete<T>(path: string, body?: Record<string, string>): Promise<ApiResult<T>> {
+  return authedFetch<T>(path, {
+    method: 'DELETE',
+    ...(body && { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  });
 }
 
 function authedPatch<T>(path: string, body: Record<string, string>): Promise<ApiResult<T>> {
@@ -383,6 +386,14 @@ export function fetchBlockedUsers(): Promise<ApiResult<BlockedUser[]>> {
  * history is untouched (see Backend.Friends.block_user/2). */
 export function blockUser(userId: string): Promise<ApiResult<void>> {
   return authedPost<void>(`/users/${userId}/block`, {});
+}
+
+/** Permanently and irreversibly deletes/anonymizes the current account
+ * (see Backend.Accounts.delete_account/2 for exactly what happens to
+ * each piece of related data) — requires re-entering the current
+ * password, same as updateUsername/updateEmail/updatePassword above. */
+export function deleteAccount(currentPassword: string): Promise<ApiResult<void>> {
+  return authedDelete<void>('/account', { current_password: currentPassword });
 }
 
 export function unblockUser(userId: string): Promise<ApiResult<void>> {

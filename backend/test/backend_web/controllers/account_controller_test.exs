@@ -3,6 +3,13 @@ defmodule BackendWeb.AccountControllerTest do
 
   defp authed(conn, user), do: put_req_header(conn, "authorization", "Bearer #{token_for(user)}")
 
+  # Only used by the "DELETE /api/account" tests below — :delete has its own
+  # strict 3/minute limit (see AccountController), much lower than the other
+  # actions in this file share, so those tests would exhaust each other's
+  # shared default fake IP allowance without each getting a distinct one
+  # (see account_controller_rate_limit_test.exs's identical-cause comment).
+  defp with_unique_ip(conn, n), do: %{conn | remote_ip: {198, 51, 100, n}}
+
   describe "PATCH /api/account/username" do
     test "updates the username with the correct current password", %{conn: conn} do
       user = user_fixture(%{"password" => "correct-password"})
@@ -231,6 +238,72 @@ defmodule BackendWeb.AccountControllerTest do
         })
 
       assert conn.status == 401
+    end
+  end
+
+  describe "DELETE /api/account" do
+    test "deletes the account with the correct current password", %{conn: conn} do
+      user = user_fixture(%{"password" => "correct-password"})
+
+      conn =
+        conn
+        |> authed(user)
+        |> with_unique_ip(1)
+        |> delete(~p"/api/account", %{"current_password" => "correct-password"})
+
+      assert response(conn, 204)
+
+      reloaded = Backend.Accounts.get_user(user.id)
+      assert reloaded.deleted_at != nil
+      refute Backend.Accounts.verify_password?(reloaded, "correct-password")
+    end
+
+    test "rejects a wrong current password and changes nothing", %{conn: conn} do
+      user = user_fixture(%{"password" => "correct-password"})
+
+      conn =
+        conn
+        |> authed(user)
+        |> with_unique_ip(2)
+        |> delete(~p"/api/account", %{"current_password" => "totally-wrong"})
+
+      assert json_response(conn, 401) == %{"error" => "Mevcut şifre yanlış"}
+
+      reloaded = Backend.Accounts.get_user(user.id)
+      assert reloaded.deleted_at == nil
+    end
+
+    test "requires current_password", %{conn: conn} do
+      user = user_fixture()
+
+      conn = conn |> authed(user) |> with_unique_ip(3) |> delete(~p"/api/account", %{})
+
+      assert conn.status == 400
+    end
+
+    test "requires authentication", %{conn: conn} do
+      conn =
+        conn |> with_unique_ip(4) |> delete(~p"/api/account", %{"current_password" => "whatever"})
+
+      assert conn.status == 401
+    end
+
+    test "the deleted user's own token stops authenticating anything afterward", %{conn: conn} do
+      user = user_fixture(%{"password" => "correct-password"})
+      token = token_for(user)
+
+      conn
+      |> authed(user)
+      |> with_unique_ip(5)
+      |> delete(~p"/api/account", %{"current_password" => "correct-password"})
+      |> response(204)
+
+      conn2 =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token}")
+        |> get(~p"/api/friends")
+
+      assert conn2.status == 401
     end
   end
 

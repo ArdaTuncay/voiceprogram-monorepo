@@ -13,6 +13,7 @@ vi.mock('../../services/api', () => ({
   fetchBlockedUsers: vi.fn().mockResolvedValue({ data: [] }),
   blockUser: vi.fn(),
   unblockUser: vi.fn(),
+  deleteAccount: vi.fn(),
 }));
 
 vi.mock('../../services/socket', () => ({
@@ -24,6 +25,7 @@ vi.mock('../../services/session', () => ({
 }));
 
 import {
+  deleteAccount,
   fetchBlockedUsers,
   unblockUser,
   updateEmail,
@@ -85,13 +87,12 @@ describe('UserSettingsModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('switches categories, showing a "Yakında" placeholder for the unfilled ones', () => {
+  it('switches categories, e.g. to "Hesap Silme / Veri Yönetimi"', () => {
     render(<UserSettingsModal user={testUser} onClose={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Hesap Silme / Veri Yönetimi' }));
 
     expect(screen.getByRole('heading', { name: 'Hesap Silme / Veri Yönetimi' })).not.toBeNull();
-    expect(screen.getByText('Yakında')).not.toBeNull();
     // The theme selector only renders for the Appearance category.
     expect(screen.queryByRole('radiogroup', { name: 'Tema' })).toBeNull();
   });
@@ -409,6 +410,77 @@ describe('UserSettingsModal', () => {
       });
 
       expect(screen.getByText('Bu kullanıcıyı engellemediniz')).not.toBeNull();
+    });
+  });
+
+  describe('Hesap Silme / Veri Yönetimi', () => {
+    function openDeleteTab() {
+      render(<UserSettingsModal user={testUser} onClose={vi.fn()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Hesap Silme / Veri Yönetimi' }));
+    }
+
+    function fillValidForm() {
+      fireEvent.change(screen.getByLabelText('Mevcut şifre'), { target: { value: 'my-password' } });
+      fireEvent.click(screen.getByLabelText(/Bu işlemin geri alınamaz olduğunu anlıyorum/));
+      fireEvent.change(screen.getByLabelText(/Onaylamak için/), {
+        target: { value: 'HESABIMI SİL' },
+      });
+    }
+
+    it('keeps the submit button disabled until password, checkbox, and exact confirmation phrase are all set', () => {
+      openDeleteTab();
+
+      const button = screen.getByRole('button', { name: 'Hesabımı Sil' });
+      expect(button).toHaveProperty('disabled', true);
+
+      fireEvent.change(screen.getByLabelText('Mevcut şifre'), { target: { value: 'my-password' } });
+      expect(button).toHaveProperty('disabled', true);
+
+      fireEvent.click(screen.getByLabelText(/Bu işlemin geri alınamaz olduğunu anlıyorum/));
+      expect(button).toHaveProperty('disabled', true);
+
+      fireEvent.change(screen.getByLabelText(/Onaylamak için/), { target: { value: 'wrong phrase' } });
+      expect(button).toHaveProperty('disabled', true);
+
+      fireEvent.change(screen.getByLabelText(/Onaylamak için/), {
+        target: { value: 'HESABIMI SİL' },
+      });
+      expect(button).toHaveProperty('disabled', false);
+    });
+
+    it('on success, calls deleteAccount and force-logs-out shortly after', async () => {
+      vi.useFakeTimers();
+      vi.mocked(deleteAccount).mockResolvedValue({ data: undefined });
+      openDeleteTab();
+      fillValidForm();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Hesabımı Sil' }));
+      });
+
+      expect(deleteAccount).toHaveBeenCalledWith('my-password');
+      expect(screen.getByText(/Hesabın silindi/)).not.toBeNull();
+      expect(forceLogout).not.toHaveBeenCalled();
+
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(disconnectSocket).toHaveBeenCalledTimes(1);
+      expect(forceLogout).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the backend error message when the current password is wrong, without logging out', async () => {
+      vi.mocked(deleteAccount).mockResolvedValue({ error: 'Mevcut şifre yanlış' });
+      openDeleteTab();
+      fillValidForm();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Hesabımı Sil' }));
+      });
+
+      expect(screen.getByText('Mevcut şifre yanlış')).not.toBeNull();
+      expect(forceLogout).not.toHaveBeenCalled();
     });
   });
 });

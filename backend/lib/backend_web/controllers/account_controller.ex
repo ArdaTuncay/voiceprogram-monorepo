@@ -18,6 +18,14 @@ defmodule BackendWeb.AccountController do
               :update_friend_request_privacy
             ]
 
+  # Much stricter than the above — this is the one action here that's
+  # irreversible, so there's no legitimate reason for it to be attempted
+  # more than a couple of times a minute (retrying after a typo'd password,
+  # say). Scoped to its own plug/action so it doesn't share a bucket with
+  # (and get a head start toward its limit from) the other account actions.
+  plug BackendWeb.RateLimiterPlug,
+       [scale: :timer.minutes(1), limit: 3, key: :current_user] when action in [:delete]
+
   @doc """
   PATCH /api/account/username — requires the current password (Discord-
   style re-auth for a sensitive change), so a hijacked/stolen session token
@@ -122,6 +130,33 @@ defmodule BackendWeb.AccountController do
   @doc "GET /api/account/blocked-users — lists everyone the current user has blocked."
   def list_blocked_users(conn, _params) do
     json(conn, Friends.list_blocked_users(conn.assigns.current_user.id))
+  end
+
+  @doc """
+  DELETE /api/account — permanently and irreversibly deletes/anonymizes the
+  current user's account, after re-verifying current_password. See
+  Accounts.delete_account/2's moduledoc for exactly what happens to each
+  piece of related data. The response has no body — the client's own
+  session token is invalidated by this same call (token_version bump), so
+  it should treat a 204 here exactly like a forced logout.
+  """
+  def delete(conn, %{"current_password" => current_password}) do
+    case Accounts.delete_account(conn.assigns.current_user, current_password) do
+      {:ok, _anonymized} ->
+        send_resp(conn, :no_content, "")
+
+      {:error, :invalid_current_password} ->
+        conn |> put_status(:unauthorized) |> json(%{error: "Mevcut şifre yanlış"})
+
+      {:error, _reason} ->
+        conn
+        |> put_status(:internal_server_error)
+        |> json(%{error: "Hesap silinemedi, lütfen tekrar deneyin"})
+    end
+  end
+
+  def delete(conn, _params) do
+    conn |> put_status(:bad_request) |> json(%{error: "current_password gerekli"})
   end
 
   defp format_errors(changeset) do

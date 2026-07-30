@@ -44,4 +44,33 @@ defmodule BackendWeb.AccountControllerRateLimitTest do
              "error" => "Too many requests. Please try again later."
            }
   end
+
+  test "DELETE /api/account 429s after 3 requests/min from the same caller", %{conn: conn} do
+    user = user_fixture(%{"password" => "correct-password"})
+
+    conn =
+      conn
+      |> put_req_header("authorization", "Bearer #{token_for(user)}")
+      # A different IP from the username test above — :delete is its own
+      # rate-limiter bucket (keyed by {controller, action}) regardless, but
+      # a fresh one keeps this test independent of that one's IP history too.
+      |> Map.put(:remote_ip, {203, 0, 113, 89})
+
+    # Deliberately wrong current_password on every request, same reasoning
+    # as the username test above — the plug runs before delete/2 does any
+    # real work, so the account is never actually deleted mid-loop.
+    responses =
+      for _ <- 1..4 do
+        delete(conn, ~p"/api/account", %{"current_password" => "wrong-on-purpose"})
+      end
+
+    {allowed, denied} = Enum.split_with(responses, &(&1.status == 401))
+
+    assert length(allowed) == 3
+    assert [limited] = denied
+
+    assert json_response(limited, 429) == %{
+             "error" => "Too many requests. Please try again later."
+           }
+  end
 end

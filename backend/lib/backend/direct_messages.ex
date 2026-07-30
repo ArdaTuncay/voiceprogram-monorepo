@@ -50,7 +50,13 @@ defmodule Backend.DirectMessages do
   @doc "Shapes a (preloaded) DM room from `viewer_id`'s point of view: who the *other* participant is."
   def to_view(%DmRoom{} = room, viewer_id) do
     other = if room.user_one_id == viewer_id, do: room.user_two, else: room.user_one
-    %{id: room.id, user_id: other.id, username: other.username, user_status: other.status}
+
+    %{
+      id: room.id,
+      user_id: other.id,
+      username: Accounts.display_username(other),
+      user_status: other.status
+    }
   end
 
   @doc "Fetches a DM room by id. Returns `nil` if not found or the id isn't a valid UUID."

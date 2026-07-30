@@ -43,6 +43,29 @@ defmodule BackendWeb.DmChannelTest do
     assert id == message.id
   end
 
+  test "a deleted author's DM messages survive with their identity hidden", %{
+    a: a,
+    b: b,
+    room: room
+  } do
+    {:ok, message} =
+      DirectMessages.create_message(%{
+        content: "before deletion",
+        user_id: a.id,
+        dm_room_id: room.id
+      })
+
+    {:ok, _} = Backend.Accounts.delete_account(a, "password123")
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(b)})
+
+    assert {:ok, %{messages: messages}, _socket} =
+             subscribe_and_join(socket, "dm:#{room.id}", %{})
+
+    assert [%{id: id, content: "before deletion", username: "[silinmiş kullanıcı]"}] = messages
+    assert id == message.id
+  end
+
   test "shout persists, broadcasts on the room topic, and notifies the other participant",
        %{a: a, b: b, room: room} do
     {:ok, a_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(a)})

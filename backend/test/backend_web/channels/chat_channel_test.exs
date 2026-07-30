@@ -55,6 +55,29 @@ defmodule BackendWeb.ChatChannelTest do
     assert id == message.id
   end
 
+  test "a deleted author's messages survive with their identity hidden", %{
+    owner: owner,
+    member: member,
+    channel: channel
+  } do
+    {:ok, message} =
+      Chat.create_message(%{
+        content: "before deletion",
+        user_id: member.id,
+        channel_id: channel.id
+      })
+
+    {:ok, _} = Backend.Accounts.delete_account(member, "password123")
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+
+    assert {:ok, %{messages: messages}, _socket} =
+             subscribe_and_join(socket, "chat:#{channel.id}", %{})
+
+    assert [%{id: id, content: "before deletion", username: "[silinmiş kullanıcı]"}] = messages
+    assert id == message.id
+  end
+
   test "shout persists and broadcasts to everyone joined to the channel",
        %{owner: owner, member: member, channel: channel} do
     {:ok, owner_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})

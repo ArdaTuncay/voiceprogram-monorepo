@@ -213,7 +213,7 @@ defmodule BackendWeb.DmChannel do
       file_url: message.file_url,
       file_type: message.file_type,
       user_id: message.user_id,
-      username: message.user && message.user.username,
+      username: Backend.Accounts.display_username(message.user),
       inserted_at: message.inserted_at,
       is_edited: message.is_edited,
       reactions: message.reactions
