@@ -74,9 +74,9 @@ describe('UserSettingsModal', () => {
   it('switches categories, showing a "Yakında" placeholder for the unfilled ones', () => {
     render(<UserSettingsModal user={testUser} onClose={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Klavye Kısayolları' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ses & Görüntü' }));
 
-    expect(screen.getByRole('heading', { name: 'Klavye Kısayolları' })).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Ses & Görüntü' })).not.toBeNull();
     expect(screen.getByText('Yakında')).not.toBeNull();
     // The theme selector only renders for the Appearance category.
     expect(screen.queryByRole('radiogroup', { name: 'Tema' })).toBeNull();
@@ -307,6 +307,20 @@ describe('UserSettingsModal', () => {
       expect(screen.getByLabelText('Masaüstü bildirimleri')).toHaveProperty('checked', false);
 
       vi.unstubAllGlobals();
+    });
+  });
+
+  describe('Klavye Kısayolları', () => {
+    it('renders the static shortcuts list', () => {
+      render(<UserSettingsModal user={testUser} onClose={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Klavye Kısayolları' }));
+
+      expect(screen.getByRole('heading', { name: 'Klavye Kısayolları' })).not.toBeNull();
+      expect(screen.getByText('Mesaj gönder / mesaj düzenlemeyi kaydet')).not.toBeNull();
+      expect(screen.getByText('Yeni satır')).not.toBeNull();
+      expect(screen.getAllByText('Enter').length).toBeGreaterThan(0);
+      expect(screen.getByText('Esc')).not.toBeNull();
     });
   });
 });

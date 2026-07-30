@@ -86,6 +86,8 @@ export default function UserSettingsModal({ user, onClose }: Props) {
             <AppearanceSettings />
           ) : category === 'notifications' ? (
             <NotificationSettings />
+          ) : category === 'shortcuts' ? (
+            <ShortcutsSettings />
           ) : (
             <PlaceholderSettings label={activeLabel} />
           )}
@@ -500,6 +502,46 @@ function NotificationSettings() {
           disabled={!prefs.enabled}
           onChange={(checked) => set('mentionsOnly', checked)}
         />
+      </div>
+    </div>
+  );
+}
+
+interface Shortcut {
+  keys: string[];
+  description: string;
+}
+
+// Static list of what's actually wired up in the codebase today (see
+// Chat.tsx/DMChatView.tsx's handleKeyDown, MessageItem.tsx's
+// handleEditKeyDown, this modal's own Escape handler, and SearchBar.tsx) —
+// not an aspirational list, and not editable/rebindable in this pass.
+const SHORTCUTS: Shortcut[] = [
+  { keys: ['Enter'], description: 'Mesaj gönder / mesaj düzenlemeyi kaydet' },
+  { keys: ['Shift', 'Enter'], description: 'Yeni satır' },
+  { keys: ['Esc'], description: 'Bu pencereyi kapat / mesaj düzenlemeyi iptal et' },
+  { keys: ['Enter'], description: 'Arama kutusunda mesajlarda ara' },
+];
+
+function ShortcutsSettings() {
+  return (
+    <div className="user-settings-section">
+      <h3 className="user-settings-heading">Klavye Kısayolları</h3>
+
+      <div className="shortcuts-list">
+        {SHORTCUTS.map((shortcut, i) => (
+          <div className="shortcuts-row" key={i}>
+            <span className="shortcuts-keys">
+              {shortcut.keys.map((key, j) => (
+                <span key={j}>
+                  {j > 0 && <span className="shortcuts-plus">+</span>}
+                  <kbd className="shortcuts-kbd">{key}</kbd>
+                </span>
+              ))}
+            </span>
+            <span className="shortcuts-description">{shortcut.description}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

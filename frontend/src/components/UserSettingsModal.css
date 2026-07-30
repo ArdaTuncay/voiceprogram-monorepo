@@ -282,3 +282,52 @@
   transform: translateX(18px);
   background: var(--on-accent);
 }
+
+/* ── Klavye Kısayolları — static two-column list ── */
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.shortcuts-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.shortcuts-row:last-child {
+  border-bottom: none;
+}
+
+.shortcuts-keys {
+  flex-shrink: 0;
+  width: 160px;
+  display: flex;
+  align-items: center;
+}
+
+.shortcuts-plus {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin: 0 4px;
+}
+
+.shortcuts-kbd {
+  display: inline-block;
+  background: var(--bg-input);
+  color: var(--text-heading);
+  border: 1px solid var(--bg-tertiary);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+}
+
+.shortcuts-description {
+  color: var(--text-normal);
+  font-size: 14px;
+}
