@@ -171,7 +171,7 @@ export default function Chat({ user, onLogout }: Props) {
 
   // Owns every Phoenix-channel join/leave effect (text channel + personal
   // notification topic) — see stores/useSocketStore.ts.
-  useSocketSync(user.id);
+  useSocketSync(user);
 
   // Auto-scroll to bottom when messages change — except right after
   // prepending an older page (loadOlderMessages), where we instead restore

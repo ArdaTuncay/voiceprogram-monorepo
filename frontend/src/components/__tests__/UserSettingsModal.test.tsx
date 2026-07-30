@@ -74,9 +74,9 @@ describe('UserSettingsModal', () => {
   it('switches categories, showing a "Yakında" placeholder for the unfilled ones', () => {
     render(<UserSettingsModal user={testUser} onClose={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Bildirimler' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Klavye Kısayolları' }));
 
-    expect(screen.getByRole('heading', { name: 'Bildirimler' })).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Klavye Kısayolları' })).not.toBeNull();
     expect(screen.getByText('Yakında')).not.toBeNull();
     // The theme selector only renders for the Appearance category.
     expect(screen.queryByRole('radiogroup', { name: 'Tema' })).toBeNull();
@@ -250,6 +250,63 @@ describe('UserSettingsModal', () => {
 
       expect(screen.getByText('Mevcut şifre yanlış')).not.toBeNull();
       expect(forceLogout).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Bildirimler', () => {
+    function openNotificationsTab() {
+      render(<UserSettingsModal user={testUser} onClose={vi.fn()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Bildirimler' }));
+    }
+
+    it('defaults to enabled + desktop on, sound + mentions-only off', () => {
+      openNotificationsTab();
+
+      expect(screen.getByLabelText('Bildirimleri etkinleştir')).toHaveProperty('checked', true);
+      expect(screen.getByLabelText('Masaüstü bildirimleri')).toHaveProperty('checked', true);
+      expect(screen.getByLabelText('Ses bildirimleri')).toHaveProperty('checked', false);
+      expect(screen.getByLabelText('Sadece bahsedilmelerde bildir')).toHaveProperty('checked', false);
+    });
+
+    it('disables the three sub-toggles when the master switch is off', () => {
+      openNotificationsTab();
+
+      fireEvent.click(screen.getByLabelText('Bildirimleri etkinleştir'));
+
+      expect(screen.getByLabelText('Ses bildirimleri')).toHaveProperty('disabled', true);
+      expect(screen.getByLabelText('Masaüstü bildirimleri')).toHaveProperty('disabled', true);
+      expect(screen.getByLabelText('Sadece bahsedilmelerde bildir')).toHaveProperty('disabled', true);
+    });
+
+    it('persists a toggle flip to localStorage', () => {
+      openNotificationsTab();
+
+      fireEvent.click(screen.getByLabelText('Sadece bahsedilmelerde bildir'));
+
+      const stored = JSON.parse(localStorage.getItem('zircle-notification-prefs')!);
+      expect(stored.mentionsOnly).toBe(true);
+      expect(stored.enabled).toBe(true);
+    });
+
+    it('requests browser permission when turning desktop notifications on, and reverts with a note if denied', async () => {
+      const requestPermission = vi.fn().mockResolvedValue('denied');
+      // jsdom has no Notification global by default.
+      vi.stubGlobal('Notification', { permission: 'default', requestPermission });
+      localStorage.setItem(
+        'zircle-notification-prefs',
+        JSON.stringify({ enabled: true, sound: false, desktop: false, mentionsOnly: false })
+      );
+
+      openNotificationsTab();
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText('Masaüstü bildirimleri'));
+      });
+
+      expect(requestPermission).toHaveBeenCalledTimes(1);
+      expect(screen.getByText(/Tarayıcı bildirim izni reddedildi/)).not.toBeNull();
+      expect(screen.getByLabelText('Masaüstü bildirimleri')).toHaveProperty('checked', false);
+
+      vi.unstubAllGlobals();
     });
   });
 });

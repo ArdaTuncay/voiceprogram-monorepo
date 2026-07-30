@@ -7,6 +7,8 @@ import { getStoredPreference, setThemePreference } from '../services/theme';
 import { updateEmail, updatePassword, updateUsername } from '../services/api';
 import { disconnectSocket } from '../services/socket';
 import { forceLogout } from '../services/session';
+import type { NotificationPreferences } from '../services/notificationPreferences';
+import { getNotificationPreferences, updateNotificationPreference } from '../services/notificationPreferences';
 import './UserSettingsModal.css';
 
 type Category =
@@ -82,6 +84,8 @@ export default function UserSettingsModal({ user, onClose }: Props) {
             <AccountSettings user={user} />
           ) : category === 'appearance' ? (
             <AppearanceSettings />
+          ) : category === 'notifications' ? (
+            <NotificationSettings />
           ) : (
             <PlaceholderSettings label={activeLabel} />
           )}
@@ -400,6 +404,102 @@ function AppearanceSettings() {
             {opt.label}
           </button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function ToggleSwitch({
+  id,
+  label,
+  checked,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className={`toggle-row${disabled ? ' disabled' : ''}`} htmlFor={id}>
+      <span className="toggle-row-label">{label}</span>
+      <span className="toggle-switch">
+        <input
+          id={id}
+          type="checkbox"
+          role="switch"
+          checked={checked}
+          disabled={disabled}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.checked)}
+        />
+        <span className="toggle-switch-track" />
+      </span>
+    </label>
+  );
+}
+
+/** Client-side only, entirely localStorage-backed (see
+ * services/notificationPreferences.ts) — no backend involved. The master
+ * switch just gates whether the other three do anything in
+ * useSocketStore.ts; it doesn't touch the unread-dot/badge system, which
+ * is unrelated navigation state. */
+function NotificationSettings() {
+  const [prefs, setPrefs] = useState<NotificationPreferences>(getNotificationPreferences);
+  const [permissionNote, setPermissionNote] = useState('');
+
+  function set<K extends keyof NotificationPreferences>(key: K, value: NotificationPreferences[K]) {
+    setPrefs(updateNotificationPreference(key, value));
+  }
+
+  async function handleDesktopToggle(checked: boolean) {
+    setPermissionNote('');
+    if (checked && typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+      const result = await Notification.requestPermission();
+      if (result !== 'granted') {
+        setPermissionNote('Tarayıcı bildirim izni reddedildi — masaüstü bildirimleri gösterilemeyecek.');
+        set('desktop', false);
+        return;
+      }
+    }
+    set('desktop', checked);
+  }
+
+  return (
+    <div className="user-settings-section">
+      <h3 className="user-settings-heading">Bildirimler</h3>
+
+      <ToggleSwitch
+        id="notif-enabled"
+        label="Bildirimleri etkinleştir"
+        checked={prefs.enabled}
+        onChange={(checked) => set('enabled', checked)}
+      />
+
+      <div className="toggle-subgroup">
+        <ToggleSwitch
+          id="notif-sound"
+          label="Ses bildirimleri"
+          checked={prefs.sound}
+          disabled={!prefs.enabled}
+          onChange={(checked) => set('sound', checked)}
+        />
+        <ToggleSwitch
+          id="notif-desktop"
+          label="Masaüstü bildirimleri"
+          checked={prefs.desktop}
+          disabled={!prefs.enabled}
+          onChange={(checked) => void handleDesktopToggle(checked)}
+        />
+        {permissionNote && <StatusMessage type="error" message={permissionNote} />}
+        <ToggleSwitch
+          id="notif-mentions-only"
+          label="Sadece bahsedilmelerde bildir"
+          checked={prefs.mentionsOnly}
+          disabled={!prefs.enabled}
+          onChange={(checked) => set('mentionsOnly', checked)}
+        />
       </div>
     </div>
   );

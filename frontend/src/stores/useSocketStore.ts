@@ -1,10 +1,16 @@
 import { useEffect } from 'react';
+import type { User } from '../types';
 import { useServerStore } from './useServerStore';
 import { useChatStore } from './useChatStore';
 import { useFriendStore } from './useFriendStore';
 import { useDMStore } from './useDMStore';
 import { useConnectionStore } from './useConnectionStore';
 import { joinChatChannel, joinUserChannel, joinDmChannel, joinServerChannel } from '../services/socket';
+import {
+  getNotificationPreferences,
+  isMentioned,
+  playNotificationSound,
+} from '../services/notificationPreferences';
 
 /**
  * Owns every Phoenix-channel side effect for the whole session: joining the
@@ -18,7 +24,8 @@ import { joinChatChannel, joinUserChannel, joinDmChannel, joinServerChannel } fr
  * refs (`activeChannelIdRef`, `channelsRef`, `activeServerIdRef`,
  * `pendingChannelIdRef`, `handleNotificationNavigateRef`) to work around.
  */
-export function useSocketSync(userId: string): void {
+export function useSocketSync(currentUser: User): void {
+  const userId = currentUser.id;
   const activeChannelId = useServerStore((state) => state.activeChannelId);
   const activeServerId = useServerStore((state) => state.activeServerId);
   const activeRoomId = useDMStore((state) => state.activeRoomId);
@@ -100,9 +107,16 @@ export function useSocketSync(userId: string): void {
     void useServerStore.getState().resyncActiveServer();
   }, [reconnectedAt]);
 
-  // Ask for desktop notification permission once, up front.
+  // Ask for desktop notification permission once, up front — only if the
+  // user's preference already has desktop notifications on (see
+  // UserSettingsModal's Bildirimler tab, which also requests permission
+  // directly at the moment someone flips that toggle on).
   useEffect(() => {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    if (
+      getNotificationPreferences().desktop &&
+      typeof Notification !== 'undefined' &&
+      Notification.permission === 'default'
+    ) {
       void Notification.requestPermission();
     }
   }, []);
@@ -121,7 +135,13 @@ export function useSocketSync(userId: string): void {
           useServerStore.getState().markServerUnread(payload.server_id);
         }
 
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        const prefs = getNotificationPreferences();
+        if (!prefs.enabled) return;
+        if (prefs.mentionsOnly && !isMentioned(payload.content, currentUser.username)) return;
+
+        if (prefs.sound) playNotificationSound();
+
+        if (prefs.desktop && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           const notification = new Notification(
             `#${payload.channel_name} — ${payload.username ?? 'Bilinmeyen'}`,
             { body: payload.content, tag: payload.channel_id }
@@ -144,7 +164,14 @@ export function useSocketSync(userId: string): void {
       onNewDmMessage: (payload) => {
         useDMStore.getState().handleNewDmMessage(payload);
 
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        const prefs = getNotificationPreferences();
+        // mentionsOnly doesn't apply here — a DM is always "about you" by
+        // definition, there's no @-mention concept in a 1:1 conversation.
+        if (!prefs.enabled) return;
+
+        if (prefs.sound) playNotificationSound();
+
+        if (prefs.desktop && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           const notification = new Notification(payload.username ?? 'Bilinmeyen', {
             body: payload.content,
             tag: payload.dm_room_id,
