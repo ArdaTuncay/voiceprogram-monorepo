@@ -17,6 +17,13 @@
   text-align: center;
 }
 
+.auth-mascot {
+  width: 96px;
+  height: auto;
+  margin: 0 auto 16px;
+  display: block;
+}
+
 .auth-card h1 {
   color: var(--text-heading);
   font-size: 24px;

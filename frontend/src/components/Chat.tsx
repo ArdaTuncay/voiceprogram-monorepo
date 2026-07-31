@@ -19,6 +19,7 @@ import ServerSettingsModal from './ServerSettingsModal';
 import CreateChannelModal from './CreateChannelModal';
 import LeaveServerModal from './LeaveServerModal';
 import FriendsPanel from './FriendsPanel';
+import EmptyState from './EmptyState';
 import DMChatView from './DMChatView';
 import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
@@ -100,6 +101,7 @@ export default function Chat({ user, onLogout }: Props) {
   const unreadChannelIds = useServerStore((s) => s.unreadChannelIds);
   const channelError = useServerStore((s) => s.channelError);
   const selectChannel = useServerStore((s) => s.selectChannel);
+  const setActiveServerId = useServerStore((s) => s.setActiveServerId);
   const loadServers = useServerStore((s) => s.loadServers);
 
   const messages = useChatStore((s) => s.messages);
@@ -138,6 +140,10 @@ export default function Chat({ user, onLogout }: Props) {
   const loadDmRooms = useDMStore((s) => s.loadRooms);
   const setActiveDmRoomId = useDMStore((s) => s.setActiveRoomId);
 
+  // Whether the standalone Arkadaşlar (Friends) view is open — its own
+  // view, separate from the Home/DM screen's default empty state (see
+  // ServerSidebar's dedicated Friends icon).
+  const [friendsViewOpen, setFriendsViewOpen] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -250,6 +256,11 @@ export default function Chat({ user, onLogout }: Props) {
     voice.leave();
     disconnectSocket();
     onLogout();
+  }
+
+  function handleSelectFriends() {
+    setActiveServerId(null);
+    setFriendsViewOpen(true);
   }
 
   function handleVoiceRoomClick(roomId: string) {
@@ -424,7 +435,11 @@ export default function Chat({ user, onLogout }: Props) {
         </div>
       )}
 
-      <ServerSidebar />
+      <ServerSidebar
+        friendsActive={friendsViewOpen}
+        onSelectFriends={handleSelectFriends}
+        onNavigate={() => setFriendsViewOpen(false)}
+      />
 
       {/* ── Left sidebar ── */}
       <aside className="channel-sidebar">
@@ -533,7 +548,10 @@ export default function Chat({ user, onLogout }: Props) {
                   <div
                     key={room.id}
                     className={`channel-item dm-room-item${room.id === activeDmRoomId ? ' active' : ''}`}
-                    onClick={() => setActiveDmRoomId(room.id)}
+                    onClick={() => {
+                      setFriendsViewOpen(false);
+                      setActiveDmRoomId(room.id);
+                    }}
                   >
                     <div className="dm-room-avatar-wrapper">
                       <div className="dm-room-avatar" style={{ background: color }} title={name}>
@@ -560,10 +578,17 @@ export default function Chat({ user, onLogout }: Props) {
         )}
       </aside>
 
-      {/* ── Main area — exactly one of the three renders at a time, each
-          owning its own <main> (server chat keeps drag/drop bound to the
-          channel store here; DMChatView binds its own to the DM store) ── */}
-      {activeServerId ? (
+      {/* ── Main area — exactly one view renders at a time, each owning
+          its own <main> (server chat keeps drag/drop bound to the channel
+          store here; DMChatView binds its own to the DM store). The
+          Arkadaşlar view takes priority over everything else since it's
+          reached by explicitly navigating away from whatever server/DM was
+          open (see handleSelectFriends). ── */}
+      {friendsViewOpen ? (
+        <main className="chat-main">
+          <FriendsPanel />
+        </main>
+      ) : activeServerId ? (
         <>
         <main
           className="chat-main"
@@ -571,19 +596,21 @@ export default function Chat({ user, onLogout }: Props) {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
+          {!activeChannelId ? (
+            <EmptyState message="Sohbet etmeye başlamak için bir kanal seç" />
+          ) : (
+          <>
             <header className="chat-header">
               <span className="chat-header-hash"><Hash size={20} /></span>
               <span className="chat-header-name">{activeChannelName}</span>
             </header>
 
-            {activeChannelId && (
-              <div className="chat-search-row">
-                <SearchBar
-                  isSearching={isSearching}
-                  onSearch={(filters) => void searchChannelMessages(activeChannelId, filters)}
-                />
-              </div>
-            )}
+            <div className="chat-search-row">
+              <SearchBar
+                isSearching={isSearching}
+                onSearch={(filters) => void searchChannelMessages(activeChannelId, filters)}
+              />
+            </div>
 
             {isDraggingFile && (
               <div className="drag-drop-overlay">
@@ -699,8 +726,10 @@ export default function Chat({ user, onLogout }: Props) {
                 </div>
               )}
             </div>
+          </>
+          )}
         </main>
-        {isSearchPanelOpen && (
+        {isSearchPanelOpen && activeChannelId && (
           <SearchResultsPanel
             results={searchResults}
             isSearching={isSearching}
@@ -713,7 +742,7 @@ export default function Chat({ user, onLogout }: Props) {
         <DMChatView currentUserId={user.id} />
       ) : (
         <main className="chat-main">
-          <FriendsPanel />
+          <EmptyState message="Sohbet etmeye başlamak için bir kişi veya kanal seç" />
         </main>
       )}
 
