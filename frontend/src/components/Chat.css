@@ -150,6 +150,15 @@
   overflow-y: auto;
 }
 
+/* .channel-item rows add their own var(--space-2) horizontal padding on top
+   of this container's, for 16px total from the sidebar edge — .list-empty-hint's
+   shared base padding (var(--space-1) horizontal) falls 4px short of that, so
+   it's bumped here to match the row alignment instead of sitting closer to
+   the edge than everything else in this list. */
+.channel-list .list-empty-hint {
+  padding: var(--space-2);
+}
+
 .channel-category-row {
   display: flex;
   align-items: center;
@@ -1082,6 +1091,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+}
+
+/* Same rationale as .channel-list .list-empty-hint above: .search-result-item
+   rows add their own var(--space-2) horizontal padding on top of this
+   container's, so the shared class's default is bumped to match. */
+.search-results-list .list-empty-hint {
+  padding: var(--space-2);
 }
 
 .search-result-item {

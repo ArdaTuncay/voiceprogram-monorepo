@@ -174,3 +174,15 @@ button {
 input, textarea {
   font-family: inherit;
 }
+
+/* Shared visual style for small "list is empty" hint text — unifies what
+   used to be three near-identical but inconsistent rules (.channel-status,
+   .friends-empty, .settings-empty). Structural/positional styling (e.g.
+   .channel-status's min-height for status-bar space reservation, still used
+   by its loading/error states) stays local to each component. */
+.list-empty-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  padding: var(--space-2) var(--space-1);
+  text-align: left;
+}

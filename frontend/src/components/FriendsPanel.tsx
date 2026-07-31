@@ -169,7 +169,7 @@ function FriendList({
   onBlock: (userId: string) => void;
 }) {
   if (friendships.length === 0) {
-    return <div className="friends-empty">{emptyText}</div>;
+    return <div className="list-empty-hint">{emptyText}</div>;
   }
 
   return (
@@ -231,7 +231,7 @@ function PendingList({
   onBlock: (userId: string) => void;
 }) {
   if (incoming.length === 0 && outgoing.length === 0) {
-    return <div className="friends-empty">Bekleyen bir istek yok.</div>;
+    return <div className="list-empty-hint">Bekleyen bir istek yok.</div>;
   }
 
   return (

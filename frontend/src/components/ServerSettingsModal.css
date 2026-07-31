@@ -191,12 +191,6 @@
   cursor: default;
 }
 
-.settings-empty {
-  color: var(--text-muted);
-  font-size: 13px;
-  padding: 8px 4px;
-}
-
 .member-status-dot {
   margin-right: 8px;
   vertical-align: middle;

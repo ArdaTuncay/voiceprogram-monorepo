@@ -569,7 +569,7 @@ export default function Chat({ user, onLogout }: Props) {
                 );
               })}
               {dmRooms.length === 0 && (
-                <div className="channel-status">
+                <div className="list-empty-hint">
                   Henüz bir sohbetin yok — Arkadaşlar panelinden birine mesaj gönder!
                 </div>
               )}

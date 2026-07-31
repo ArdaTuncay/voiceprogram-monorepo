@@ -202,7 +202,7 @@ function ChannelsTab({ channels }: { channels: Channel[] }) {
             </button>
           </li>
         ))}
-        {channels.length === 0 && <li className="settings-empty">Henüz kanal yok.</li>}
+        {channels.length === 0 && <li className="list-empty-hint">Henüz kanal yok.</li>}
       </ul>
     </div>
   );
@@ -381,7 +381,7 @@ function InvitesTab({ serverId }: { serverId: string }) {
             </li>
           );
         })}
-        {invites.length === 0 && <li className="settings-empty">Henüz davet linki yok.</li>}
+        {invites.length === 0 && <li className="list-empty-hint">Henüz davet linki yok.</li>}
       </ul>
     </div>
   );

@@ -37,7 +37,7 @@ export default function SearchResultsPanel({ results, isSearching, onSelectMessa
 
       <div className="search-results-list">
         {isSearching && <div className="channel-status">Aranıyor…</div>}
-        {!isSearching && results.length === 0 && <div className="channel-status">Sonuç bulunamadı</div>}
+        {!isSearching && results.length === 0 && <div className="list-empty-hint">Sonuç bulunamadı</div>}
         {!isSearching &&
           results.map((msg) => {
             const color = userColor(msg.user_id);
