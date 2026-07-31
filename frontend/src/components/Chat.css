@@ -47,6 +47,7 @@
 /* ── Left sidebar ── */
 .channel-sidebar {
   background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
   width: 240px;
   flex-shrink: 0;
   display: flex;
@@ -390,7 +391,7 @@
   align-items: center;
   padding: 0 16px;
   gap: 8px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 

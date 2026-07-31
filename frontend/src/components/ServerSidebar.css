@@ -1,5 +1,6 @@
 .server-sidebar {
   background: var(--bg-tertiary);
+  border-right: 1px solid var(--border);
   width: 72px;
   flex-shrink: 0;
   display: flex;
