@@ -41,7 +41,7 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
         title="Direkt Mesajlar"
         aria-label="Direkt Mesajlar"
       >
-        <Home size={20} />
+        <Home size={20} strokeWidth={2} />
       </button>
 
       <button
@@ -50,7 +50,7 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
         title="Arkadaşlar"
         aria-label="Arkadaşlar"
       >
-        <Users size={20} />
+        <Users size={20} strokeWidth={2} />
       </button>
 
       <div className="server-sidebar-divider" />
@@ -79,7 +79,7 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
           title="Sunucu Oluştur"
           aria-label="Sunucu Oluştur"
         >
-          <Plus size={24} />
+          <Plus size={20} strokeWidth={2} />
         </button>
 
         <button
@@ -88,7 +88,7 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
           title="Bir Sunucuya Katıl"
           aria-label="Bir Sunucuya Katıl"
         >
-          <LogIn size={18} />
+          <LogIn size={20} strokeWidth={2} />
         </button>
       </div>
 

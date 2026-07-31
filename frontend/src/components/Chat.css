@@ -346,13 +346,13 @@
   padding: 4px 6px;
   border-radius: 4px;
   line-height: 1;
-  transition: color 0.1s, background 0.1s;
+  transition: color 0.15s, background 0.15s;
   flex-shrink: 0;
 }
 
 .user-settings-btn:hover {
   color: var(--text-normal);
-  background: rgba(79, 84, 92, 0.24);
+  background: var(--bg-input);
 }
 
 .logout-btn {
@@ -360,18 +360,19 @@
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 4px 6px;
   border-radius: 4px;
   line-height: 1;
-  transition: color 0.1s, background 0.1s;
+  transition: color 0.15s, background 0.15s;
   flex-shrink: 0;
-  title: "Log out";
 }
 
 .logout-btn:hover {
   color: var(--text-normal);
-  background: rgba(79, 84, 92, 0.24);
+  background: var(--bg-input);
 }
 
 /* ── Main chat area ── */

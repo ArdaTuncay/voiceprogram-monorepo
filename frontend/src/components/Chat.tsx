@@ -410,7 +410,7 @@ export default function Chat({ user, onLogout }: Props) {
         title="Kullanıcı Ayarları"
         aria-label="Kullanıcı Ayarları"
       >
-        <Settings size={15} />
+        <Settings size={20} strokeWidth={2} />
       </button>
       <button
         className="logout-btn"
@@ -418,7 +418,7 @@ export default function Chat({ user, onLogout }: Props) {
         title="Log out"
         aria-label="Log out"
       >
-        <LogOut size={16} />
+        <LogOut size={20} strokeWidth={2} />
       </button>
     </div>
   );

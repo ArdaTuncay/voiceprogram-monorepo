@@ -72,6 +72,31 @@
   color: var(--on-accent);
 }
 
+/* "Which tab am I on" indicator — a thin vertical bar inset from the
+   active icon's own left edge. An earlier version placed this just
+   outside the icon, in the rail's left gutter (`left: -10px`) — that
+   landed at document x≈2px, which `.server-sidebar`'s `overflow-y: auto`
+   silently turns into `overflow-x: auto` for too (per the CSS Overflow
+   spec, a scrolling value on one axis forces the other away from
+   `visible`, even if `overflow-x: visible` is explicitly authored), and
+   with the rail flush against the viewport's left edge that made the bar
+   invisible in practice. Keeping the bar fully inside the icon's own box
+   sidesteps that entirely — nothing here depends on a parent's overflow
+   behavior or how close to the viewport edge the rail sits. Needs
+   `--on-accent` (not `--accent`) for contrast, since the active icon's own
+   background is already `--accent`. */
+.server-icon.active::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--on-accent);
+}
+
 .server-create-area {
   width: 100%;
   display: flex;
