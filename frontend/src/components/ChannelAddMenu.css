@@ -24,12 +24,14 @@
 .channel-add-menu-dropdown {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
+  right: 0;
   z-index: 20;
   display: flex;
   flex-direction: column;
+  width: max-content;
   min-width: 160px;
-  background: var(--bg-tertiary);
+  max-width: min(220px, calc(100vw - var(--space-4)));
+  background: var(--bg-secondary);
   border: 1px solid rgba(0, 0, 0, 0.3);
   border-radius: 6px;
   padding: var(--space-1);
