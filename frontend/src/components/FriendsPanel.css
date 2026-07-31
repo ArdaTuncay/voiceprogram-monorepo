@@ -9,9 +9,9 @@
 .friends-subtabs {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   height: 48px;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   flex-shrink: 0;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
 }
@@ -22,12 +22,12 @@
   color: var(--text-muted);
   font-size: 14px;
   font-weight: 600;
-  padding: 6px 10px;
+  padding: var(--space-1-5) var(--space-2-5);
   border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .friends-subtab:hover {
@@ -51,7 +51,7 @@
   justify-content: center;
   min-width: 16px;
   height: 16px;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border-radius: 8px;
   background: var(--danger);
   color: var(--interactive-active);
@@ -62,20 +62,20 @@
 .friends-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+  padding: var(--space-4) var(--space-5);
 }
 
 .friends-error {
   color: var(--danger);
   font-size: 13px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .friends-loading,
 .friends-empty {
   color: var(--text-muted);
   font-size: 14px;
-  padding: 24px 4px;
+  padding: var(--space-6) var(--space-1);
 }
 
 .friends-section-title {
@@ -84,11 +84,11 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  margin: 20px 4px 8px;
+  margin: var(--space-5) var(--space-1) var(--space-2);
 }
 
 .friends-section-title:first-child {
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .friends-list {
@@ -100,8 +100,8 @@
 .friends-list-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 4px;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-1);
   border-bottom: 1px solid var(--bg-tertiary);
 }
 
@@ -172,7 +172,7 @@
 }
 
 .friends-message-btn {
-  margin-right: 4px;
+  margin-right: var(--space-1);
 }
 
 .friends-message-btn:hover {
@@ -207,18 +207,18 @@
 .add-friend-title {
   color: var(--text-heading);
   font-size: 16px;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
 }
 
 .add-friend-description {
   color: var(--text-muted);
   font-size: 13px;
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-4);
 }
 
 .add-friend-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .add-friend-input {
@@ -228,7 +228,7 @@
   border-radius: 4px;
   color: var(--text-normal);
   font-size: 14px;
-  padding: 10px 12px;
+  padding: var(--space-2-5) var(--space-3);
   outline: none;
 }
 
@@ -239,7 +239,7 @@
   color: var(--on-accent);
   font-size: 14px;
   font-weight: 600;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -256,5 +256,5 @@
 .add-friend-success {
   color: var(--success);
   font-size: 13px;
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
