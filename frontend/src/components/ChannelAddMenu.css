@@ -10,7 +10,7 @@
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 3px 6px;
+  padding: var(--space-1) var(--space-1-5);
   border-radius: 4px;
   line-height: 1;
 }
@@ -32,22 +32,22 @@
   background: var(--bg-tertiary);
   border: 1px solid rgba(0, 0, 0, 0.3);
   border-radius: 6px;
-  padding: 4px;
-  gap: 1px;
+  padding: var(--space-1);
+  gap: var(--space-1);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 .channel-add-menu-option {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   background: none;
   border: none;
   color: var(--text-normal);
   font-size: 13px;
   font-weight: 500;
   text-align: left;
-  padding: 7px 8px;
+  padding: var(--space-2) var(--space-2);
   border-radius: 4px;
   cursor: pointer;
 }

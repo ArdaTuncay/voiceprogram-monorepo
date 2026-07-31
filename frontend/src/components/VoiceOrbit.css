@@ -1,12 +1,12 @@
 .voice-orbit {
   position: relative;
-  margin: 6px auto 8px;
+  margin: var(--space-1-5) auto var(--space-2);
 }
 
 .voice-orbit-single {
   display: flex;
   justify-content: center;
-  padding: 6px 0 8px;
+  padding: var(--space-1-5) 0 var(--space-2);
 }
 
 .voice-orbit-participant {

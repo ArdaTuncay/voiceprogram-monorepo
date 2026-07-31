@@ -1,9 +1,9 @@
 .link-preview-card {
   display: flex;
   align-items: stretch;
-  gap: 12px;
+  gap: var(--space-3);
   max-width: 440px;
-  margin-top: 6px;
+  margin-top: var(--space-1-5);
   background: var(--bg-secondary);
   border-radius: 6px;
   overflow: hidden;
@@ -24,10 +24,10 @@
 .link-preview-body {
   flex: 1;
   min-width: 0;
-  padding: 10px 12px 10px 0;
+  padding: var(--space-2-5) var(--space-3) var(--space-2-5) 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .link-preview-site {
