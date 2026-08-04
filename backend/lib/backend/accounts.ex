@@ -236,6 +236,34 @@ defmodule Backend.Accounts do
   end
 
   @doc """
+  Generates a fresh, cryptographically random email verification token for
+  `user`, persists it together with when it was generated (for a future
+  resend/expiry check) and returns the raw token as `{:ok, updated_user,
+  raw_token}` — the only place the plaintext token is ever available,
+  since `Backend.Accounts.UserNotifier` and the not-yet-built verify
+  endpoint only ever see the persisted (currently unhashed — see note
+  below) column.
+
+  Stored as plain text for now, not hashed — a deliberate, temporary
+  simplification for this step; hashing before persisting is a follow-up
+  once something actually consumes/verifies this column.
+  """
+  def generate_email_verification_token(%User{} = user) do
+    raw_token = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+
+    user
+    |> Ecto.Changeset.change(
+      email_verification_token: raw_token,
+      email_verification_sent_at: DateTime.truncate(DateTime.utc_now(), :second)
+    )
+    |> Repo.update()
+    |> case do
+      {:ok, updated_user} -> {:ok, updated_user, raw_token}
+      {:error, _changeset} = error -> error
+    end
+  end
+
+  @doc """
   The name to show for a message/DM author, or a DM room's other
   participant — `"[silinmiş kullanıcı]"` once `User.deleted?/1` is true,
   their real (anonymized, meaningless) `username` otherwise. This is the
