@@ -14,6 +14,9 @@ defmodule Backend.Accounts.User do
     field :token_version, :integer, default: 0
     field :friend_request_privacy, :string, default: "everyone"
     field :deleted_at, :utc_datetime
+    field :email_verified, :boolean, default: false
+    field :email_verification_token, :string
+    field :email_verification_sent_at, :utc_datetime
 
     timestamps(type: :utc_datetime)
   end
