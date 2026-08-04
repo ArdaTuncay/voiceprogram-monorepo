@@ -1,26 +1,91 @@
+/* Theme tokens: :root holds the dark palette directly (not gated behind
+   [data-theme="dark"]) so every existing var(--token) reference keeps
+   working even if the data-theme attribute is ever missing or fails to
+   apply (test environments, a JS error before paint, etc.) — the app just
+   silently stays dark instead of losing its color tokens entirely.
+   [data-theme="light"] below overrides the same custom properties when
+   services/theme.ts sets that attribute on <html>; a plain attribute
+   selector on the root element ties in specificity with :root, so source
+   order (this file, light block second) decides who wins. */
 :root {
-  /* Discord dark theme palette */
-  --bg-primary:   #36393f;
-  --bg-secondary: #2f3136;
-  --bg-tertiary:  #202225;
-  --bg-input:     #40444b;
+  /* Monochrome matte gray palette (neutral scale, no blue/slate tint) */
+  --bg-primary:   #171717;  /* neutral-900 */
+  --bg-secondary: #262626;  /* neutral-800 */
+  --bg-tertiary:  #0a0a0a;  /* neutral-950 */
+  --bg-input:     #404040;  /* neutral-700 */
 
-  --text-normal:  #dcddde;
-  --text-muted:   #72767d;
-  --text-heading: #ffffff;
+  --text-normal:  #e5e5e5;  /* neutral-200 */
+  --text-muted:   #a3a3a3;  /* neutral-400 */
+  --text-heading: #fafafa;  /* neutral-50 */
 
-  --interactive-normal: #b9bbbe;
-  --interactive-hover:  #dcddde;
-  --interactive-active: #ffffff;
+  --interactive-normal: #d4d4d4;  /* neutral-300 */
+  --interactive-hover:  #e5e5e5;  /* neutral-200 */
+  /* Deliberately NOT re-defined per theme (see the light block below) —
+     its ~15 call sites are all foreground text/icons on top of colored
+     avatar backgrounds or --danger/--success button fills, never plain
+     text on a neutral surface, so it needs to stay a constant light color
+     regardless of overall theme. The one place that used to reuse it for
+     a genuine neutral-surface case (.channel-item.active) now reads
+     --text-heading instead, which does invert per theme. */
+  --interactive-active: #fafafa;  /* neutral-50 */
 
-  --accent:       #7289da;
-  --accent-hover: #677bc4;
+  /* Accent is now tonal, not chromatic: highest-contrast neutral, not a color */
+  --accent:       #f5f5f5;  /* neutral-100 */
+  --accent-hover: #e5e5e5;  /* neutral-200 */
+  /* Accent surfaces are now light, so foreground content on them needs a dark
+     token instead of the light --interactive-active/--text-heading used
+     everywhere else — 16.4:1 contrast against --accent, 14.2:1 against --accent-hover */
+  --on-accent: var(--bg-primary);
 
-  --success: #43b581;
-  --danger:  #f04747;
-  --warning: #faa61a;
+  /* Keyboard-focus ring — same neutral accent used everywhere else, kept as
+     its own token (rather than referencing --accent directly at each call
+     site) so a future design pass can give focus rings their own color
+     without touching every focus-visible rule. */
+  --focus-ring: var(--accent);
 
-  font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, system-ui, -apple-system, sans-serif;
+  /* Functional colors stay desaturated/matte but keep their hue for meaning */
+  --success: #5c9a72;
+  --danger:  #cc655c;
+  --danger-hover: #c0473c;  /* --danger, HSL lightness -15% (58% -> 49.3%), same hue/saturation */
+  --warning: #c9974a;
+
+  /* Hairline separator between adjacent surfaces of near-identical
+     background (e.g. the online-users panel against chat-main) — a solid
+     neutral wouldn't adapt across the two very different bg scales below,
+     so this stays a semi-transparent white/black pair instead. */
+  --border: rgba(255, 255, 255, 0.08);
+
+  /* Motion tokens */
+  --transition-fast: 0.15s ease;
+
+  /* Typography tokens */
+  --font-sans: 'InterVariable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-base: 0.9375rem;
+  --font-size-md: 1.0625rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+
+  /* Spacing scale — a superset of the plain 8px grid: the half-steps
+     (--space-1-5, --space-2-5) exist because several already-consistent
+     UI values (6px/10px) sit between grid steps rather than on them, and
+     forcing everything onto {4,8,12,16,20,24,32} would mean a real (if
+     small) visual shift at every one of those spots. */
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  font-family: var(--font-sans);
   font-size: 16px;
   color: var(--text-normal);
   background: var(--bg-primary);
@@ -28,6 +93,56 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Light theme — same neutral scale, light end. Every value below was
+   checked against WCAG AA (4.5:1 for normal text, 3:1 for large/UI
+   elements) using the real relative-luminance formula, not eyeballed:
+     --text-normal   (#262626 on #fafafa):  14.5:1
+     --text-muted    (#525252 on #fafafa):   7.5:1
+     --text-heading  (#171717 on #fafafa):  17.2:1
+     --interactive-normal (#404040 on --bg-secondary #f5f5f5): 9.5:1
+     --interactive-hover  (#262626 on --bg-secondary #f5f5f5): 13.9:1
+     --accent        (#171717 on #fafafa):  17.2:1 (and --on-accent, which
+                       resolves to --bg-primary, gets the same ratio back
+                       against --accent as its background)
+     --success  (#256b40 on #fafafa): 6.2:1
+     --danger   (#b3261e on #fafafa): 6.3:1  (white-on-it, for the
+                 danger-filled buttons that pair it with --interactive-active: 6.5:1)
+     --danger-hover (#8c1e18 on #fafafa): 8.7:1
+     --warning  (#7a4e00 on --bg-tertiary #e5e5e5): 5.7:1
+   success/danger/warning are new hex values, not the dark theme's — reusing
+   those would be far too light to read as text on a light background. */
+[data-theme="light"] {
+  --bg-primary:   #fafafa;  /* neutral-50 */
+  --bg-secondary: #f5f5f5;  /* neutral-100 */
+  --bg-tertiary:  #e5e5e5;  /* neutral-200 — one step grayer than secondary,
+                                continuing the same direction away from
+                                white so the server rail / online panel
+                                still read as a framing surface rather
+                                than flipping to "brighter than content" */
+  --bg-input:     #e5e5e5;  /* neutral-200 */
+
+  --text-normal:  #262626;  /* neutral-800 */
+  --text-muted:   #525252;  /* neutral-600 */
+  --text-heading: #171717;  /* neutral-900 */
+
+  --interactive-normal: #404040;  /* neutral-700 */
+  --interactive-hover:  #262626;  /* neutral-800 */
+  /* --interactive-active intentionally NOT overridden — see the :root comment above. */
+
+  --accent:       #171717;  /* neutral-900 */
+  --accent-hover: #262626;  /* neutral-800 */
+  /* --on-accent stays the var(--bg-primary) reference — it resolves to this
+     theme's light --bg-primary automatically, which is exactly what's
+     needed as foreground text on the now-dark --accent background. */
+
+  --success: #256b40;
+  --danger:  #b3261e;
+  --danger-hover: #8c1e18;
+  --warning: #7a4e00;
+
+  --border: rgba(0, 0, 0, 0.08);
 }
 
 *,
@@ -40,6 +155,9 @@ body {
   margin: 0;
   overflow: hidden;
   height: 100vh;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
@@ -64,4 +182,29 @@ button {
 
 input, textarea {
   font-family: inherit;
+}
+
+/* Single global keyboard-focus indicator for every interactive element —
+   component CSS should not define its own outline for the focus-visible
+   state; only :hover/:disabled/transition styling belongs there. */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Shared visual style for small "list is empty" hint text — unifies what
+   used to be three near-identical but inconsistent rules (.channel-status,
+   .friends-empty, .settings-empty). Structural/positional styling (e.g.
+   .channel-status's min-height for status-bar space reservation, still used
+   by its loading/error states) stays local to each component. */
+.list-empty-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  padding: var(--space-2) var(--space-1);
+  text-align: left;
 }

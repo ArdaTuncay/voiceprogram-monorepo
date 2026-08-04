@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
+import { AlertTriangle, Ban, MessageCircle, Trash2, Check, X } from 'lucide-react';
 import type { Friendship } from '../types';
 import { useFriendStore } from '../stores/useFriendStore';
 import { useDMStore } from '../stores/useDMStore';
 import { userColor, initials } from '../utils';
+import StatusIndicator from './StatusIndicator';
 import './FriendsPanel.css';
 
 type SubTab = 'online' | 'all' | 'pending' | 'add';
@@ -15,6 +17,7 @@ export default function FriendsPanel() {
   const loadFriendships = useFriendStore((s) => s.loadFriendships);
   const acceptRequest = useFriendStore((s) => s.acceptRequest);
   const removeFriendship = useFriendStore((s) => s.removeFriendship);
+  const blockUser = useFriendStore((s) => s.blockUser);
 
   const openRoomWithUser = useDMStore((s) => s.openRoomWithUser);
 
@@ -41,6 +44,14 @@ export default function FriendsPanel() {
     setActioningId(id);
     await removeFriendship(id);
     setActioningId(null);
+  }
+
+  async function handleBlock(userId: string) {
+    setActioningId(userId);
+    setMessageError('');
+    const errorMessage = await blockUser(userId);
+    setActioningId(null);
+    if (errorMessage) setMessageError(errorMessage);
   }
 
   async function handleMessage(userId: string) {
@@ -80,8 +91,8 @@ export default function FriendsPanel() {
       </div>
 
       <div className="friends-content">
-        {error && <div className="friends-error">⚠ {error}</div>}
-        {messageError && <div className="friends-error">⚠ {messageError}</div>}
+        {error && <div className="friends-error"><AlertTriangle size={14} /> {error}</div>}
+        {messageError && <div className="friends-error"><AlertTriangle size={14} /> {messageError}</div>}
 
         {loading ? (
           <div className="friends-loading">Yükleniyor…</div>
@@ -94,6 +105,7 @@ export default function FriendsPanel() {
                 actioningId={actioningId}
                 onRemove={handleRemove}
                 onMessage={handleMessage}
+                onBlock={handleBlock}
               />
             )}
             {subTab === 'all' && (
@@ -103,6 +115,7 @@ export default function FriendsPanel() {
                 actioningId={actioningId}
                 onRemove={handleRemove}
                 onMessage={handleMessage}
+                onBlock={handleBlock}
               />
             )}
             {subTab === 'pending' && (
@@ -112,6 +125,7 @@ export default function FriendsPanel() {
                 actioningId={actioningId}
                 onAccept={handleAccept}
                 onRemove={handleRemove}
+                onBlock={handleBlock}
               />
             )}
             {subTab === 'add' && <AddFriendForm />}
@@ -130,7 +144,11 @@ function FriendAvatar({ friendship }: { friendship: Friendship }) {
       <div className="friends-list-avatar" style={{ background: color }} title={name}>
         {initials(name)}
       </div>
-      <span className={`friends-status-dot${friendship.user_status === 'online' ? ' online' : ''}`} />
+      <StatusIndicator
+        status={friendship.user_status === 'online' ? 'online' : 'offline'}
+        size={11}
+        className="friends-status-dot"
+      />
     </div>
   );
 }
@@ -141,15 +159,17 @@ function FriendList({
   actioningId,
   onRemove,
   onMessage,
+  onBlock,
 }: {
   friendships: Friendship[];
   emptyText: string;
   actioningId: string | null;
   onRemove: (id: string) => void;
   onMessage: (userId: string) => void;
+  onBlock: (userId: string) => void;
 }) {
   if (friendships.length === 0) {
-    return <div className="friends-empty">{emptyText}</div>;
+    return <div className="list-empty-hint">{emptyText}</div>;
   }
 
   return (
@@ -169,7 +189,7 @@ function FriendList({
             title="Mesaj Gönder"
             aria-label={`${f.username ?? 'kullanıcıya'} mesaj gönder`}
           >
-            💬
+            <MessageCircle size={16} />
           </button>
           <button
             className="friends-remove-btn"
@@ -178,7 +198,16 @@ function FriendList({
             title="Arkadaşlıktan Çıkar"
             aria-label={`${f.username ?? 'kullanıcıyı'} arkadaşlıktan çıkar`}
           >
-            🗑️
+            <Trash2 size={14} />
+          </button>
+          <button
+            className="friends-remove-btn"
+            onClick={() => onBlock(f.user_id)}
+            disabled={actioningId === f.user_id}
+            title="Engelle"
+            aria-label={`${f.username ?? 'kullanıcıyı'} engelle`}
+          >
+            <Ban size={14} />
           </button>
         </li>
       ))}
@@ -192,15 +221,17 @@ function PendingList({
   actioningId,
   onAccept,
   onRemove,
+  onBlock,
 }: {
   incoming: Friendship[];
   outgoing: Friendship[];
   actioningId: string | null;
   onAccept: (id: string) => void;
   onRemove: (id: string) => void;
+  onBlock: (userId: string) => void;
 }) {
   if (incoming.length === 0 && outgoing.length === 0) {
-    return <div className="friends-empty">Bekleyen bir istek yok.</div>;
+    return <div className="list-empty-hint">Bekleyen bir istek yok.</div>;
   }
 
   return (
@@ -222,7 +253,7 @@ function PendingList({
                   title="Kabul Et"
                   aria-label={`${f.username ?? 'kullanıcının'} isteğini kabul et`}
                 >
-                  ✓
+                  <Check size={14} />
                 </button>
                 <button
                   className="friends-remove-btn"
@@ -231,7 +262,16 @@ function PendingList({
                   title="Reddet"
                   aria-label={`${f.username ?? 'kullanıcının'} isteğini reddet`}
                 >
-                  ✕
+                  <X size={14} />
+                </button>
+                <button
+                  className="friends-remove-btn"
+                  onClick={() => onBlock(f.user_id)}
+                  disabled={actioningId === f.user_id}
+                  title="Engelle"
+                  aria-label={`${f.username ?? 'kullanıcıyı'} engelle`}
+                >
+                  <Ban size={14} />
                 </button>
               </li>
             ))}
@@ -257,7 +297,7 @@ function PendingList({
                   title="İsteği İptal Et"
                   aria-label={`${f.username ?? 'kullanıcıya'} gönderilen isteği iptal et`}
                 >
-                  ✕
+                  <X size={14} />
                 </button>
               </li>
             ))}
@@ -312,8 +352,8 @@ function AddFriendForm() {
           {submitting ? 'Gönderiliyor…' : 'İstek Gönder'}
         </button>
       </form>
-      {error && <div className="friends-error">⚠ {error}</div>}
-      {success && <div className="add-friend-success">✓ {success}</div>}
+      {error && <div className="friends-error"><AlertTriangle size={14} /> {error}</div>}
+      {success && <div className="add-friend-success"><Check size={14} /> {success}</div>}
     </div>
   );
 }

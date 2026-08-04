@@ -1,7 +1,9 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ChangeEvent, DragEvent, UIEvent } from 'react';
+import { AtSign, Ban, Paperclip, Send, AlertTriangle } from 'lucide-react';
 import { resolveFileUrl } from '../config';
 import { useDMStore } from '../stores/useDMStore';
+import { useFriendStore } from '../stores/useFriendStore';
 import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
 import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
@@ -86,7 +88,25 @@ export default function DMChatView({ currentUserId }: Props) {
     return () => window.clearTimeout(timer);
   }, [highlightedMessageId, clearHighlight]);
 
-  const otherName = rooms.find((r) => r.id === activeRoomId)?.username ?? 'Bilinmeyen';
+  const activeRoom = rooms.find((r) => r.id === activeRoomId);
+  const otherName = activeRoom?.username ?? 'Bilinmeyen';
+  const otherUserId = activeRoom?.user_id;
+
+  const blockUser = useFriendStore((s) => s.blockUser);
+  const [confirmingBlock, setConfirmingBlock] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const [blockError, setBlockError] = useState('');
+
+  async function handleConfirmBlock() {
+    if (!otherUserId) return;
+
+    setBlocking(true);
+    setBlockError('');
+    const error = await blockUser(otherUserId);
+    setBlocking(false);
+    setConfirmingBlock(false);
+    if (error) setBlockError(error);
+  }
 
   function handleAttachClick() {
     fileInputRef.current?.click();
@@ -136,16 +156,53 @@ export default function DMChatView({ currentUserId }: Props) {
       onDrop={handleDrop}
     >
       <header className="chat-header">
-        <span className="chat-header-hash">@</span>
+        <span className="chat-header-hash"><AtSign size={20} /></span>
         <span className="chat-header-name">{otherName}</span>
-        {activeRoomId && (
-          <SearchBar isSearching={isSearching} onSearch={(filters) => void searchDmMessages(activeRoomId, filters)} />
+        {otherUserId && (
+          <button
+            className="invite-people-btn leave-server-btn"
+            onClick={() => setConfirmingBlock(true)}
+            title={`${otherName} kullanıcısını engelle`}
+            aria-label={`${otherName} kullanıcısını engelle`}
+          >
+            <Ban size={16} />
+          </button>
         )}
       </header>
 
+      {confirmingBlock && (
+        <div className="dm-block-confirm">
+          <span>{otherName} adlı kullanıcıyı engellemek istediğine emin misin?</span>
+          <button
+            className="dm-block-confirm-btn"
+            onClick={() => void handleConfirmBlock()}
+            disabled={blocking}
+          >
+            {blocking ? 'Engelleniyor…' : 'Evet, Engelle'}
+          </button>
+          <button
+            className="dm-block-cancel-btn"
+            onClick={() => setConfirmingBlock(false)}
+            disabled={blocking}
+          >
+            Vazgeç
+          </button>
+        </div>
+      )}
+
+      {blockError && (
+        <div className="channel-status error"><AlertTriangle size={14} /> {blockError}</div>
+      )}
+
+      {activeRoomId && (
+        <div className="chat-search-row">
+          <SearchBar isSearching={isSearching} onSearch={(filters) => void searchDmMessages(activeRoomId, filters)} />
+        </div>
+      )}
+
       {isDraggingFile && (
         <div className="drag-drop-overlay">
-          <div className="drag-drop-message">📎 Fotoğrafı buraya bırak</div>
+          <div className="drag-drop-message"><Paperclip size={18} /> Fotoğrafı buraya bırak</div>
         </div>
       )}
 
@@ -155,7 +212,7 @@ export default function DMChatView({ currentUserId }: Props) {
             <div className="channel-status">Eski mesajlar yükleniyor…</div>
           )}
           <div className="channel-intro">
-            <h2>@ {otherName}</h2>
+            <h2><AtSign size={28} /> {otherName}</h2>
             <p>Bu, {otherName} ile olan özel sohbetinin başlangıcı. Merhaba de!</p>
           </div>
 
@@ -190,7 +247,7 @@ export default function DMChatView({ currentUserId }: Props) {
             title="Dosya Ekle"
             aria-label="Dosya Ekle"
           >
-            📎
+            <Paperclip size={18} />
           </button>
           <textarea
             ref={textareaRef}
@@ -209,12 +266,12 @@ export default function DMChatView({ currentUserId }: Props) {
             aria-label="Send message"
             title="Send (Enter)"
           >
-            ➤
+            <Send size={18} />
           </button>
         </div>
 
         {isUploading && <div className="upload-status">Yükleniyor…</div>}
-        {uploadError && <div className="upload-status upload-status-error">⚠ {uploadError}</div>}
+        {uploadError && <div className="upload-status upload-status-error"><AlertTriangle size={14} /> {uploadError}</div>}
 
         {typingUsername && (
           <div className="typing-indicator">

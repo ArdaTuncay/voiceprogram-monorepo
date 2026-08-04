@@ -9,6 +9,7 @@ defmodule BackendWeb.DmChannel do
   use Phoenix.Channel
 
   alias Backend.DirectMessages
+  alias Backend.Friends
   alias Backend.Presence
   alias BackendWeb.ChannelRateLimiter
 
@@ -67,35 +68,18 @@ defmodule BackendWeb.DmChannel do
 
   @impl true
   def handle_in("shout", params, socket) do
-    key = {:dm, "shout", socket.assigns.room_id, socket.assigns.user_id}
-
-    if ChannelRateLimiter.limited?(
-         key,
-         @shout_scale,
-         @shout_limit,
-         socket.assigns.user_id,
-         "dm_shout"
-       ) do
-      {:reply, {:error, %{reason: "rate_limited"}}, socket}
+    # Checked before the rate limiter, not after — a blocked sender
+    # shouldn't be able to tell the two failure modes apart by which one
+    # fires first, and there's no reason to spend a rate-limit hit on a
+    # message that was never going anywhere. Room history/join stays
+    # untouched either way (see BackendWeb.DmChannel's moduledoc) — this
+    # only stops a *new* message, mirroring
+    # Backend.DirectMessages.open_room/2's own block check for opening a
+    # room in the first place.
+    if Friends.blocked_either_way?(socket.assigns.user_id, socket.assigns.other_user_id) do
+      {:reply, {:error, %{reason: "blocked"}}, socket}
     else
-      attrs = %{
-        content: Map.get(params, "content", ""),
-        file_url: Map.get(params, "file_url"),
-        file_type: Map.get(params, "file_type"),
-        user_id: socket.assigns.user_id,
-        dm_room_id: socket.assigns.room_id
-      }
-
-      case DirectMessages.create_message(attrs) do
-        {:ok, message} ->
-          serialized = serialize_message(message)
-          broadcast!(socket, "shout", serialized)
-          notify_other_participant(socket, serialized)
-          {:reply, :ok, socket}
-
-        {:error, changeset} ->
-          {:reply, {:error, %{errors: format_errors(changeset)}}, socket}
-      end
+      handle_shout(params, socket)
     end
   end
 
@@ -175,6 +159,39 @@ defmodule BackendWeb.DmChannel do
     end
   end
 
+  defp handle_shout(params, socket) do
+    key = {:dm, "shout", socket.assigns.room_id, socket.assigns.user_id}
+
+    if ChannelRateLimiter.limited?(
+         key,
+         @shout_scale,
+         @shout_limit,
+         socket.assigns.user_id,
+         "dm_shout"
+       ) do
+      {:reply, {:error, %{reason: "rate_limited"}}, socket}
+    else
+      attrs = %{
+        content: Map.get(params, "content", ""),
+        file_url: Map.get(params, "file_url"),
+        file_type: Map.get(params, "file_type"),
+        user_id: socket.assigns.user_id,
+        dm_room_id: socket.assigns.room_id
+      }
+
+      case DirectMessages.create_message(attrs) do
+        {:ok, message} ->
+          serialized = serialize_message(message)
+          broadcast!(socket, "shout", serialized)
+          notify_other_participant(socket, serialized)
+          {:reply, :ok, socket}
+
+        {:error, changeset} ->
+          {:reply, {:error, %{errors: format_errors(changeset)}}, socket}
+      end
+    end
+  end
+
   # Lets the other participant know a message landed even if they aren't
   # viewing this DM right now — mirrors ChatChannel's notify_other_members/3,
   # via the same personal "user:<id>" topic (no separate DM notification
@@ -196,7 +213,7 @@ defmodule BackendWeb.DmChannel do
       file_url: message.file_url,
       file_type: message.file_type,
       user_id: message.user_id,
-      username: message.user && message.user.username,
+      username: Backend.Accounts.display_username(message.user),
       inserted_at: message.inserted_at,
       is_edited: message.is_edited,
       reactions: message.reactions

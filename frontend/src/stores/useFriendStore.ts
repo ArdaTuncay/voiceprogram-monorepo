@@ -1,10 +1,13 @@
 import { create } from 'zustand';
-import type { Friendship } from '../types';
+import type { BlockedUser, Friendship } from '../types';
 import {
   fetchFriends,
   sendFriendRequest as apiSendFriendRequest,
   acceptFriendRequest as apiAcceptFriendRequest,
   removeFriendship as apiRemoveFriendship,
+  fetchBlockedUsers,
+  blockUser as apiBlockUser,
+  unblockUser as apiUnblockUser,
 } from '../services/api';
 
 function upsert(list: Friendship[], next: Friendship): Friendship[] {
@@ -19,12 +22,21 @@ interface FriendStoreState {
   friendships: Friendship[];
   loading: boolean;
   error: string;
+  blockedUsers: BlockedUser[];
 
   loadFriendships: () => Promise<void>;
   refreshFriendships: () => Promise<void>;
   sendRequest: (username: string) => Promise<string | undefined>;
   acceptRequest: (friendshipId: string) => Promise<string | undefined>;
   removeFriendship: (friendshipId: string) => Promise<string | undefined>;
+  loadBlockedUsers: () => Promise<void>;
+  /** Blocks a user by id — also drops any friendship/pending-request row
+   * involving them from local state, since the backend just demoted it to
+   * `status: "blocked"` (no longer "accepted"/"pending", see
+   * Backend.Friends.block_user/2), so it wouldn't show up as either
+   * anymore anyway. */
+  blockUser: (userId: string) => Promise<string | undefined>;
+  unblockUser: (userId: string) => Promise<string | undefined>;
   /** Wipes this store back to its initial state — called on a forced logout
    * (see services/session.ts) so nothing from this session leaks into
    * whatever comes next in the same tab (a fresh login, or a different
@@ -42,6 +54,7 @@ export const useFriendStore = create<FriendStoreState>((set, get) => ({
   friendships: [],
   loading: false,
   error: '',
+  blockedUsers: [],
 
   loadFriendships: async () => {
     set({ loading: true, error: '' });
@@ -98,5 +111,31 @@ export const useFriendStore = create<FriendStoreState>((set, get) => ({
   handleFriendRemoved: (payload) =>
     set((state) => ({ friendships: state.friendships.filter((f) => f.id !== payload.id) })),
 
-  reset: () => set({ friendships: [], loading: false, error: '' }),
+  loadBlockedUsers: async () => {
+    const { data } = await fetchBlockedUsers();
+    if (data) set({ blockedUsers: data });
+  },
+
+  blockUser: async (userId) => {
+    const { error } = await apiBlockUser(userId);
+    if (error) return error;
+
+    set((state) => ({
+      friendships: state.friendships.filter((f) => f.user_id !== userId),
+    }));
+    await get().loadBlockedUsers();
+    return undefined;
+  },
+
+  unblockUser: async (userId) => {
+    const { error } = await apiUnblockUser(userId);
+    if (error) return error;
+
+    set((state) => ({
+      blockedUsers: state.blockedUsers.filter((u) => u.user_id !== userId),
+    }));
+    return undefined;
+  },
+
+  reset: () => set({ friendships: [], loading: false, error: '', blockedUsers: [] }),
 }));

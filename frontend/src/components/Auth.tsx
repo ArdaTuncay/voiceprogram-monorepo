@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { User } from '../types';
 import { registerUser, loginUser } from '../services/api';
+import mascot from '../assets/zircle-mascot.svg';
 import './Auth.css';
 
 interface Props {
@@ -45,6 +46,7 @@ export default function Auth({ onAuth }: Props) {
   return (
     <div className="auth-page">
       <div className="auth-card">
+        <img src={mascot} alt="Zircle maskotu" className="auth-mascot" />
         <h1>{mode === 'login' ? 'Welcome back!' : 'Create an account'}</h1>
         <p className="subtitle">
           {mode === 'login'

@@ -80,6 +80,9 @@ defmodule BackendWeb.DmController do
         |> put_status(:forbidden)
         |> json(%{error: "Sadece arkadaşlarınıza mesaj gönderebilirsiniz"})
 
+      {:error, :blocked} ->
+        conn |> put_status(:forbidden) |> json(%{error: "Bu kullanıcıyla mesajlaşamazsınız"})
+
       {:error, %Ecto.Changeset{} = changeset} ->
         conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
     end
@@ -100,7 +103,7 @@ defmodule BackendWeb.DmController do
       file_url: message.file_url,
       file_type: message.file_type,
       user_id: message.user_id,
-      username: message.user && message.user.username,
+      username: Backend.Accounts.display_username(message.user),
       inserted_at: message.inserted_at,
       reactions: message.reactions
     }

@@ -1,0 +1,23 @@
+<svg width="340" height="230" viewBox="0 0 680 460" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Zircle maskotu</title>
+<desc>Yuvarlak, mor-lavanta renkli, gülümseyen bir kristal/daire yaratığı</desc>
+<ellipse cx="340" cy="400" rx="110" ry="14" fill="#000000" fill-opacity="0.08"/>
+<ellipse cx="215" cy="320" rx="24" ry="36" fill="#8D87CE" transform="rotate(-18 215 320)"/>
+<ellipse cx="465" cy="320" rx="24" ry="36" fill="#8D87CE" transform="rotate(18 465 320)"/>
+<ellipse cx="305" cy="378" rx="28" ry="17" fill="#8D87CE"/>
+<ellipse cx="375" cy="378" rx="28" ry="17" fill="#8D87CE"/>
+<path d="M280 205 Q300 165 320 208 Q300 225 280 205 Z" fill="#7A74B8"/>
+<path d="M360 208 Q380 165 400 205 Q400 225 360 208 Z" fill="#7A74B8"/>
+<ellipse cx="340" cy="310" rx="132" ry="115" fill="#8D87CE"/>
+<path d="M420 220 Q460 260 430 380 Q470 320 460 240 Q450 220 420 220 Z" fill="#7A74B8"/>
+<circle cx="300" cy="300" r="15" fill="#2B2540"/>
+<circle cx="380" cy="300" r="15" fill="#2B2540"/>
+<circle cx="295" cy="294" r="5" fill="#F5F4FA"/>
+<circle cx="375" cy="294" r="5" fill="#F5F4FA"/>
+<ellipse cx="292" cy="333" rx="19" ry="10" fill="#F2A9B8" fill-opacity="0.55"/>
+<ellipse cx="388" cy="333" rx="19" ry="10" fill="#F2A9B8" fill-opacity="0.55"/>
+<path d="M312 335 Q340 355 368 335" fill="none" stroke="#2B2540" stroke-width="5" stroke-linecap="round"/>
+<circle cx="465" cy="225" r="6" fill="#8D87CE" fill-opacity="0.5"/>
+<circle cx="487" cy="195" r="9" fill="#8D87CE" fill-opacity="0.4"/>
+<circle cx="510" cy="160" r="13" fill="#8D87CE" fill-opacity="0.3"/>
+</svg>

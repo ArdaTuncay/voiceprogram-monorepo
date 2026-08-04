@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { Hash, Volume2, Folder, AlertTriangle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { ChannelType } from '../types';
 import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
@@ -19,7 +21,7 @@ const TITLES: Record<ChannelType, string> = {
   category: 'Kategori Oluştur',
 };
 
-const ICONS: Record<ChannelType, string> = { text: '#', voice: '🔊', category: '📁' };
+const ICONS: Record<ChannelType, LucideIcon> = { text: Hash, voice: Volume2, category: Folder };
 const PLACEHOLDERS: Record<ChannelType, string> = {
   text: 'yeni-kanal',
   voice: 'yeni-ses-kanalı',
@@ -27,6 +29,7 @@ const PLACEHOLDERS: Record<ChannelType, string> = {
 };
 
 export default function CreateChannelModal({ type, parentId, onClose }: Props) {
+  const Icon = ICONS[type];
   const createChannel = useServerStore((s) => s.createChannel);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
@@ -59,7 +62,7 @@ export default function CreateChannelModal({ type, parentId, onClose }: Props) {
           {type === 'category' ? 'Kategori Adı' : 'Kanal Adı'}
         </label>
         <div className="create-channel-input-row">
-          <span className="create-channel-input-icon">{ICONS[type]}</span>
+          <span className="create-channel-input-icon"><Icon size={16} /></span>
           <input
             id="create-channel-name"
             autoFocus
@@ -71,7 +74,7 @@ export default function CreateChannelModal({ type, parentId, onClose }: Props) {
             disabled={submitting}
           />
         </div>
-        {error && <div className="create-channel-error">⚠ {error}</div>}
+        {error && <div className="create-channel-error"><AlertTriangle size={14} /> {error}</div>}
         <button
           className="create-channel-submit-btn"
           type="submit"

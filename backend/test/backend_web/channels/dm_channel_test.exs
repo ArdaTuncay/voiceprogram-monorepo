@@ -43,6 +43,29 @@ defmodule BackendWeb.DmChannelTest do
     assert id == message.id
   end
 
+  test "a deleted author's DM messages survive with their identity hidden", %{
+    a: a,
+    b: b,
+    room: room
+  } do
+    {:ok, message} =
+      DirectMessages.create_message(%{
+        content: "before deletion",
+        user_id: a.id,
+        dm_room_id: room.id
+      })
+
+    {:ok, _} = Backend.Accounts.delete_account(a, "password123")
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(b)})
+
+    assert {:ok, %{messages: messages}, _socket} =
+             subscribe_and_join(socket, "dm:#{room.id}", %{})
+
+    assert [%{id: id, content: "before deletion", username: "[silinmiş kullanıcı]"}] = messages
+    assert id == message.id
+  end
+
   test "shout persists, broadcasts on the room topic, and notifies the other participant",
        %{a: a, b: b, room: room} do
     {:ok, a_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(a)})
@@ -61,6 +84,27 @@ defmodule BackendWeb.DmChannelTest do
     assert room_id == room.id
 
     assert [%{content: "hey there"}] = DirectMessages.list_messages(room.id)
+  end
+
+  test "shout is rejected once either side has blocked the other, without touching existing history",
+       %{a: a, b: b, room: room} do
+    {:ok, existing} =
+      DirectMessages.create_message(%{
+        content: "before the block",
+        user_id: a.id,
+        dm_room_id: room.id
+      })
+
+    {:ok, _} = Backend.Friends.block_user(a.id, b.id)
+
+    {:ok, a_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(a)})
+    {:ok, _, a_socket} = subscribe_and_join(a_socket, "dm:#{room.id}", %{})
+
+    ref = push(a_socket, "shout", %{"content" => "should not send"})
+    assert_reply ref, :error, %{reason: "blocked"}
+
+    assert [%{id: id}] = DirectMessages.list_messages(room.id)
+    assert id == existing.id
   end
 
   test "toggle_reaction broadcasts the updated grouped reactions", %{a: a, b: b, room: room} do

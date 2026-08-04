@@ -16,3 +16,15 @@ export function initials(name: string | null): string {
   if (!name) return '?';
   return name.slice(0, 2).toUpperCase();
 }
+
+/** Unlike `initials` (first two chars of one name), this takes the first
+ * letter of each of the first two words — for multi-word server names. */
+export function serverInitials(name: string): string {
+  const letters = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('');
+  return (letters || '?').toUpperCase();
+}

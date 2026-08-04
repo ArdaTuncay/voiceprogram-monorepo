@@ -1,3 +1,4 @@
+import { X, Paperclip } from 'lucide-react';
 import type { ChatMessage } from '../types';
 import { userColor, initials } from '../utils';
 
@@ -30,13 +31,13 @@ export default function SearchResultsPanel({ results, isSearching, onSelectMessa
           title="Kapat"
           aria-label="Kapat"
         >
-          ✕
+          <X size={14} />
         </button>
       </div>
 
       <div className="search-results-list">
         {isSearching && <div className="channel-status">Aranıyor…</div>}
-        {!isSearching && results.length === 0 && <div className="channel-status">Sonuç bulunamadı</div>}
+        {!isSearching && results.length === 0 && <div className="list-empty-hint">Sonuç bulunamadı</div>}
         {!isSearching &&
           results.map((msg) => {
             const color = userColor(msg.user_id);
@@ -54,7 +55,7 @@ export default function SearchResultsPanel({ results, isSearching, onSelectMessa
                     <span className="search-result-time">{formatTime(msg.inserted_at)}</span>
                   </div>
                   {msg.content && <div className="search-result-content">{msg.content}</div>}
-                  {msg.file_url && <div className="search-result-file-tag">📎 Ek</div>}
+                  {msg.file_url && <div className="search-result-file-tag"><Paperclip size={12} /> Ek</div>}
                 </div>
               </div>
             );

@@ -14,6 +14,9 @@ import type {
   SearchFilters,
   SearchResultsPage,
   TurnCredentialsResponse,
+  User,
+  BlockedUser,
+  FriendRequestPrivacy,
 } from '../types';
 import { API_BASE_URL } from '../config';
 import { getStoredToken, storeToken } from './tokenStorage';
@@ -111,8 +114,19 @@ function authedPut<T>(path: string, body: Record<string, string>): Promise<ApiRe
   });
 }
 
-function authedDelete<T>(path: string): Promise<ApiResult<T>> {
-  return authedFetch<T>(path, { method: 'DELETE' });
+function authedDelete<T>(path: string, body?: Record<string, string>): Promise<ApiResult<T>> {
+  return authedFetch<T>(path, {
+    method: 'DELETE',
+    ...(body && { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  });
+}
+
+function authedPatch<T>(path: string, body: Record<string, string>): Promise<ApiResult<T>> {
+  return authedFetch<T>(path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }
 
 export async function registerUser(
@@ -324,4 +338,64 @@ export function fetchLinkPreview(url: string): Promise<ApiResult<LinkPreview>> {
  */
 export function fetchTurnCredentials(): Promise<ApiResult<TurnCredentialsResponse>> {
   return authedGet<TurnCredentialsResponse>('/voice/turn-credentials');
+}
+
+/** Changes the current user's username — requires re-entering the current
+ * password (see BackendWeb.AccountController.update_username/2). */
+export function updateUsername(username: string, currentPassword: string): Promise<ApiResult<User>> {
+  return authedPatch<User>('/account/username', { username, current_password: currentPassword });
+}
+
+/** Changes the current user's email — same current-password requirement as
+ * updateUsername. Takes effect immediately, no confirmation link (see
+ * PROJECT_ARCHITECTURE.md's note on why). */
+export function updateEmail(email: string, currentPassword: string): Promise<ApiResult<User>> {
+  return authedPatch<User>('/account/email', { email, current_password: currentPassword });
+}
+
+/** Changes the current user's password. On success, every previously
+ * issued token — including the one this very request used — stops
+ * authenticating (see BackendWeb.AccountController.update_password/3), so
+ * the caller is expected to force a fresh login afterwards rather than
+ * keep using the current session. */
+export function updatePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<ApiResult<User>> {
+  return authedPatch<User>('/account/password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+}
+
+/** "everyone" (default) or "nobody" — checked by the backend before a
+ * friend request is even created (see BackendWeb.AccountController). */
+export function updateFriendRequestPrivacy(
+  privacy: FriendRequestPrivacy
+): Promise<ApiResult<{ friend_request_privacy: FriendRequestPrivacy }>> {
+  return authedPatch('/account/friend-request-privacy', { friend_request_privacy: privacy });
+}
+
+/** Lists every user the current account has blocked (never who has blocked them). */
+export function fetchBlockedUsers(): Promise<ApiResult<BlockedUser[]>> {
+  return authedGet<BlockedUser[]>('/account/blocked-users');
+}
+
+/** Blocks a user by id — they can no longer send a friend request, open a
+ * new DM, or send a message in an existing DM room; existing message
+ * history is untouched (see Backend.Friends.block_user/2). */
+export function blockUser(userId: string): Promise<ApiResult<void>> {
+  return authedPost<void>(`/users/${userId}/block`, {});
+}
+
+/** Permanently and irreversibly deletes/anonymizes the current account
+ * (see Backend.Accounts.delete_account/2 for exactly what happens to
+ * each piece of related data) — requires re-entering the current
+ * password, same as updateUsername/updateEmail/updatePassword above. */
+export function deleteAccount(currentPassword: string): Promise<ApiResult<void>> {
+  return authedDelete<void>('/account', { current_password: currentPassword });
+}
+
+export function unblockUser(userId: string): Promise<ApiResult<void>> {
+  return authedDelete<void>(`/users/${userId}/block`);
 }

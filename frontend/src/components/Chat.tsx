@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { KeyboardEvent, ChangeEvent, DragEvent, UIEvent } from 'react';
-import type { User, Channel, ChannelType } from '../types';
+import type { User, Channel, ChannelType, PresenceUser } from '../types';
 import { resolveFileUrl } from '../config';
 import { disconnectSocket } from '../services/socket';
 import { useVoiceChannel } from '../hooks/useVoiceChannel';
@@ -12,16 +12,42 @@ import { useDMStore } from '../stores/useDMStore';
 import { useSocketSync } from '../stores/useSocketStore';
 import { useConnectionStore } from '../stores/useConnectionStore';
 import { userColor, initials } from '../utils';
+import { getMediaPreferences, supportsOutputDeviceSelection } from '../services/mediaPreferences';
 import ServerSidebar from './ServerSidebar';
 import InviteModal from './InviteModal';
 import ServerSettingsModal from './ServerSettingsModal';
 import CreateChannelModal from './CreateChannelModal';
 import LeaveServerModal from './LeaveServerModal';
 import FriendsPanel from './FriendsPanel';
+import EmptyState from './EmptyState';
 import DMChatView from './DMChatView';
 import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
+import StatusIndicator from './StatusIndicator';
+import ChannelAddMenu from './ChannelAddMenu';
+import UserSettingsModal from './UserSettingsModal';
+import VoiceOrbit from './VoiceOrbit';
+import type { OrbitParticipant } from './VoiceOrbit';
+import {
+  Volume2,
+  Mic,
+  MicOff,
+  Headphones,
+  VolumeX,
+  ScreenShare,
+  ScreenShareOff,
+  Hash,
+  UserPlus,
+  Settings,
+  DoorOpen,
+  LogOut,
+  ChevronDown,
+  AlertTriangle,
+  Circle,
+  Paperclip,
+  Send,
+} from 'lucide-react';
 import './Chat.css';
 
 interface Props {
@@ -35,6 +61,38 @@ function typingIndicatorText(usernames: (string | null)[]): string {
   return `${names.slice(0, 2).join(', ')} ve ${names.length - 2} kişi daha yazıyor...`;
 }
 
+function buildOrbitParticipants(
+  participants: PresenceUser[],
+  speakingUserIds: Set<string>,
+  reconnectingPeerIds: Set<string>,
+): OrbitParticipant[] {
+  return participants.map((p) => {
+    const speaking = speakingUserIds.has(p.user_id);
+    const reconnecting = reconnectingPeerIds.has(p.user_id);
+    const name = p.username ?? 'Unknown';
+    const statusText = reconnecting
+      ? 'Yeniden Bağlanıyor...'
+      : p.deafened
+        ? 'Sağırlaştırıldı'
+        : p.muted
+          ? 'Mikrofon Kapalı'
+          : speaking
+            ? 'Konuşuyor'
+            : 'Ses Bağlantısı Aktif';
+    return {
+      id: p.user_id,
+      displayName: name,
+      initials: initials(name),
+      avatarColor: userColor(p.user_id),
+      isSpeaking: speaking,
+      isMuted: !!p.muted,
+      isDeafened: !!p.deafened,
+      isReconnecting: reconnecting,
+      statusText,
+    };
+  });
+}
+
 export default function Chat({ user, onLogout }: Props) {
   const servers = useServerStore((s) => s.servers);
   const activeServerId = useServerStore((s) => s.activeServerId);
@@ -43,6 +101,7 @@ export default function Chat({ user, onLogout }: Props) {
   const unreadChannelIds = useServerStore((s) => s.unreadChannelIds);
   const channelError = useServerStore((s) => s.channelError);
   const selectChannel = useServerStore((s) => s.selectChannel);
+  const setActiveServerId = useServerStore((s) => s.setActiveServerId);
   const loadServers = useServerStore((s) => s.loadServers);
 
   const messages = useChatStore((s) => s.messages);
@@ -81,9 +140,14 @@ export default function Chat({ user, onLogout }: Props) {
   const loadDmRooms = useDMStore((s) => s.loadRooms);
   const setActiveDmRoomId = useDMStore((s) => s.setActiveRoomId);
 
+  // Whether the standalone Arkadaşlar (Friends) view is open — its own
+  // view, separate from the Home/DM screen's default empty state (see
+  // ServerSidebar's dedicated Friends icon).
+  const [friendsViewOpen, setFriendsViewOpen] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showUserSettingsModal, setShowUserSettingsModal] = useState(false);
   const [createChannelRequest, setCreateChannelRequest] = useState<{
     type: ChannelType;
     parentId: string | null;
@@ -114,7 +178,7 @@ export default function Chat({ user, onLogout }: Props) {
 
   // Owns every Phoenix-channel join/leave effect (text channel + personal
   // notification topic) — see stores/useSocketStore.ts.
-  useSocketSync(user.id);
+  useSocketSync(user);
 
   // Auto-scroll to bottom when messages change — except right after
   // prepending an older page (loadOlderMessages), where we instead restore
@@ -194,6 +258,11 @@ export default function Chat({ user, onLogout }: Props) {
     onLogout();
   }
 
+  function handleSelectFriends() {
+    setActiveServerId(null);
+    setFriendsViewOpen(true);
+  }
+
   function handleVoiceRoomClick(roomId: string) {
     if (voice.activeRoomId === roomId) {
       voice.leave();
@@ -266,56 +335,13 @@ export default function Chat({ user, onLogout }: Props) {
             className={`channel-item voice-channel-item${isActive ? ' active' : ''}`}
             onClick={() => handleVoiceRoomClick(ch.id)}
           >
-            <span className="channel-hash">🔊</span>
+            <span className="channel-hash"><Volume2 size={18} /></span>
             {ch.name}
           </div>
 
           {isActive && (
             <div className="voice-participant-list">
-              {voice.participants.map((p) => {
-                const color = userColor(p.user_id);
-                const name = p.username ?? 'Unknown';
-                const speaking = voice.speakingUserIds.has(p.user_id);
-                const reconnecting = voice.reconnectingPeerIds.has(p.user_id);
-                const statusText = reconnecting
-                  ? '🔄 Yeniden Bağlanıyor...'
-                  : p.deafened
-                    ? 'Sağırlaştırıldı'
-                    : p.muted
-                      ? 'Mikrofon Kapalı'
-                      : speaking
-                        ? 'Konuşuyor'
-                        : 'Ses Bağlantısı Aktif';
-                return (
-                  <div key={p.user_id} className="voice-participant">
-                    <div
-                      className={`voice-participant-avatar${speaking ? ' speaking' : ''}`}
-                      style={{ background: color }}
-                      title={name}
-                    >
-                      {initials(name)}
-                    </div>
-                    <div className="voice-participant-info">
-                      <span className="voice-participant-name">
-                        {name}
-                        {p.muted && (
-                          <span className="voice-status-icon mute-icon" title="Mikrofon Kapalı">
-                            🔇
-                          </span>
-                        )}
-                        {p.deafened && (
-                          <span className="voice-status-icon deafen-icon" title="Sağırlaştırıldı">
-                            🔕
-                          </span>
-                        )}
-                      </span>
-                      <span className={`voice-participant-status${reconnecting ? ' reconnecting' : ''}`}>
-                        {statusText}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+              <VoiceOrbit participants={buildOrbitParticipants(voice.participants, voice.speakingUserIds, voice.reconnectingPeerIds)} />
 
               <div className="voice-controls-row">
                 <button
@@ -324,7 +350,7 @@ export default function Chat({ user, onLogout }: Props) {
                   title={voice.isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
                   aria-label={voice.isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
                 >
-                  {voice.isMuted ? '🔇' : '🎤'}
+                  {voice.isMuted ? <MicOff size={16} /> : <Mic size={16} />}
                 </button>
                 <button
                   className={`voice-control-btn${voice.isDeafened ? ' active' : ''}`}
@@ -332,7 +358,7 @@ export default function Chat({ user, onLogout }: Props) {
                   title={voice.isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
                   aria-label={voice.isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
                 >
-                  {voice.isDeafened ? '🔕' : '🎧'}
+                  {voice.isDeafened ? <VolumeX size={16} /> : <Headphones size={16} />}
                 </button>
               </div>
 
@@ -340,7 +366,8 @@ export default function Chat({ user, onLogout }: Props) {
                 className={`screen-share-btn${voice.isScreenSharing ? ' active' : ''}`}
                 onClick={handleToggleScreenShare}
               >
-                🖥️ {voice.isScreenSharing ? 'Ekranı Durdur' : 'Ekranı Paylaş'}
+                {voice.isScreenSharing ? <ScreenShareOff size={14} /> : <ScreenShare size={14} />}{' '}
+                {voice.isScreenSharing ? 'Ekranı Durdur' : 'Ekranı Paylaş'}
               </button>
             </div>
           )}
@@ -355,12 +382,46 @@ export default function Chat({ user, onLogout }: Props) {
         className={`channel-item${ch.id === activeChannelId ? ' active' : ''}`}
         onClick={() => selectChannel(ch.id)}
       >
-        <span className="channel-hash">#</span>
+        <span className="channel-hash"><Hash size={18} /></span>
         <span className={unread ? 'channel-name-unread' : undefined}>{ch.name}</span>
         {unread && <span className="unread-dot" />}
       </div>
     );
   }
+
+  const userPanel = (
+    <div className="user-panel">
+      <div
+        className={`user-avatar-sm${voice.activeRoomId && voice.speakingUserIds.has(user.id) ? ' speaking' : ''}`}
+        style={{ background: myColor }}
+        title={user.username}
+      >
+        {initials(user.username)}
+      </div>
+      <div className="user-info">
+        <div className="user-name-sm">{user.username}</div>
+        <div className={`user-status-sm${isConnected ? '' : ' user-status-offline'}`}>
+          <Circle size={8} fill="currentColor" stroke="none" /> {isConnected ? 'Çevrimiçi' : 'Bağlantı Kesildi'}
+        </div>
+      </div>
+      <button
+        className="user-settings-btn"
+        onClick={() => setShowUserSettingsModal(true)}
+        title="Kullanıcı Ayarları"
+        aria-label="Kullanıcı Ayarları"
+      >
+        <Settings size={20} strokeWidth={2} />
+      </button>
+      <button
+        className="logout-btn"
+        onClick={handleLogout}
+        title="Log out"
+        aria-label="Log out"
+      >
+        <LogOut size={20} strokeWidth={2} />
+      </button>
+    </div>
+  );
 
   return (
     <div className="chat-layout">
@@ -374,7 +435,11 @@ export default function Chat({ user, onLogout }: Props) {
         </div>
       )}
 
-      <ServerSidebar />
+      <ServerSidebar
+        friendsActive={friendsViewOpen}
+        onSelectFriends={handleSelectFriends}
+        onNavigate={() => setFriendsViewOpen(false)}
+      />
 
       {/* ── Left sidebar ── */}
       <aside className="channel-sidebar">
@@ -388,7 +453,7 @@ export default function Chat({ user, onLogout }: Props) {
                 title="İnsanları Davet Et"
                 aria-label="İnsanları Davet Et"
               >
-                👤+
+                <UserPlus size={16} />
               </button>
               {isServerOwner && (
                 <button
@@ -397,7 +462,7 @@ export default function Chat({ user, onLogout }: Props) {
                   title="Sunucu Ayarları"
                   aria-label="Sunucu Ayarları"
                 >
-                  ⚙️
+                  <Settings size={16} />
                 </button>
               )}
               {!isServerOwner && (
@@ -407,38 +472,21 @@ export default function Chat({ user, onLogout }: Props) {
                   title="Sunucudan Ayrıl"
                   aria-label="Sunucudan Ayrıl"
                 >
-                  🚪
+                  <DoorOpen size={16} />
                 </button>
               )}
             </div>
 
+            {userPanel}
+
             <nav className="channel-list">
               {isServerOwner && (
                 <div className="channel-list-toolbar">
-                  <button
-                    className="channel-category-add-btn"
-                    onClick={() => setCreateChannelRequest({ type: 'text', parentId: null })}
-                    title="Metin Kanalı Oluştur"
-                    aria-label="Metin Kanalı Oluştur"
-                  >
-                    #+
-                  </button>
-                  <button
-                    className="channel-category-add-btn"
-                    onClick={() => setCreateChannelRequest({ type: 'voice', parentId: null })}
-                    title="Ses Kanalı Oluştur"
-                    aria-label="Ses Kanalı Oluştur"
-                  >
-                    🔊+
-                  </button>
-                  <button
-                    className="channel-category-add-btn"
-                    onClick={() => setCreateChannelRequest({ type: 'category', parentId: null })}
-                    title="Kategori Oluştur"
-                    aria-label="Kategori Oluştur"
-                  >
-                    📁+
-                  </button>
+                  <span className="channel-category-label">Kanallar</span>
+                  <ChannelAddMenu
+                    label="Kanal Oluştur"
+                    onSelect={(type) => setCreateChannelRequest({ type, parentId: null })}
+                  />
                 </div>
               )}
 
@@ -453,31 +501,18 @@ export default function Chat({ user, onLogout }: Props) {
                           className="channel-category-toggle"
                           onClick={() => toggleCategory(group.category!.id)}
                         >
-                          <span className={`category-chevron${collapsed ? ' collapsed' : ''}`}>▾</span>
+                          <ChevronDown size={12} className={`category-chevron${collapsed ? ' collapsed' : ''}`} />
                           <span className="channel-category-label">{group.category.name}</span>
                         </button>
                         {isServerOwner && (
                           <div className="channel-category-add-actions">
-                            <button
-                              className="channel-category-add-btn"
-                              onClick={() =>
-                                setCreateChannelRequest({ type: 'text', parentId: group.category!.id })
+                            <ChannelAddMenu
+                              label="Bu kategoriye kanal ekle"
+                              includeCategory={false}
+                              onSelect={(type) =>
+                                setCreateChannelRequest({ type, parentId: group.category!.id })
                               }
-                              title="Bu kategoriye metin kanalı ekle"
-                              aria-label="Bu kategoriye metin kanalı ekle"
-                            >
-                              #+
-                            </button>
-                            <button
-                              className="channel-category-add-btn"
-                              onClick={() =>
-                                setCreateChannelRequest({ type: 'voice', parentId: group.category!.id })
-                              }
-                              title="Bu kategoriye ses kanalı ekle"
-                              aria-label="Bu kategoriye ses kanalı ekle"
-                            >
-                              🔊+
-                            </button>
+                            />
                           </div>
                         )}
                       </div>
@@ -493,7 +528,7 @@ export default function Chat({ user, onLogout }: Props) {
                   </div>
                 );
               })}
-              {voice.error && <div className="channel-status error">⚠ {voice.error}</div>}
+              {voice.error && <div className="channel-status error"><AlertTriangle size={14} /> {voice.error}</div>}
             </nav>
           </>
         ) : (
@@ -501,6 +536,8 @@ export default function Chat({ user, onLogout }: Props) {
             <div className="server-header">
               <span className="server-header-name">Direkt Mesajlar</span>
             </div>
+
+            {userPanel}
 
             <nav className="channel-list">
               {dmRooms.map((room) => {
@@ -511,13 +548,20 @@ export default function Chat({ user, onLogout }: Props) {
                   <div
                     key={room.id}
                     className={`channel-item dm-room-item${room.id === activeDmRoomId ? ' active' : ''}`}
-                    onClick={() => setActiveDmRoomId(room.id)}
+                    onClick={() => {
+                      setFriendsViewOpen(false);
+                      setActiveDmRoomId(room.id);
+                    }}
                   >
                     <div className="dm-room-avatar-wrapper">
                       <div className="dm-room-avatar" style={{ background: color }} title={name}>
                         {initials(name)}
                       </div>
-                      <span className={`dm-room-status-dot${room.user_status === 'online' ? ' online' : ''}`} />
+                      <StatusIndicator
+                        status={room.user_status === 'online' ? 'online' : 'offline'}
+                        size={9}
+                        className="dm-room-status-dot"
+                      />
                     </div>
                     <span className={unread ? 'channel-name-unread' : undefined}>{name}</span>
                     {unread && <span className="unread-dot" />}
@@ -525,43 +569,26 @@ export default function Chat({ user, onLogout }: Props) {
                 );
               })}
               {dmRooms.length === 0 && (
-                <div className="channel-status">
+                <div className="list-empty-hint">
                   Henüz bir sohbetin yok — Arkadaşlar panelinden birine mesaj gönder!
                 </div>
               )}
             </nav>
           </>
         )}
-
-        <div className="user-panel">
-          <div
-            className={`user-avatar-sm${voice.activeRoomId && voice.speakingUserIds.has(user.id) ? ' speaking' : ''}`}
-            style={{ background: myColor }}
-            title={user.username}
-          >
-            {initials(user.username)}
-          </div>
-          <div className="user-info">
-            <div className="user-name-sm">{user.username}</div>
-            <div className={`user-status-sm${isConnected ? '' : ' user-status-offline'}`}>
-              ● {isConnected ? 'Çevrimiçi' : 'Bağlantı Kesildi'}
-            </div>
-          </div>
-          <button
-            className="logout-btn"
-            onClick={handleLogout}
-            title="Log out"
-            aria-label="Log out"
-          >
-            ↪
-          </button>
-        </div>
       </aside>
 
-      {/* ── Main area — exactly one of the three renders at a time, each
-          owning its own <main> (server chat keeps drag/drop bound to the
-          channel store here; DMChatView binds its own to the DM store) ── */}
-      {activeServerId ? (
+      {/* ── Main area — exactly one view renders at a time, each owning
+          its own <main> (server chat keeps drag/drop bound to the channel
+          store here; DMChatView binds its own to the DM store). The
+          Arkadaşlar view takes priority over everything else since it's
+          reached by explicitly navigating away from whatever server/DM was
+          open (see handleSelectFriends). ── */}
+      {friendsViewOpen ? (
+        <main className="chat-main">
+          <FriendsPanel />
+        </main>
+      ) : activeServerId ? (
         <>
         <main
           className="chat-main"
@@ -569,20 +596,25 @@ export default function Chat({ user, onLogout }: Props) {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
+          {!activeChannelId ? (
+            <EmptyState message="Sohbet etmeye başlamak için bir kanal seç" />
+          ) : (
+          <>
             <header className="chat-header">
-              <span className="chat-header-hash">#</span>
+              <span className="chat-header-hash"><Hash size={20} /></span>
               <span className="chat-header-name">{activeChannelName}</span>
-              {activeChannelId && (
-                <SearchBar
-                  isSearching={isSearching}
-                  onSearch={(filters) => void searchChannelMessages(activeChannelId, filters)}
-                />
-              )}
             </header>
+
+            <div className="chat-search-row">
+              <SearchBar
+                isSearching={isSearching}
+                onSearch={(filters) => void searchChannelMessages(activeChannelId, filters)}
+              />
+            </div>
 
             {isDraggingFile && (
               <div className="drag-drop-overlay">
-                <div className="drag-drop-message">📎 Fotoğrafı buraya bırak</div>
+                <div className="drag-drop-message"><Paperclip size={18} /> Fotoğrafı buraya bırak</div>
               </div>
             )}
 
@@ -617,7 +649,7 @@ export default function Chat({ user, onLogout }: Props) {
                   <div className="channel-status">Eski mesajlar yükleniyor…</div>
                 )}
                 <div className="channel-intro">
-                  <h2># {activeChannelName}</h2>
+                  <h2><Hash size={28} /> {activeChannelName}</h2>
                   <p>Bu, #{activeChannelName} kanalının başlangıcı. Merhaba de!</p>
                 </div>
 
@@ -637,7 +669,7 @@ export default function Chat({ user, onLogout }: Props) {
             </div>
 
             {channelError && (
-              <div className="channel-status error">⚠ {channelError}</div>
+              <div className="channel-status error"><AlertTriangle size={14} /> {channelError}</div>
             )}
 
             <div className="message-input-area">
@@ -656,7 +688,7 @@ export default function Chat({ user, onLogout }: Props) {
                   title="Dosya Ekle"
                   aria-label="Dosya Ekle"
                 >
-                  📎
+                  <Paperclip size={18} />
                 </button>
                 <textarea
                   ref={textareaRef}
@@ -676,12 +708,12 @@ export default function Chat({ user, onLogout }: Props) {
                   aria-label="Send message"
                   title="Send (Enter)"
                 >
-                  ➤
+                  <Send size={18} />
                 </button>
               </div>
 
               {isUploading && <div className="upload-status">Yükleniyor…</div>}
-              {uploadError && <div className="upload-status upload-status-error">⚠ {uploadError}</div>}
+              {uploadError && <div className="upload-status upload-status-error"><AlertTriangle size={14} /> {uploadError}</div>}
 
               {Object.keys(typingUsers).length > 0 && (
                 <div className="typing-indicator">
@@ -694,8 +726,10 @@ export default function Chat({ user, onLogout }: Props) {
                 </div>
               )}
             </div>
+          </>
+          )}
         </main>
-        {isSearchPanelOpen && (
+        {isSearchPanelOpen && activeChannelId && (
           <SearchResultsPanel
             results={searchResults}
             isSearching={isSearching}
@@ -708,7 +742,7 @@ export default function Chat({ user, onLogout }: Props) {
         <DMChatView currentUserId={user.id} />
       ) : (
         <main className="chat-main">
-          <FriendsPanel />
+          <EmptyState message="Sohbet etmeye başlamak için bir kişi veya kanal seç" />
         </main>
       )}
 
@@ -738,7 +772,7 @@ export default function Chat({ user, onLogout }: Props) {
                     >
                       {initials(name)}
                     </div>
-                    <span className="online-status-dot" />
+                    <StatusIndicator status="online" size={11} className="online-status-dot" />
                   </div>
                   <span className="online-user-name">{name}</span>
                 </div>
@@ -756,7 +790,16 @@ export default function Chat({ user, onLogout }: Props) {
           muted={voice.isDeafened}
           style={{ display: 'none' }}
           ref={(el) => {
-            if (el) el.srcObject = stream;
+            if (!el) return;
+            el.srcObject = stream;
+            // Applies the saved output-device preference (see
+            // UserSettingsModal's Ses & Görüntü tab) — a no-op string
+            // ("") means "system default", and setSinkId isn't available
+            // at all in every browser (Firefox), hence the guards.
+            const { speakerDeviceId } = getMediaPreferences();
+            if (speakerDeviceId && supportsOutputDeviceSelection()) {
+              void el.setSinkId(speakerDeviceId).catch(() => {});
+            }
           }}
         />
       ))}
@@ -779,6 +822,10 @@ export default function Chat({ user, onLogout }: Props) {
 
       {showLeaveModal && activeServerId && !isServerOwner && (
         <LeaveServerModal onClose={() => setShowLeaveModal(false)} />
+      )}
+
+      {showUserSettingsModal && (
+        <UserSettingsModal user={user} onClose={() => setShowUserSettingsModal(false)} />
       )}
     </div>
   );

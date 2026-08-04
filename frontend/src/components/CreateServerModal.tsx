@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
 import './CreateServerModal.css';
@@ -50,7 +51,7 @@ export default function CreateServerModal({ onClose }: Props) {
           maxLength={50}
           disabled={submitting}
         />
-        {error && <div className="create-server-error">⚠ {error}</div>}
+        {error && <div className="create-server-error"><AlertTriangle size={14} /> {error}</div>}
         <button
           className="create-server-submit-btn"
           type="submit"

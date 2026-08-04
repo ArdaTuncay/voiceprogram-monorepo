@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
 import './LeaveServerModal.css';
@@ -36,7 +37,7 @@ export default function LeaveServerModal({ onClose }: Props) {
         <strong>{server.name}</strong> sunucusundan ayrılmak istediğine emin misin? Tekrar
         katılmak için yeni bir davet linkine ihtiyacın olacak.
       </p>
-      {error && <div className="leave-server-error">⚠ {error}</div>}
+      {error && <div className="leave-server-error"><AlertTriangle size={14} /> {error}</div>}
       <div className="leave-server-actions">
         <button className="leave-server-cancel-btn" onClick={onClose} disabled={leaving}>
           Vazgeç

@@ -1,4 +1,5 @@
 import type { ReactNode, MouseEvent } from 'react';
+import { X } from 'lucide-react';
 import './Modal.css';
 
 interface Props {
@@ -18,7 +19,7 @@ export default function Modal({ title, onClose, children }: Props) {
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>
           <button className="modal-close-btn" onClick={onClose} aria-label="Kapat" title="Kapat">
-            ✕
+            <X size={16} />
           </button>
         </div>
         <div className="modal-body">{children}</div>

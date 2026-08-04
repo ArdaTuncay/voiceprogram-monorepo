@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
+import { Pencil } from 'lucide-react';
 import type { ChatMessage } from '../types';
 import { resolveFileUrl } from '../config';
 import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
@@ -96,7 +97,7 @@ export default function MessageItem({
               title="Mesajı düzenle"
               aria-label="Mesajı düzenle"
             >
-              ✏️
+              <Pencil size={14} />
             </button>
           )}
         </div>

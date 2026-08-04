@@ -17,6 +17,7 @@ defmodule BackendWeb.UserController do
           id: user.id,
           username: user.username,
           email: user.email,
+          friend_request_privacy: user.friend_request_privacy,
           token: Accounts.generate_user_token(user)
         })
 

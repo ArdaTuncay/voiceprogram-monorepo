@@ -51,20 +51,20 @@
   border-radius: 4px;
   color: var(--text-normal);
   font-size: 14px;
-  padding: 10px 12px;
-  outline: none;
+  padding: var(--space-2-5) var(--space-3);
 }
 
 .settings-save-btn {
   background: var(--accent);
   border: none;
   border-radius: 4px;
-  color: #fff;
+  color: var(--on-accent);
   font-size: 14px;
   font-weight: 600;
   padding: 0 16px;
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color var(--transition-fast);
 }
 
 .settings-save-btn:hover:not(:disabled) {
@@ -72,8 +72,8 @@
 }
 
 .settings-save-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .settings-error {
@@ -105,11 +105,12 @@
   background: var(--danger);
   border: none;
   border-radius: 4px;
-  color: #fff;
+  color: var(--interactive-active);
   font-size: 14px;
   font-weight: 600;
   padding: 8px 16px;
   cursor: pointer;
+  transition: filter var(--transition-fast);
 }
 
 .settings-delete-btn:hover,
@@ -119,7 +120,7 @@
 
 .settings-confirm-delete-btn:disabled {
   opacity: 0.6;
-  cursor: default;
+  cursor: not-allowed;
 }
 
 .settings-cancel-btn {
@@ -131,10 +132,16 @@
   font-weight: 600;
   padding: 8px 16px;
   cursor: pointer;
+  transition: background-color var(--transition-fast);
 }
 
 .settings-cancel-btn:hover:not(:disabled) {
   background: var(--bg-tertiary);
+}
+
+.settings-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .settings-list {
@@ -160,7 +167,7 @@
 .settings-owner-badge {
   display: inline-block;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -179,6 +186,7 @@
   padding: 4px 8px;
   border-radius: 4px;
   flex-shrink: 0;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .settings-icon-btn:hover:not(:disabled) {
@@ -187,28 +195,13 @@
 }
 
 .settings-icon-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.settings-empty {
-  color: var(--text-muted);
-  font-size: 13px;
-  padding: 8px 4px;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .member-status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-muted);
   margin-right: 8px;
   vertical-align: middle;
-}
-
-.member-status-dot.online {
-  background: var(--success);
 }
 
 .invite-code {

@@ -1,0 +1,60 @@
+.channel-add-menu {
+  position: relative;
+}
+
+.channel-add-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-1-5);
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.channel-add-menu-trigger:hover,
+.channel-add-menu-trigger[aria-expanded="true"] {
+  color: var(--text-normal);
+  background: var(--bg-primary);
+}
+
+.channel-add-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: 160px;
+  max-width: min(220px, calc(100vw - var(--space-4)));
+  background: var(--bg-secondary);
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: var(--space-1);
+  gap: var(--space-1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.channel-add-menu-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--text-normal);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  padding: var(--space-2) var(--space-2);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.channel-add-menu-option:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}

@@ -18,8 +18,8 @@
   z-index: 3000;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
   border-radius: 20px;
   background: var(--bg-tertiary);
   border: 1px solid var(--warning);
@@ -47,6 +47,7 @@
 /* ── Left sidebar ── */
 .channel-sidebar {
   background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
   width: 240px;
   flex-shrink: 0;
   display: flex;
@@ -58,7 +59,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8px 0 16px;
+  padding: 0 var(--space-2) 0 var(--space-4);
   font-weight: 700;
   font-size: 15px;
   color: var(--text-heading);
@@ -70,6 +71,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .invite-people-btn {
@@ -78,7 +81,7 @@
   color: var(--text-muted);
   font-size: 16px;
   cursor: pointer;
-  padding: 6px;
+  padding: var(--space-1-5);
   border-radius: 4px;
   flex-shrink: 0;
 }
@@ -94,21 +97,73 @@
 }
 
 .leave-server-btn:hover {
-  color: #fff;
+  color: var(--interactive-active);
   background: var(--danger);
+}
+
+/* ── DM header block-user confirmation ── */
+.dm-block-confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2-5) var(--space-4);
+  background: var(--bg-tertiary);
+  color: var(--text-normal);
+  font-size: 13px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.dm-block-confirm-btn,
+.dm-block-cancel-btn {
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: var(--space-1-5) var(--space-2-5);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dm-block-confirm-btn {
+  background: var(--danger);
+  color: var(--interactive-active);
+}
+
+.dm-block-confirm-btn:hover:not(:disabled) {
+  background: var(--danger-hover);
+}
+
+.dm-block-cancel-btn {
+  background: var(--bg-input);
+  color: var(--text-normal);
+}
+
+.dm-block-confirm-btn:disabled,
+.dm-block-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .channel-list {
   flex: 1;
-  padding: 16px 8px 8px;
+  padding: var(--space-4) var(--space-2) var(--space-2);
   overflow-y: auto;
+}
+
+/* .channel-item rows add their own var(--space-2) horizontal padding on top
+   of this container's, for 16px total from the sidebar edge — .list-empty-hint's
+   shared base padding (var(--space-1) horizontal) falls 4px short of that, so
+   it's bumped here to match the row alignment instead of sitting closer to
+   the edge than everything else in this list. */
+.channel-list .list-empty-hint {
+  padding: var(--space-2);
 }
 
 .channel-category-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 4px 4px 8px;
+  padding: 0 var(--space-1) var(--space-1) var(--space-2);
 }
 
 .channel-category-label {
@@ -119,36 +174,20 @@
   text-transform: uppercase;
 }
 
-.channel-category-add-btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.channel-category-add-btn:hover {
-  color: var(--text-normal);
-  background: var(--bg-primary);
-}
-
+/* Mirrors .channel-category-row's layout/padding (label left, add-action
+   right) so the top-level "+" reads as "belongs to the channel list below"
+   instead of a floating, unlabeled icon — and so the gap before the first
+   channel row matches the gap between category groups rather than being
+   its own, larger one. */
 .channel-list-toolbar {
   display: flex;
-  gap: 4px;
-  padding: 0 4px 10px 8px;
-}
-
-.channel-list-toolbar .channel-category-add-btn,
-.channel-category-add-actions .channel-category-add-btn {
-  font-size: 12px;
-  font-weight: 700;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-1) var(--space-1) var(--space-2);
 }
 
 .channel-category-group {
-  margin-top: 14px;
+  margin-top: var(--space-4);
 }
 
 .channel-category-group:first-child {
@@ -158,7 +197,7 @@
 .channel-category-toggle {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   background: none;
   border: none;
   padding: 0;
@@ -177,7 +216,7 @@
 
 .channel-category-add-actions {
   display: flex;
-  gap: 2px;
+  gap: var(--space-1);
 }
 
 .channel-category-label-plain {
@@ -195,8 +234,8 @@
   cursor: pointer;
   font-size: 15px;
   font-weight: 500;
-  padding: 6px 8px;
-  gap: 6px;
+  padding: var(--space-1-5) var(--space-2);
+  gap: var(--space-1-5);
   transition: background 0.1s, color 0.1s;
   user-select: none;
 }
@@ -208,7 +247,11 @@
 
 .channel-item.active {
   background: rgba(114, 137, 218, 0.2);
-  color: var(--interactive-active);
+  /* Not --interactive-active — that token is pinned to a constant light
+     color for the (unrelated) colored-avatar/danger-button text it mostly
+     serves, so it doesn't invert for the light theme. --text-heading is
+     the token that actually means "brightest neutral text" per theme. */
+  color: var(--text-heading);
 }
 
 .channel-hash {
@@ -240,7 +283,7 @@
   justify-content: center;
   font-size: 11px;
   font-weight: 700;
-  color: #fff;
+  color: var(--interactive-active);
   text-transform: uppercase;
 }
 
@@ -248,26 +291,20 @@
   position: absolute;
   bottom: -2px;
   right: -2px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  border: 2px solid var(--bg-secondary);
 }
 
-.dm-room-status-dot.online {
-  background: var(--success);
-}
-
-/* ── User panel ── */
+/* ── User panel — sits between the workspace header and the channel list,
+   not at the bottom of the sidebar, so it reads as "who you are" rather
+   than a footer. */
 .user-panel {
   background: rgba(0, 0, 0, 0.22);
-  padding: 8px;
+  padding: var(--space-2) var(--space-3);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   height: 52px;
   flex-shrink: 0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .user-avatar-sm {
@@ -279,7 +316,7 @@
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
-  color: #fff;
+  color: var(--interactive-active);
   flex-shrink: 0;
   text-transform: uppercase;
 }
@@ -293,6 +330,7 @@
   color: var(--text-heading);
   font-size: 13px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -307,23 +345,44 @@
   color: var(--text-muted);
 }
 
+.user-settings-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-1-5);
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.user-settings-btn:hover {
+  color: var(--text-normal);
+  background: var(--bg-input);
+}
+
 .logout-btn {
   background: none;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 16px;
-  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-1-5);
   border-radius: 4px;
   line-height: 1;
-  transition: color 0.1s, background 0.1s;
+  transition: color 0.15s, background 0.15s;
   flex-shrink: 0;
-  title: "Log out";
 }
 
 .logout-btn:hover {
   color: var(--text-normal);
-  background: rgba(79, 84, 92, 0.24);
+  background: var(--bg-input);
 }
 
 /* ── Main chat area ── */
@@ -339,9 +398,9 @@
   height: 48px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  gap: 8px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  padding: 0 var(--space-4);
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -357,21 +416,40 @@
   font-weight: 700;
 }
 
-/* ── Search bar (in chat-header) ── */
+/* ── Search bar — its own centered row directly under the header, instead
+   of squeezed into the header next to the channel name. That header row is
+   already busy (name + invite/settings icons) and only had room for a
+   ~220px sliver, which read as a decorative placeholder rather than a
+   usable search field. Giving it a dedicated, centered, wider pill makes it
+   discoverable without competing with the header for space. ── */
+.chat-search-row {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2-5) var(--space-4);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
 .search-bar {
-  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: var(--bg-primary);
-  border-radius: 4px;
-  padding: 0 8px;
-  height: 28px;
-  width: 220px;
+  gap: var(--space-2);
+  background: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: 18px;
+  padding: 0 var(--space-4);
+  height: 36px;
+  width: 100%;
+  max-width: 480px;
+  transition: border-color 0.1s;
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent);
 }
 
 .search-bar-icon {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--text-muted);
   flex-shrink: 0;
 }
@@ -381,9 +459,8 @@
   min-width: 0;
   background: transparent;
   border: none;
-  outline: none;
   color: var(--text-normal);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .search-bar-input::placeholder {
@@ -397,7 +474,7 @@
   cursor: pointer;
   font-size: 13px;
   line-height: 1;
-  padding: 2px;
+  padding: var(--space-1);
   border-radius: 3px;
   opacity: 0.6;
 }
@@ -410,6 +487,7 @@
 .search-bar-filter-btn.active {
   opacity: 1;
   background: var(--accent);
+  color: var(--on-accent);
 }
 
 .search-bar-spinner {
@@ -452,20 +530,25 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 16px 0 8px;
+  padding: var(--space-4) 0 var(--space-2);
   min-height: min-content;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .channel-intro {
-  padding: 16px 16px 24px;
+  padding: var(--space-4) var(--space-4) var(--space-6);
   border-bottom: 1px solid rgba(79, 84, 92, 0.2);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .channel-intro h2 {
   color: var(--text-heading);
   font-size: 32px;
-  margin: 0 0 8px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--space-2);
 }
 
 .channel-intro p {
@@ -478,8 +561,8 @@
   position: relative;
   display: flex;
   align-items: flex-start;
-  padding: 2px 16px;
-  gap: 16px;
+  padding: var(--space-1) var(--space-4);
+  gap: var(--space-4);
   transition: background 0.05s;
 }
 
@@ -501,8 +584,8 @@
   background: var(--bg-secondary);
   border: 1px solid var(--bg-tertiary);
   border-radius: 8px;
-  padding: 2px;
-  gap: 2px;
+  padding: var(--space-1);
+  gap: var(--space-1);
   opacity: 0;
   pointer-events: none;
   transform: translateY(2px);
@@ -522,7 +605,7 @@
   border-radius: 4px;
   font-size: 16px;
   line-height: 1;
-  padding: 4px 6px;
+  padding: var(--space-1) var(--space-1-5);
   cursor: pointer;
   transition: background 0.1s, transform 0.1s;
 }
@@ -535,18 +618,18 @@
 .message-reactions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+  gap: var(--space-1-5);
+  margin-top: var(--space-1-5);
 }
 
 .message-reaction-pill {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1-5);
   background: var(--bg-tertiary);
   border: 1px solid transparent;
   border-radius: 10px;
-  padding: 2px 8px;
+  padding: var(--space-1) var(--space-2);
   cursor: pointer;
   transition: background 0.1s, border-color 0.1s;
 }
@@ -584,23 +667,23 @@
   justify-content: center;
   font-size: 16px;
   font-weight: 700;
-  color: #fff;
+  color: var(--interactive-active);
   flex-shrink: 0;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   text-transform: uppercase;
 }
 
 .message-body {
   flex: 1;
   min-width: 0;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
 }
 
 .message-header {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
   flex-wrap: wrap;
 }
 
@@ -632,7 +715,7 @@
   border-radius: 4px;
   font-size: 12px;
   line-height: 1;
-  padding: 3px 5px;
+  padding: var(--space-1) var(--space-1-5);
   margin-left: auto;
   cursor: pointer;
   opacity: 0;
@@ -650,8 +733,8 @@
 .message-edit-box {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 2px;
+  gap: var(--space-1-5);
+  margin-top: var(--space-1);
 }
 
 .message-edit-input {
@@ -664,16 +747,12 @@
   font-size: 15px;
   font-family: inherit;
   line-height: 1.4;
-  padding: 8px 10px;
-}
-
-.message-edit-input:focus {
-  outline: none;
+  padding: var(--space-2) var(--space-2-5);
 }
 
 .message-edit-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .message-edit-save-btn,
@@ -682,13 +761,13 @@
   border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: var(--space-1) var(--space-2-5);
   cursor: pointer;
 }
 
 .message-edit-save-btn {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .message-edit-save-btn:disabled {
@@ -736,8 +815,8 @@
   background: var(--bg-tertiary);
   border: 1px solid rgba(0, 0, 0, 0.25);
   border-radius: 6px;
-  margin: 6px 0 2px;
-  padding: 10px 12px;
+  margin: var(--space-1-5) 0 var(--space-1);
+  padding: var(--space-2-5) var(--space-3);
   overflow-x: auto;
   white-space: pre;
 }
@@ -755,13 +834,18 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1-5);
 }
 
-/* ── Input area ── */
+/* ── Input area — same ~720px reading column as the message list above it,
+   centered, instead of stretching edge-to-edge in wide windows. ── */
 .message-input-area {
-  padding: 0 16px 24px;
+  padding: 0 var(--space-4) var(--space-6);
   flex-shrink: 0;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .message-input-box {
@@ -769,8 +853,8 @@
   border-radius: 8px;
   display: flex;
   align-items: flex-end;
-  padding: 0 16px;
-  gap: 8px;
+  padding: 0 var(--space-4);
+  gap: var(--space-2);
 }
 
 .message-input {
@@ -780,8 +864,7 @@
   flex: 1;
   font-size: 15px;
   line-height: 1.4;
-  outline: none;
-  padding: 12px 0;
+  padding: var(--space-3) 0;
   font-family: inherit;
   resize: none;
   max-height: 168px;
@@ -794,10 +877,10 @@
   color: var(--text-muted);
   font-size: 18px;
   cursor: pointer;
-  padding: 4px;
+  padding: var(--space-1);
   flex-shrink: 0;
   line-height: 1;
-  margin-bottom: 9px;
+  margin-bottom: var(--space-2-5);
 }
 
 .attach-btn:hover:not(:disabled) {
@@ -811,7 +894,7 @@
 
 /* ── Media upload ── */
 .upload-status {
-  padding: 6px 4px 0;
+  padding: var(--space-1-5) var(--space-1) 0;
   color: var(--text-muted);
   font-size: 12.5px;
 }
@@ -824,7 +907,7 @@
   display: block;
   max-width: 320px;
   max-height: 320px;
-  margin-top: 6px;
+  margin-top: var(--space-1-5);
   border-radius: 8px;
   cursor: pointer;
   object-fit: contain;
@@ -848,7 +931,7 @@
   color: var(--text-heading);
   font-size: 16px;
   font-weight: 600;
-  padding: 12px 20px;
+  padding: var(--space-3) var(--space-5);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
@@ -875,8 +958,8 @@
 .typing-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 4px 0;
+  gap: var(--space-1-5);
+  padding: var(--space-1-5) var(--space-1) 0;
   color: var(--text-muted);
   font-size: 12.5px;
   font-style: italic;
@@ -884,7 +967,7 @@
 
 .typing-dots {
   display: inline-flex;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .typing-dots span {
@@ -924,8 +1007,8 @@
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 6px;
-  margin-bottom: 5px;
+  padding: var(--space-1-5);
+  margin-bottom: var(--space-1-5);
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -946,7 +1029,7 @@
 
 /* ── Status bar ── */
 .channel-status {
-  padding: 4px 16px 0;
+  padding: var(--space-1) var(--space-4) 0;
   font-size: 12px;
   min-height: 18px;
 }
@@ -973,7 +1056,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   font-weight: 700;
   font-size: 13px;
   color: var(--text-muted);
@@ -988,7 +1071,7 @@
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1;
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 .search-results-close-btn:hover {
@@ -998,16 +1081,23 @@
 .search-results-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
+}
+
+/* Same rationale as .channel-list .list-empty-hint above: .search-result-item
+   rows add their own var(--space-2) horizontal padding on top of this
+   container's, so the shared class's default is bumped to match. */
+.search-results-list .list-empty-hint {
+  padding: var(--space-2);
 }
 
 .search-result-item {
   display: flex;
-  gap: 10px;
-  padding: 8px;
+  gap: var(--space-2-5);
+  padding: var(--space-2);
   border-radius: 4px;
   cursor: pointer;
 }
@@ -1026,7 +1116,7 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 600;
-  color: #fff;
+  color: var(--interactive-active);
 }
 
 .search-result-body {
@@ -1037,7 +1127,7 @@
 .search-result-meta {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .search-result-author {
@@ -1064,12 +1154,21 @@
 .search-result-file-tag {
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: var(--space-1);
 }
 
-/* ── Right sidebar: online users ── */
+/* ── Right sidebar: online users — bg-tertiary (not bg-secondary, which
+   search-results-panel already uses and which sits too close to
+   bg-primary to read as a distinct surface) so it visually bookends the
+   layout the same way the server rail does on the far left. The
+   border-left gives it a crisp edge against chat-main since dark-on-dark
+   backgrounds alone don't leave a hard boundary. Stays a direct flex
+   child of .chat-layout (height: 100vh, flex row, default
+   align-items: stretch), so it's already full-height header-to-input;
+   nothing here overrides that. ── */
 .online-sidebar {
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
+  border-left: 1px solid var(--border);
   width: 240px;
   flex-shrink: 0;
   display: flex;
@@ -1080,7 +1179,7 @@
   height: 48px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   font-weight: 700;
   font-size: 13px;
   color: var(--text-muted);
@@ -1093,17 +1192,17 @@
 .online-user-list {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 8px;
+  padding: var(--space-3) var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
 }
 
 .online-user-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
+  gap: var(--space-2-5);
+  padding: var(--space-1-5) var(--space-2);
   border-radius: 4px;
   cursor: default;
 }
@@ -1126,7 +1225,7 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  color: #fff;
+  color: var(--interactive-active);
   text-transform: uppercase;
 }
 
@@ -1134,11 +1233,6 @@
   position: absolute;
   bottom: -2px;
   right: -2px;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--success);
-  border: 2.5px solid var(--bg-secondary);
 }
 
 .online-user-name {
@@ -1152,21 +1246,21 @@
 
 /* ── Voice channels ── */
 .voice-channel-item {
-  margin-top: 1px;
+  margin-top: var(--space-1);
 }
 
 .voice-participant-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 4px 8px 8px 24px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) var(--space-2) var(--space-6);
 }
 
 .voice-participant {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 2px 0;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
 }
 
 .voice-participant-avatar {
@@ -1178,7 +1272,7 @@
   justify-content: center;
   font-size: 10px;
   font-weight: 700;
-  color: #fff;
+  color: var(--interactive-active);
   text-transform: uppercase;
   flex-shrink: 0;
   box-shadow: 0 0 0 2px var(--success);
@@ -1191,7 +1285,8 @@
  * class, not just the voice-room participant list (see `.user-avatar-sm`
  * below, for the local user's own avatar in the bottom profile panel). */
 .voice-participant-avatar.speaking,
-.user-avatar-sm.speaking {
+.user-avatar-sm.speaking,
+.voice-orbit-avatar.speaking {
   animation: voice-activity-glow 1.4s ease-in-out infinite;
 }
 
@@ -1215,7 +1310,7 @@
 .voice-participant-name {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   color: var(--text-normal);
   font-size: 12.5px;
   font-weight: 500;
@@ -1249,8 +1344,8 @@
 /* ── Mute / deafen controls ── */
 .voice-controls-row {
   display: flex;
-  gap: 6px;
-  margin-top: 6px;
+  gap: var(--space-1-5);
+  margin-top: var(--space-1-5);
 }
 
 .voice-control-btn {
@@ -1258,7 +1353,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 0;
+  padding: var(--space-1-5) 0;
   border: none;
   border-radius: 4px;
   background: rgba(79, 84, 92, 0.32);
@@ -1273,11 +1368,11 @@
 
 .voice-control-btn.active {
   background: var(--danger);
-  color: #fff;
+  color: var(--interactive-active);
 }
 
 .voice-control-btn.active:hover {
-  background: #d84040;
+  background: var(--danger-hover);
 }
 
 /* ── Unread channel indicator ── */
@@ -1299,10 +1394,10 @@
 .screen-share-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1-5);
   width: 100%;
-  margin-top: 6px;
-  padding: 6px 8px;
+  margin-top: var(--space-1-5);
+  padding: var(--space-1-5) var(--space-2);
   border: none;
   border-radius: 4px;
   background: rgba(79, 84, 92, 0.32);
@@ -1318,22 +1413,23 @@
 
 .screen-share-btn.active {
   background: var(--danger);
-  color: #fff;
+  color: var(--interactive-active);
 }
 
 .screen-share-btn.active:hover {
-  background: #d84040;
+  background: var(--danger-hover);
 }
 
 .screen-share-panel {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
 }
 
+/* background: #000 below is bilinçli olarak tema token'larından bağımsız — video letterbox zemini */
 .screen-share-tile {
   position: relative;
   width: 320px;
@@ -1356,10 +1452,10 @@
   position: absolute;
   bottom: 6px;
   left: 8px;
-  padding: 2px 8px;
+  padding: var(--space-1) var(--space-2);
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.6);
-  color: #fff;
+  color: var(--interactive-active);
   font-size: 12px;
   font-weight: 600;
 }

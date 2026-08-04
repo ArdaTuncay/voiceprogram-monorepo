@@ -1,0 +1,54 @@
+.voice-orbit {
+  position: relative;
+  margin: var(--space-1-5) auto var(--space-2);
+}
+
+.voice-orbit-single {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-1-5) 0 var(--space-2);
+}
+
+.voice-orbit-participant {
+  position: absolute;
+}
+
+.voice-orbit-avatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--interactive-active);
+  text-transform: uppercase;
+  box-shadow: 0 0 0 2px var(--success);
+  transition: width 0.15s, height 0.15s, opacity 0.15s;
+}
+
+.voice-orbit-avatar.reconnecting {
+  opacity: 0.55;
+}
+
+.voice-orbit-badge {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--danger);
+}
+
+.voice-orbit-badge-mute {
+  bottom: -2px;
+  right: -2px;
+}
+
+.voice-orbit-badge-deafen {
+  top: -2px;
+  right: -2px;
+}
