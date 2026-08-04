@@ -216,6 +216,34 @@ if config_env() == :prod do
     check_origin: check_origin,
     secret_key_base: secret_key_base
 
+  # Transactional email (e-posta doğrulama vb. — bu adımda sadece Backend.Mailer
+  # bağlanıyor, henüz hiçbir yer çağırmıyor). Brevo API üzerinden gönderim
+  # yapılıyor; adapter bir HTTP client istiyor, config/prod.exs zaten
+  # `config :swoosh, api_client: Swoosh.ApiClient.Req` ile Req'i seçmiş ve
+  # `req` mix.exs'te zaten bağımlılık — yeni paket eklemeye gerek kalmadı.
+  # Her iki env var da zorunlu (DATABASE_URL/SECRET_KEY_BASE ile aynı desen):
+  # eksikse boot sırasında net bir mesajla raise edilir, aksi halde mailer
+  # sessizce yanlış/boş bir gönderen adresiyle ayakta kalabilirdi.
+  brevo_api_key =
+    System.get_env("BREVO_API_KEY") ||
+      raise """
+      environment variable BREVO_API_KEY is missing.
+      Brevo (Sendinblue) transactional email API anahtarınızı ayarlayın.
+      """
+
+  mailer_from_email =
+    System.get_env("MAILER_FROM_EMAIL") ||
+      raise """
+      environment variable MAILER_FROM_EMAIL is missing.
+      Örnek: MAILER_FROM_EMAIL=no-reply@example.com
+      """
+
+  config :backend, Backend.Mailer,
+    adapter: Swoosh.Adapters.Brevo,
+    api_key: brevo_api_key
+
+  config :backend, :mailer_from, mailer_from_email
+
   # ## SSL Support
   #
   # To get SSL working, you will need to add the `https` key
