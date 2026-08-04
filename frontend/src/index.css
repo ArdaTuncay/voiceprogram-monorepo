@@ -37,6 +37,12 @@
      everywhere else — 16.4:1 contrast against --accent, 14.2:1 against --accent-hover */
   --on-accent: var(--bg-primary);
 
+  /* Keyboard-focus ring — same neutral accent used everywhere else, kept as
+     its own token (rather than referencing --accent directly at each call
+     site) so a future design pass can give focus rings their own color
+     without touching every focus-visible rule. */
+  --focus-ring: var(--accent);
+
   /* Functional colors stay desaturated/matte but keep their hue for meaning */
   --success: #5c9a72;
   --danger:  #cc655c;
@@ -173,6 +179,19 @@ button {
 
 input, textarea {
   font-family: inherit;
+}
+
+/* Single global keyboard-focus indicator for every interactive element —
+   component CSS should not define its own outline for the focus-visible
+   state; only :hover/:disabled/transition styling belongs there. */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 /* Shared visual style for small "list is empty" hint text — unifies what

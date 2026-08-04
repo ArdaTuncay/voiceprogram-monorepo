@@ -459,7 +459,6 @@
   min-width: 0;
   background: transparent;
   border: none;
-  outline: none;
   color: var(--text-normal);
   font-size: 14px;
 }
@@ -751,10 +750,6 @@
   padding: var(--space-2) var(--space-2-5);
 }
 
-.message-edit-input:focus {
-  outline: none;
-}
-
 .message-edit-actions {
   display: flex;
   gap: var(--space-2);
@@ -869,7 +864,6 @@
   flex: 1;
   font-size: 15px;
   line-height: 1.4;
-  outline: none;
   padding: var(--space-3) 0;
   font-family: inherit;
   resize: none;

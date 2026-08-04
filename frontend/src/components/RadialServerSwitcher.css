@@ -35,7 +35,6 @@
 .radial-switcher-item:focus-visible {
   background: var(--accent);
   color: var(--on-accent);
-  outline: none;
   transform: scale(1.08);
 }
 

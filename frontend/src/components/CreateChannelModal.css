@@ -38,7 +38,6 @@
   color: var(--text-normal);
   font-size: 15px;
   padding: var(--space-2-5) 0;
-  outline: none;
 }
 
 .create-channel-error {
