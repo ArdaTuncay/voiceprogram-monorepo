@@ -55,6 +55,9 @@
      so this stays a semi-transparent white/black pair instead. */
   --border: rgba(255, 255, 255, 0.08);
 
+  /* Motion tokens */
+  --transition-fast: 0.15s ease;
+
   /* Typography tokens */
   --font-sans: 'InterVariable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-size-xs: 0.75rem;

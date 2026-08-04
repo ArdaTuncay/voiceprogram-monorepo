@@ -26,6 +26,7 @@
   font-weight: 600;
   padding: 8px 16px;
   cursor: pointer;
+  transition: background-color var(--transition-fast);
 }
 
 .leave-server-cancel-btn:hover:not(:disabled) {
@@ -41,6 +42,7 @@
   font-weight: 600;
   padding: 8px 16px;
   cursor: pointer;
+  transition: filter var(--transition-fast);
 }
 
 .leave-server-confirm-btn:hover:not(:disabled) {
@@ -50,5 +52,5 @@
 .leave-server-cancel-btn:disabled,
 .leave-server-confirm-btn:disabled {
   opacity: 0.6;
-  cursor: default;
+  cursor: not-allowed;
 }

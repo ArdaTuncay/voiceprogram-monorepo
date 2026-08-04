@@ -38,6 +38,7 @@
   padding: var(--space-2-5) var(--space-4);
   cursor: pointer;
   align-self: flex-end;
+  transition: background-color var(--transition-fast);
 }
 
 .join-submit-btn:hover:not(:disabled) {

@@ -64,6 +64,7 @@
   padding: 0 16px;
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color var(--transition-fast);
 }
 
 .settings-save-btn:hover:not(:disabled) {
@@ -71,8 +72,8 @@
 }
 
 .settings-save-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .settings-error {
@@ -109,6 +110,7 @@
   font-weight: 600;
   padding: 8px 16px;
   cursor: pointer;
+  transition: filter var(--transition-fast);
 }
 
 .settings-delete-btn:hover,
@@ -118,7 +120,7 @@
 
 .settings-confirm-delete-btn:disabled {
   opacity: 0.6;
-  cursor: default;
+  cursor: not-allowed;
 }
 
 .settings-cancel-btn {
@@ -130,10 +132,16 @@
   font-weight: 600;
   padding: 8px 16px;
   cursor: pointer;
+  transition: background-color var(--transition-fast);
 }
 
 .settings-cancel-btn:hover:not(:disabled) {
   background: var(--bg-tertiary);
+}
+
+.settings-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .settings-list {
@@ -178,6 +186,7 @@
   padding: 4px 8px;
   border-radius: 4px;
   flex-shrink: 0;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .settings-icon-btn:hover:not(:disabled) {
@@ -186,8 +195,8 @@
 }
 
 .settings-icon-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .member-status-dot {

@@ -56,6 +56,7 @@
   cursor: pointer;
   align-self: flex-end;
   margin-top: var(--space-2);
+  transition: background-color var(--transition-fast);
 }
 
 .create-channel-submit-btn:hover:not(:disabled) {
