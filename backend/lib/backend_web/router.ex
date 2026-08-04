@@ -23,6 +23,8 @@ defmodule BackendWeb.Router do
 
     post "/users/register", UserController, :register
     post "/users/login", UserController, :login
+    get "/verify-email/:token", VerificationController, :verify
+    post "/resend-verification", VerificationController, :resend
   end
 
   scope "/api", BackendWeb do

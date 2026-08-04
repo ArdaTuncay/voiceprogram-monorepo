@@ -93,6 +93,13 @@ config :phoenix, :plug_init_mode, :runtime
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
 
+# UserNotifier reads this (see backend/config/runtime.exs's prod-only
+# equivalent, sourced from MAILER_FROM_EMAIL) instead of an env var
+# directly, so a value must exist here too — Swoosh.Adapters.Local never
+# actually sends anywhere (see the /dev/mailbox preview route), so this
+# never needs to be a real, deliverable address.
+config :backend, :mailer_from, "no-reply@zircle.local"
+
 # Local-only dev secrets (e.g. a managed TURN provider's API key for
 # testing useVoiceChannel.ts's dynamic-TURN path locally — see
 # PROJECT_ARCHITECTURE.md 4.4/4.4.1) — gitignored, never committed, safe

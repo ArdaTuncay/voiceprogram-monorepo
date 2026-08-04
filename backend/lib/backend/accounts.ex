@@ -6,7 +6,9 @@ defmodule Backend.Accounts do
 
   import Ecto.Query, warn: false
 
-  alias Backend.Accounts.User
+  require Logger
+
+  alias Backend.Accounts.{User, UserNotifier}
   alias Backend.Friends.Friendship
   alias Backend.Repo
   alias Backend.Servers.{Server, ServerMember}
@@ -261,6 +263,49 @@ defmodule Backend.Accounts do
       {:ok, updated_user} -> {:ok, updated_user, raw_token}
       {:error, _changeset} = error -> error
     end
+  end
+
+  @doc """
+  Generates a fresh verification token for `user` and emails it via
+  `Backend.Accounts.UserNotifier` — the single place both `POST
+  /api/users/register` and `POST /api/resend-verification` go through, so
+  they share one failure policy: token generation, mail delivery, *or* an
+  unexpected exception raised by either (e.g. the mail provider's HTTP
+  client) is logged and swallowed, never propagated. A transient mail
+  outage must not fail registration or crash the resend endpoint — it
+  should only delay the user actually receiving their link, not cost them
+  the account they just created.
+
+  Always returns `:ok`.
+  """
+  def send_verification_email(%User{} = user) do
+    case generate_email_verification_token(user) do
+      {:ok, updated_user, token} ->
+        case UserNotifier.deliver_verification_email(updated_user, token) do
+          {:ok, _} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning(
+              "doğrulama e-postası gönderilemedi user_id=#{user.id} reason=#{inspect(reason)}"
+            )
+        end
+
+      {:error, reason} ->
+        Logger.warning(
+          "doğrulama token'ı üretilemedi user_id=#{user.id} reason=#{inspect(reason)}"
+        )
+    end
+
+    :ok
+  rescue
+    exception ->
+      Logger.warning(
+        "doğrulama e-postası gönderimi sırasında beklenmeyen hata user_id=#{user.id}: " <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      :ok
   end
 
   @doc """

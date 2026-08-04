@@ -23,6 +23,12 @@ config :backend, BackendWeb.Endpoint,
 # In test we don't send emails
 config :backend, Backend.Mailer, adapter: Swoosh.Adapters.Test
 
+# Same reasoning as config/dev.exs — UserNotifier reads this config key
+# unconditionally, so it must exist here too even though Swoosh.Adapters.Test
+# never actually delivers anywhere (mail ends up in the test process's
+# mailbox, see Swoosh.TestAssertions).
+config :backend, :mailer_from, "no-reply@zircle.test"
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 
