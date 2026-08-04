@@ -10,14 +10,19 @@ defmodule Backend.Accounts.UserNotifier do
   @doc """
   Sends `user` an email verification link carrying `token` (as produced by
   `Backend.Accounts.generate_email_verification_token/1`). The link points
-  at `/api/verify-email/:token` — that route doesn't exist yet, this only
-  builds the link text.
+  at the *frontend's* `/verify-email/:token` route (see
+  `config :backend, :frontend_url` in runtime.exs, sourced from the same
+  `FRONTEND_URL` env var as prod's CORS/WebSocket origin check) —
+  `VerifyEmailPage` there is what actually calls `GET
+  /api/verify-email/:token` and shows the result; a link straight to the
+  backend would just dump raw JSON in the user's browser.
 
   Returns `{:ok, term}` on successful handoff to the configured adapter, or
   `{:error, term}` otherwise (see `Swoosh.Mailer.deliver/2`).
   """
   def deliver_verification_email(%User{} = user, token) when is_binary(token) do
-    verification_url = BackendWeb.Endpoint.url() <> "/api/verify-email/" <> token
+    frontend_url = Application.fetch_env!(:backend, :frontend_url)
+    verification_url = frontend_url <> "/verify-email/" <> token
 
     new()
     |> from(Application.fetch_env!(:backend, :mailer_from))
