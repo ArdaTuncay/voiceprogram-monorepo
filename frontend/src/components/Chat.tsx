@@ -26,6 +26,7 @@ import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
 import StatusIndicator from './StatusIndicator';
 import ChannelAddMenu from './ChannelAddMenu';
+import NotificationPermissionBanner from './NotificationPermissionBanner';
 import UserSettingsModal from './UserSettingsModal';
 import VoiceOrbit from './VoiceOrbit';
 import type { OrbitParticipant } from './VoiceOrbit';
@@ -260,6 +261,11 @@ export default function Chat({ user, onLogout }: Props) {
 
   function handleSelectFriends() {
     setActiveServerId(null);
+    // Opening Friends never opens a DM — it replaces whatever DM view was
+    // showing, so any previously-active room stops counting as "currently
+    // viewed" (see useServerStore's setActiveServerId, which handles this
+    // same reset for the server-select case).
+    useDMStore.getState().setActiveRoomId(null);
     setFriendsViewOpen(true);
   }
 
@@ -425,6 +431,8 @@ export default function Chat({ user, onLogout }: Props) {
 
   return (
     <div className="chat-layout">
+      <NotificationPermissionBanner />
+
       {/* Only after we've actually been connected before — never during the
           initial page-load handshake, where this would be a misleading
           flash rather than a real "you got disconnected" signal. */}

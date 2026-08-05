@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useDMStore } from './useDMStore';
 import type {
   Server,
   Channel,
@@ -171,6 +172,14 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
       nextUnreadServerIds.delete(serverId);
       return { activeServerId: serverId, unreadServerIds: nextUnreadServerIds };
     });
+    // Servers and DMs are mutually exclusive views — picking a server, or
+    // returning to the DM/Friends area from one, both mean whatever DM
+    // room was previously open is no longer being viewed. Without this,
+    // useDMStore's activeRoomId stayed stuck on that room forever (nothing
+    // else ever cleared it — see stores/useSocketStore.ts's onNewDmMessage
+    // guard), permanently suppressing that room's notifications even after
+    // the user had long since left it.
+    useDMStore.getState().setActiveRoomId(null);
     if (!serverId) {
       set({ channels: [], activeChannelId: null });
       return;

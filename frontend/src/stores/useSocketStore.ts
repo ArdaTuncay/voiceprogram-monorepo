@@ -107,20 +107,6 @@ export function useSocketSync(currentUser: User): void {
     void useServerStore.getState().resyncActiveServer();
   }, [reconnectedAt]);
 
-  // Ask for desktop notification permission once, up front — only if the
-  // user's preference already has desktop notifications on (see
-  // UserSettingsModal's Bildirimler tab, which also requests permission
-  // directly at the moment someone flips that toggle on).
-  useEffect(() => {
-    if (
-      getNotificationPreferences().desktop &&
-      typeof Notification !== 'undefined' &&
-      Notification.permission === 'default'
-    ) {
-      void Notification.requestPermission();
-    }
-  }, []);
-
   // Joins the personal notification topic once for the whole session — it
   // carries messages for every channel across every server the user is in
   // (not just the one currently open) plus every server-moderation event
@@ -144,7 +130,7 @@ export function useSocketSync(currentUser: User): void {
         if (prefs.desktop && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           const notification = new Notification(
             `#${payload.channel_name} — ${payload.username ?? 'Bilinmeyen'}`,
-            { body: payload.content, tag: payload.channel_id }
+            { body: payload.content, tag: payload.channel_id, renotify: true }
           );
           notification.onclick = () => {
             window.focus();
@@ -164,6 +150,8 @@ export function useSocketSync(currentUser: User): void {
       onNewDmMessage: (payload) => {
         useDMStore.getState().handleNewDmMessage(payload);
 
+        if (payload.dm_room_id === useDMStore.getState().activeRoomId) return;
+
         const prefs = getNotificationPreferences();
         // mentionsOnly doesn't apply here — a DM is always "about you" by
         // definition, there's no @-mention concept in a 1:1 conversation.
@@ -175,6 +163,7 @@ export function useSocketSync(currentUser: User): void {
           const notification = new Notification(payload.username ?? 'Bilinmeyen', {
             body: payload.content,
             tag: payload.dm_room_id,
+            renotify: true,
           });
           notification.onclick = () => {
             window.focus();

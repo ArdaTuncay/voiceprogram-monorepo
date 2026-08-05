@@ -33,3 +33,13 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** Not yet in this project's bundled TypeScript DOM lib despite being part
+ * of the Notifications spec and supported by every browser this app
+ * targets — re-alerts (re-shows/re-sounds) a notification that replaces an
+ * existing one sharing the same `tag`, instead of silently swapping its
+ * content with no visible/audible cue. See useSocketStore.ts's
+ * onNewMessage/onNewDmMessage. */
+interface NotificationOptions {
+  renotify?: boolean;
+}
