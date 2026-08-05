@@ -159,6 +159,20 @@ defmodule BackendWeb.DmChannel do
     end
   end
 
+  # No rate limit and no broadcast — this only ever updates the caller's
+  # own read position (see Backend.DirectMessages.mark_room_read/3), never
+  # something another participant's client needs to hear about live.
+  @impl true
+  def handle_in("mark_read", %{"seq" => seq}, socket) do
+    case DirectMessages.mark_room_read(socket.assigns.user_id, socket.assigns.room_id, seq) do
+      {:ok, _dm_room_read} ->
+        {:reply, {:ok, %{}}, socket}
+
+      {:error, changeset} ->
+        {:reply, {:error, %{errors: format_errors(changeset)}}, socket}
+    end
+  end
+
   defp handle_shout(params, socket) do
     key = {:dm, "shout", socket.assigns.room_id, socket.assigns.user_id}
 
@@ -216,7 +230,13 @@ defmodule BackendWeb.DmChannel do
       username: Backend.Accounts.display_username(message.user),
       inserted_at: message.inserted_at,
       is_edited: message.is_edited,
-      reactions: message.reactions
+      reactions: message.reactions,
+      # The client's own read-position pointer (see "mark_read" above) is
+      # this same DB-assigned monotonic sequence — exposing it here is what
+      # lets the frontend know which message is actually the newest one
+      # it's seen, without it this whole read-tracking feature would have
+      # no seq value to ever send back.
+      seq: message.seq
     }
   end
 

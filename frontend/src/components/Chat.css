@@ -1390,6 +1390,23 @@
   margin-left: auto;
 }
 
+/* Same slot/role as .unread-dot (far right of a .channel-item row), just
+   wide enough to hold a count instead of being a bare dot. */
+.unread-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--danger);
+  color: var(--interactive-active);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
 /* ── Screen share ── */
 .screen-share-btn {
   display: flex;

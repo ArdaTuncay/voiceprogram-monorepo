@@ -209,6 +209,18 @@ export function editDmMessage(messageId: string, content: string): void {
   dmChannel?.push('update_message', { message_id: messageId, content });
 }
 
+/**
+ * Tells the server the highest message `seq` the current user has read in
+ * the active DM room, invoking `onSuccess` once it confirms — unlike this
+ * file's other DM pushes (fire-and-forget, relying on a broadcast to
+ * update state), `"mark_read"` only ever affects the caller's own read
+ * position (see `BackendWeb.DmChannel`), so the direct reply is the only
+ * signal a caller gets and is worth actually waiting for.
+ */
+export function sendDmMarkRead(seq: number, onSuccess: () => void): void {
+  dmChannel?.push('mark_read', { seq }).receive('ok', onSuccess);
+}
+
 export interface VoiceChannelCallbacks {
   onPresenceChange: (users: PresenceUser[]) => void;
   onOffer: (payload: VoiceSignalPayload) => void;

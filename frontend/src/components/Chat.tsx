@@ -62,6 +62,10 @@ function typingIndicatorText(usernames: (string | null)[]): string {
   return `${names.slice(0, 2).join(', ')} ve ${names.length - 2} kişi daha yazıyor...`;
 }
 
+function formatUnreadBadge(count: number): string {
+  return count > 9 ? '9+' : String(count);
+}
+
 function buildOrbitParticipants(
   participants: PresenceUser[],
   speakingUserIds: Set<string>,
@@ -137,7 +141,7 @@ export default function Chat({ user, onLogout }: Props) {
 
   const dmRooms = useDMStore((s) => s.rooms);
   const activeDmRoomId = useDMStore((s) => s.activeRoomId);
-  const unreadRoomIds = useDMStore((s) => s.unreadRoomIds);
+  const unreadCounts = useDMStore((s) => s.unreadCounts);
   const loadDmRooms = useDMStore((s) => s.loadRooms);
   const setActiveDmRoomId = useDMStore((s) => s.setActiveRoomId);
 
@@ -549,7 +553,7 @@ export default function Chat({ user, onLogout }: Props) {
 
             <nav className="channel-list">
               {dmRooms.map((room) => {
-                const unread = unreadRoomIds.has(room.id);
+                const unreadCount = unreadCounts[room.id] ?? 0;
                 const color = userColor(room.user_id);
                 const name = room.username ?? 'Bilinmeyen';
                 return (
@@ -571,8 +575,10 @@ export default function Chat({ user, onLogout }: Props) {
                         className="dm-room-status-dot"
                       />
                     </div>
-                    <span className={unread ? 'channel-name-unread' : undefined}>{name}</span>
-                    {unread && <span className="unread-dot" />}
+                    <span className={unreadCount > 0 ? 'channel-name-unread' : undefined}>{name}</span>
+                    {unreadCount > 0 && (
+                      <span className="unread-badge">{formatUnreadBadge(unreadCount)}</span>
+                    )}
                   </div>
                 );
               })}

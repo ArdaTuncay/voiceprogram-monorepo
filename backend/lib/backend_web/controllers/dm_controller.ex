@@ -105,7 +105,10 @@ defmodule BackendWeb.DmController do
       user_id: message.user_id,
       username: Backend.Accounts.display_username(message.user),
       inserted_at: message.inserted_at,
-      reactions: message.reactions
+      reactions: message.reactions,
+      # See BackendWeb.DmChannel's serialize_message/1 for why this needs
+      # to travel with every message shape, not just the channel's.
+      seq: message.seq
     }
   end
 end

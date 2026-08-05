@@ -79,7 +79,17 @@ export function useSocketSync(currentUser: User): void {
     if (!activeRoomId) return;
 
     const cleanup = joinDmChannel(activeRoomId, {
-      onJoined: (resp) => useDMStore.getState().setMessages(resp.messages),
+      onJoined: (resp) => {
+        useDMStore.getState().setMessages(resp.messages);
+        // Deliberately after setMessages, not from setActiveRoomId itself —
+        // that fires synchronously, before this join's messages (the ones
+        // markRoomRead needs to find the true latest seq in) have loaded,
+        // which risked marking the room read against a stale/empty message
+        // list (or briefly a *different* room's, left over from before this
+        // switch). This is the first point where `messages` is guaranteed
+        // to actually belong to `activeRoomId`.
+        useDMStore.getState().markRoomRead(activeRoomId);
+      },
       onShout: (msg) => useDMStore.getState().addMessage(msg),
       onError: () => {},
       onPresenceChange: () => {},

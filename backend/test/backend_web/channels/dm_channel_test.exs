@@ -1,7 +1,11 @@
 defmodule BackendWeb.DmChannelTest do
   use BackendWeb.ChannelCase, async: true
 
+  import Ecto.Query, only: [where: 2]
+
   alias Backend.DirectMessages
+  alias Backend.DirectMessages.DmRoomRead
+  alias Backend.Repo
 
   setup do
     a = user_fixture()
@@ -195,6 +199,30 @@ defmodule BackendWeb.DmChannelTest do
 
     assert %{content: "edit 10"} =
              room.id |> DirectMessages.list_messages() |> Enum.find(&(&1.id == message.id))
+  end
+
+  test "mark_read updates the caller's own read position, without broadcasting anything", %{
+    a: a,
+    b: b,
+    room: room
+  } do
+    {:ok, message} =
+      DirectMessages.create_message(%{content: "hi", user_id: a.id, dm_room_id: room.id})
+
+    {:ok, b_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(b)})
+    {:ok, _, b_socket} = subscribe_and_join(b_socket, "dm:#{room.id}", %{})
+
+    ref = push(b_socket, "mark_read", %{"seq" => message.seq})
+    assert_reply ref, :ok, %{}
+    refute_broadcast "mark_read", %{}
+
+    assert DirectMessages.unread_count(b.id, room.id) == 0
+
+    # a never called mark_read — no read position was created for them at
+    # all, confirming the event only ever touches the caller's own row.
+    assert DmRoomRead
+           |> where(user_id: ^a.id, dm_room_id: ^room.id)
+           |> Repo.aggregate(:count) == 0
   end
 
   test "toggle_reaction is rate-limited after 30 toggles/min", %{a: a, room: room} do

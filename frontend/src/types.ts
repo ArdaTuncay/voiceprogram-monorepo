@@ -28,6 +28,12 @@ export interface ChatMessage {
   inserted_at: string;
   is_edited: boolean;
   reactions: Reaction[];
+  /** DB-assigned monotonic send order — currently only populated on DM
+   * messages (see BackendWeb.DmChannel/DmController), used to tell the
+   * server the newest message a user has actually read (see
+   * useDMStore.ts's markRoomRead). Optional because server-channel
+   * messages don't carry it (yet). */
+  seq?: number;
 }
 
 /** A page of message history from `GET .../messages`, oldest → newest —
@@ -222,6 +228,9 @@ export interface DmRoom {
   user_id: string;
   username: string | null;
   user_status: UserStatus;
+  /** How many of this room's messages the viewer hasn't read yet — the
+   * viewer's own messages never count (see Backend.DirectMessages.unread_count/2). */
+  unread_count: number;
 }
 
 export interface NewDmMessageNotification extends ChatMessage {
