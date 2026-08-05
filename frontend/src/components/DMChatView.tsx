@@ -5,6 +5,7 @@ import { resolveFileUrl } from '../config';
 import { useDMStore } from '../stores/useDMStore';
 import { useFriendStore } from '../stores/useFriendStore';
 import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
+import { shouldGroupMessages } from '../utils';
 import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
@@ -36,6 +37,7 @@ export default function DMChatView({ currentUserId }: Props) {
   const setLightboxUrl = useDMStore((s) => s.setLightboxUrl);
   const toggleReaction = useDMStore((s) => s.toggleReaction);
   const editMessage = useDMStore((s) => s.editMessage);
+  const deleteMessage = useDMStore((s) => s.deleteMessage);
   const searchResults = useDMStore((s) => s.searchResults);
   const isSearching = useDMStore((s) => s.isSearching);
   const isSearchPanelOpen = useDMStore((s) => s.isSearchPanelOpen);
@@ -216,15 +218,17 @@ export default function DMChatView({ currentUserId }: Props) {
             <p>Bu, {otherName} ile olan özel sohbetinin başlangıcı. Merhaba de!</p>
           </div>
 
-          {messages.map((msg) => (
+          {messages.map((msg, index) => (
             <MessageItem
               key={msg.id}
               message={msg}
               currentUserId={currentUserId}
               onToggleReaction={(emoji) => toggleReaction(msg.id, emoji)}
               onEditMessage={(content) => editMessage(msg.id, content)}
+              onDeleteMessage={() => deleteMessage(msg.id)}
               onImageClick={setLightboxUrl}
               isHighlighted={msg.id === highlightedMessageId}
+              isGrouped={shouldGroupMessages(messages[index - 1], msg)}
             />
           ))}
           <div ref={bottomRef} />

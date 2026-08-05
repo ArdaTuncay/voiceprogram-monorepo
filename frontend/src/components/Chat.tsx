@@ -11,7 +11,7 @@ import { useChatStore } from '../stores/useChatStore';
 import { useDMStore } from '../stores/useDMStore';
 import { useSocketSync } from '../stores/useSocketStore';
 import { useConnectionStore } from '../stores/useConnectionStore';
-import { userColor, initials } from '../utils';
+import { userColor, initials, shouldGroupMessages } from '../utils';
 import { getMediaPreferences, supportsOutputDeviceSelection } from '../services/mediaPreferences';
 import ServerSidebar from './ServerSidebar';
 import InviteModal from './InviteModal';
@@ -127,6 +127,7 @@ export default function Chat({ user, onLogout }: Props) {
   const setLightboxUrl = useChatStore((s) => s.setLightboxUrl);
   const toggleReaction = useChatStore((s) => s.toggleReaction);
   const editMessage = useChatStore((s) => s.editMessage);
+  const deleteMessage = useChatStore((s) => s.deleteMessage);
   const searchResults = useChatStore((s) => s.searchResults);
   const isSearching = useChatStore((s) => s.isSearching);
   const isSearchPanelOpen = useChatStore((s) => s.isSearchPanelOpen);
@@ -667,15 +668,18 @@ export default function Chat({ user, onLogout }: Props) {
                   <p>Bu, #{activeChannelName} kanalının başlangıcı. Merhaba de!</p>
                 </div>
 
-                {messages.map((msg) => (
+                {messages.map((msg, index) => (
                   <MessageItem
                     key={msg.id}
                     message={msg}
                     currentUserId={user.id}
                     onToggleReaction={(emoji) => toggleReaction(msg.id, emoji)}
                     onEditMessage={(content) => editMessage(msg.id, content)}
+                    onDeleteMessage={() => deleteMessage(msg.id)}
                     onImageClick={setLightboxUrl}
+                    isServerOwner={isServerOwner}
                     isHighlighted={msg.id === highlightedMessageId}
+                    isGrouped={shouldGroupMessages(messages[index - 1], msg)}
                   />
                 ))}
                 <div ref={bottomRef} />
