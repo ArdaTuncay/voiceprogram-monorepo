@@ -25,6 +25,9 @@ defmodule BackendWeb.DmChannel do
   @toggle_reaction_scale :timer.minutes(1)
   @toggle_reaction_limit 30
 
+  @delete_message_scale :timer.minutes(1)
+  @delete_message_limit 10
+
   @impl true
   def join("dm:" <> room_id, _params, socket) do
     case DirectMessages.get_room(room_id) do
@@ -105,6 +108,38 @@ defmodule BackendWeb.DmChannel do
       case DirectMessages.update_dm_message(message_id, attrs) do
         {:ok, message} ->
           broadcast!(socket, "dm_message_updated", serialize_message(message))
+          {:reply, :ok, socket}
+
+        {:error, :not_found} ->
+          {:reply, {:error, %{reason: "message not found"}}, socket}
+
+        {:error, :not_authorized} ->
+          {:reply, {:error, %{reason: "not authorized"}}, socket}
+
+        {:error, changeset} ->
+          {:reply, {:error, %{errors: format_errors(changeset)}}, socket}
+      end
+    end
+  end
+
+  @impl true
+  def handle_in("delete_message", %{"message_id" => message_id}, socket) do
+    key = {:dm, "delete_message", socket.assigns.room_id, socket.assigns.user_id}
+
+    if ChannelRateLimiter.limited?(
+         key,
+         @delete_message_scale,
+         @delete_message_limit,
+         socket.assigns.user_id,
+         "dm_delete_message"
+       ) do
+      {:reply, {:error, %{reason: "rate_limited"}}, socket}
+    else
+      attrs = %{user_id: socket.assigns.user_id, dm_room_id: socket.assigns.room_id}
+
+      case DirectMessages.delete_message(message_id, attrs) do
+        {:ok, message} ->
+          broadcast!(socket, "dm_message_deleted", serialize_message(message))
           {:reply, :ok, socket}
 
         {:error, :not_found} ->
@@ -236,7 +271,12 @@ defmodule BackendWeb.DmChannel do
       # lets the frontend know which message is actually the newest one
       # it's seen, without it this whole read-tracking feature would have
       # no seq value to ever send back.
-      seq: message.seq
+      seq: message.seq,
+      # content/file_url/file_type are already nil by this point for a
+      # deleted message (see DmMessage.delete_changeset/1) — this just
+      # gives the frontend an explicit signal to render its "message
+      # deleted" placeholder instead of an oddly-empty message.
+      is_deleted: !is_nil(message.deleted_at)
     }
   end
 

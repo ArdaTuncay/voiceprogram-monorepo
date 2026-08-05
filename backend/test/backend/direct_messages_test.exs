@@ -267,4 +267,75 @@ defmodule Backend.DirectMessagesTest do
       assert count == 1
     end
   end
+
+  describe "delete_message/2" do
+    test "the author can delete their own message — content/file fields are actually wiped" do
+      a = user_fixture()
+      b = user_fixture()
+      room = dm_room_fixture(a, b)
+
+      {:ok, message} =
+        DirectMessages.create_message(%{
+          content: "oops",
+          file_url: "http://example.com/f.png",
+          file_type: "image/png",
+          user_id: a.id,
+          dm_room_id: room.id
+        })
+
+      assert {:ok, deleted} =
+               DirectMessages.delete_message(message.id, %{user_id: a.id, dm_room_id: room.id})
+
+      assert deleted.content == nil
+      assert deleted.file_url == nil
+      assert deleted.file_type == nil
+      assert deleted.deleted_at != nil
+    end
+
+    # DMs have no owner/moderator concept (unlike Backend.Chat.delete_message/2) —
+    # the other participant is a plain unauthorized caller here, nothing more.
+    test "the other participant cannot delete a message they didn't write" do
+      a = user_fixture()
+      b = user_fixture()
+      room = dm_room_fixture(a, b)
+
+      {:ok, message} =
+        DirectMessages.create_message(%{content: "oops", user_id: a.id, dm_room_id: room.id})
+
+      assert {:error, :not_authorized} =
+               DirectMessages.delete_message(message.id, %{user_id: b.id, dm_room_id: room.id})
+
+      assert %{content: "oops"} =
+               room.id |> DirectMessages.list_messages() |> Enum.find(&(&1.id == message.id))
+    end
+
+    test "rejects a nonexistent message id" do
+      a = user_fixture()
+      b = user_fixture()
+      room = dm_room_fixture(a, b)
+
+      assert {:error, :not_found} =
+               DirectMessages.delete_message(Ecto.UUID.generate(), %{
+                 user_id: a.id,
+                 dm_room_id: room.id
+               })
+    end
+
+    test "rejects deleting a message scoped to a different room" do
+      a = user_fixture()
+      b = user_fixture()
+      c = user_fixture()
+      room = dm_room_fixture(a, b)
+      other_room = dm_room_fixture(a, c)
+
+      {:ok, message} =
+        DirectMessages.create_message(%{content: "hi", user_id: a.id, dm_room_id: room.id})
+
+      assert {:error, :not_authorized} =
+               DirectMessages.delete_message(message.id, %{
+                 user_id: a.id,
+                 dm_room_id: other_room.id
+               })
+    end
+  end
 end

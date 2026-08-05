@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { ChatMessage, PresenceUser, ReactionToggledPayload, SearchFilters } from '../types';
-import { shout, sendTyping, toggleReaction, editMessage } from '../services/socket';
+import { shout, sendTyping, toggleReaction, editMessage, deleteMessage } from '../services/socket';
 import { fetchChannelMessages, searchChannelMessages, uploadFile } from '../services/api';
 import { useServerStore } from './useServerStore';
 
@@ -97,6 +97,15 @@ interface ChatStoreState {
   // author too, same "single source of truth via the broadcast" convention
   // as handleReactionToggled).
   handleMessageUpdated: (msg: ChatMessage) => void;
+
+  deleteMessage: (messageId: string) => void;
+  // Reducer driven by the channel's "message_deleted" socket event — see
+  // stores/useSocketStore.ts. Same "replace by id, broadcast is the only
+  // source of truth" shape as handleMessageUpdated; the broadcasted
+  // message already has content/file_url/file_type nulled out and
+  // is_deleted: true (see Backend.Chat.delete_message/2), so there's
+  // nothing message-shape-specific to do here beyond that replace.
+  handleMessageDeleted: (msg: ChatMessage) => void;
 
   /** Wipes this store back to its initial state — called on a forced logout
    * (see services/session.ts) so nothing from this session leaks into
@@ -302,6 +311,13 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   editMessage: (messageId, content) => editMessage(messageId, content),
 
   handleMessageUpdated: (msg) =>
+    set((state) => ({
+      messages: state.messages.map((m) => (m.id === msg.id ? msg : m)),
+    })),
+
+  deleteMessage: (messageId) => deleteMessage(messageId),
+
+  handleMessageDeleted: (msg) =>
     set((state) => ({
       messages: state.messages.map((m) => (m.id === msg.id ? msg : m)),
     })),

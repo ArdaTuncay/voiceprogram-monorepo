@@ -47,6 +47,7 @@ export function useSocketSync(currentUser: User): void {
         useChatStore.getState().setTypingUser(payload.user_id, payload.username, payload.is_typing),
       onReactionToggled: (payload) => useChatStore.getState().handleReactionToggled(payload),
       onMessageUpdated: (msg) => useChatStore.getState().handleMessageUpdated(msg),
+      onMessageDeleted: (msg) => useChatStore.getState().handleMessageDeleted(msg),
     });
     return cleanup;
   }, [activeChannelId]);
@@ -97,6 +98,7 @@ export function useSocketSync(currentUser: User): void {
         useDMStore.getState().setTyping(payload.is_typing ? payload.username : null),
       onReactionToggled: (payload) => useDMStore.getState().handleReactionToggled(payload),
       onMessageUpdated: (msg) => useDMStore.getState().handleMessageUpdated(msg),
+      onMessageDeleted: (msg) => useDMStore.getState().handleMessageDeleted(msg),
     });
     return cleanup;
   }, [activeRoomId]);

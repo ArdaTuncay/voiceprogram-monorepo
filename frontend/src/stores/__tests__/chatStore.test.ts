@@ -7,6 +7,8 @@ vi.mock('../../services/socket', () => ({
   shout: vi.fn(),
   sendTyping: vi.fn(),
   toggleReaction: vi.fn(),
+  editMessage: vi.fn(),
+  deleteMessage: vi.fn(),
 }));
 
 vi.mock('../../services/api', () => ({
@@ -14,7 +16,7 @@ vi.mock('../../services/api', () => ({
   uploadFile: vi.fn(),
 }));
 
-import { shout } from '../../services/socket';
+import { shout, deleteMessage } from '../../services/socket';
 import { uploadFile } from '../../services/api';
 
 function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
@@ -28,6 +30,7 @@ function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
     inserted_at: '2026-07-14T00:00:00Z',
     is_edited: false,
     reactions: [],
+    is_deleted: false,
     ...overrides,
   };
 }
@@ -99,6 +102,28 @@ describe('useChatStore', () => {
     const [a, b] = useChatStore.getState().messages;
     expect(a.reactions).toEqual([{ emoji: '👍', count: 1, user_ids: ['u1'] }]);
     expect(b.reactions).toEqual([]);
+  });
+
+  it('deleteMessage pushes to the socket (fire-and-forget, no local state change)', () => {
+    useChatStore.getState().deleteMessage('a');
+
+    expect(deleteMessage).toHaveBeenCalledWith('a');
+  });
+
+  it('handleMessageDeleted replaces only the matching message with the broadcasted (wiped) version', () => {
+    useChatStore.setState({
+      messages: [makeMessage({ id: 'a', content: 'oops' }), makeMessage({ id: 'b', content: 'still here' })],
+    });
+
+    useChatStore.getState().handleMessageDeleted(
+      makeMessage({ id: 'a', content: null as unknown as string, file_url: null, file_type: null, is_deleted: true })
+    );
+
+    const [a, b] = useChatStore.getState().messages;
+    expect(a.is_deleted).toBe(true);
+    expect(a.content).toBeNull();
+    expect(b.content).toBe('still here');
+    expect(b.is_deleted).toBe(false);
   });
 
   it('handleFileSelected discards the upload if the active channel changed while it was in flight', async () => {

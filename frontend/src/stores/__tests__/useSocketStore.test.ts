@@ -59,6 +59,7 @@ function baseMessage(overrides: Partial<NewMessageNotification> = {}): NewMessag
     inserted_at: new Date().toISOString(),
     is_edited: false,
     reactions: [],
+    is_deleted: false,
     channel_id: 'chan-1',
     channel_name: 'genel',
     server_id: 'server-1',
@@ -77,6 +78,7 @@ function baseDmMessage(overrides: Partial<NewDmMessageNotification> = {}): NewDm
     inserted_at: new Date().toISOString(),
     is_edited: false,
     reactions: [],
+    is_deleted: false,
     dm_room_id: 'room-1',
     ...overrides,
   };

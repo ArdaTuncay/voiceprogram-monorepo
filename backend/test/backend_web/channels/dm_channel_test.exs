@@ -242,4 +242,67 @@ defmodule BackendWeb.DmChannelTest do
     ref = push(socket, "toggle_reaction", %{"message_id" => message.id, "emoji" => "🔥"})
     assert_reply ref, :error, %{reason: "rate_limited"}
   end
+
+  test "delete_message broadcasts dm_message_deleted with content wiped when the author deletes it",
+       %{a: a, room: room} do
+    {:ok, message} =
+      DirectMessages.create_message(%{content: "oops", user_id: a.id, dm_room_id: room.id})
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(a)})
+    {:ok, _, socket} = subscribe_and_join(socket, "dm:#{room.id}", %{})
+
+    ref = push(socket, "delete_message", %{"message_id" => message.id})
+    assert_reply ref, :ok
+
+    assert_broadcast "dm_message_deleted", %{
+      id: id,
+      content: nil,
+      file_url: nil,
+      file_type: nil,
+      is_deleted: true
+    }
+
+    assert id == message.id
+  end
+
+  test "delete_message is rejected for the other participant — DMs have no owner carve-out", %{
+    a: a,
+    b: b,
+    room: room
+  } do
+    {:ok, message} =
+      DirectMessages.create_message(%{content: "oops", user_id: a.id, dm_room_id: room.id})
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(b)})
+    {:ok, _, socket} = subscribe_and_join(socket, "dm:#{room.id}", %{})
+
+    ref = push(socket, "delete_message", %{"message_id" => message.id})
+    assert_reply ref, :error, %{reason: "not authorized"}
+
+    assert %{content: "oops"} =
+             room.id |> DirectMessages.list_messages() |> Enum.find(&(&1.id == message.id))
+  end
+
+  test "delete_message is rate-limited after 10 deletes/min", %{a: a, room: room} do
+    messages =
+      for n <- 1..11 do
+        {:ok, message} =
+          DirectMessages.create_message(%{content: "msg #{n}", user_id: a.id, dm_room_id: room.id})
+
+        message
+      end
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(a)})
+    {:ok, _, socket} = subscribe_and_join(socket, "dm:#{room.id}", %{})
+
+    {to_delete, [eleventh]} = Enum.split(messages, 10)
+
+    for message <- to_delete do
+      ref = push(socket, "delete_message", %{"message_id" => message.id})
+      assert_reply ref, :ok
+    end
+
+    ref = push(socket, "delete_message", %{"message_id" => eleventh.id})
+    assert_reply ref, :error, %{reason: "rate_limited"}
+  end
 end

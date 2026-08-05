@@ -34,6 +34,11 @@ export interface ChatMessage {
    * useDMStore.ts's markRoomRead). Optional because server-channel
    * messages don't carry it (yet). */
   seq?: number;
+  /** Soft-delete marker (see Backend.Chat.Message/DmMessage's
+   * delete_changeset/1) — true means content/file_url/file_type have
+   * already been wiped to null server-side; MessageItem renders a
+   * placeholder instead of trusting those fields to still hold anything. */
+  is_deleted: boolean;
 }
 
 /** A page of message history from `GET .../messages`, oldest → newest —

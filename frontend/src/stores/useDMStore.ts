@@ -12,6 +12,7 @@ import {
   sendDmTyping,
   toggleDmReaction,
   editDmMessage,
+  deleteDmMessage,
   sendDmMarkRead,
 } from '../services/socket';
 
@@ -122,6 +123,13 @@ interface DMStoreState {
   // stores/useSocketStore.ts. Replaces the message by id in place, same
   // convention as handleReactionToggled.
   handleMessageUpdated: (msg: ChatMessage) => void;
+
+  deleteMessage: (messageId: string) => void;
+  // Reducer driven by the room's "dm_message_deleted" socket event — see
+  // stores/useSocketStore.ts. Same shape as handleMessageUpdated; the
+  // broadcasted message already has content/file_url/file_type nulled
+  // out and is_deleted: true (see Backend.DirectMessages.delete_message/2).
+  handleMessageDeleted: (msg: ChatMessage) => void;
 
   // Reducer driven by the personal "user:<id>" socket topic — see
   // stores/useSocketStore.ts, which wires this to the actual event.
@@ -360,6 +368,13 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
   editMessage: (messageId, content) => editDmMessage(messageId, content),
 
   handleMessageUpdated: (msg) =>
+    set((state) => ({
+      messages: state.messages.map((m) => (m.id === msg.id ? msg : m)),
+    })),
+
+  deleteMessage: (messageId) => deleteDmMessage(messageId),
+
+  handleMessageDeleted: (msg) =>
     set((state) => ({
       messages: state.messages.map((m) => (m.id === msg.id ? msg : m)),
     })),

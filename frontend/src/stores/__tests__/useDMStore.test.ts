@@ -15,11 +15,12 @@ vi.mock('../../services/socket', () => ({
   sendDmTyping: vi.fn(),
   toggleDmReaction: vi.fn(),
   editDmMessage: vi.fn(),
+  deleteDmMessage: vi.fn(),
   sendDmMarkRead: vi.fn(),
 }));
 
 import { fetchDmRooms, openDmRoom } from '../../services/api';
-import { sendDmMarkRead } from '../../services/socket';
+import { sendDmMarkRead, deleteDmMessage } from '../../services/socket';
 
 function makeRoom(overrides: Partial<DmRoom> = {}): DmRoom {
   return {
@@ -43,6 +44,7 @@ function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
     inserted_at: new Date().toISOString(),
     is_edited: false,
     reactions: [],
+    is_deleted: false,
     ...overrides,
   };
 }
@@ -157,6 +159,36 @@ describe('useDMStore — unread counts', () => {
 
       expect(useDMStore.getState().unreadCounts['room-1']).toBe(0);
       expect(sendDmMarkRead).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteMessage / handleMessageDeleted', () => {
+    it('deleteMessage pushes to the socket (fire-and-forget, no local state change)', () => {
+      useDMStore.getState().deleteMessage('m-a');
+
+      expect(deleteDmMessage).toHaveBeenCalledWith('m-a');
+    });
+
+    it('handleMessageDeleted replaces only the matching message with the broadcasted (wiped) version', () => {
+      useDMStore.setState({
+        messages: [makeMessage({ id: 'm-a', content: 'oops' }), makeMessage({ id: 'm-b', content: 'still here' })],
+      });
+
+      useDMStore.getState().handleMessageDeleted(
+        makeMessage({
+          id: 'm-a',
+          content: null as unknown as string,
+          file_url: null,
+          file_type: null,
+          is_deleted: true,
+        })
+      );
+
+      const [a, b] = useDMStore.getState().messages;
+      expect(a.is_deleted).toBe(true);
+      expect(a.content).toBeNull();
+      expect(b.content).toBe('still here');
+      expect(b.is_deleted).toBe(false);
     });
   });
 });

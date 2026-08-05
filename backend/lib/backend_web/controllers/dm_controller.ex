@@ -108,7 +108,8 @@ defmodule BackendWeb.DmController do
       reactions: message.reactions,
       # See BackendWeb.DmChannel's serialize_message/1 for why this needs
       # to travel with every message shape, not just the channel's.
-      seq: message.seq
+      seq: message.seq,
+      is_deleted: !is_nil(message.deleted_at)
     }
   end
 end

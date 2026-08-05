@@ -8,6 +8,7 @@ defmodule Backend.Chat do
 
   alias Backend.Chat.{Channel, Message, MessageReaction}
   alias Backend.Repo
+  alias Backend.Servers
 
   @default_message_limit 50
   @search_limit 50
@@ -198,6 +199,59 @@ defmodule Backend.Chat do
           error ->
             error
         end
+    end
+  end
+
+  @doc """
+  Soft-deletes `message_id` on behalf of `attrs[:user_id]` — the message's
+  original author, *or* the owner of the server the message's channel
+  belongs to (see `Backend.Servers.owner?/2`), may delete it. Same
+  channel-scoping guard as `update_message/2` (still required even for
+  the owner — a server's owner can moderate their own channels, not
+  reach into an unrelated one), but with that owner carve-out
+  `update_message/2` deliberately doesn't have: moderating who gets to
+  say what stays separate from rewriting what they said.
+
+  Clears `content`/`file_url`/`file_type` outright (see
+  `Message.delete_changeset/1`) — deleted content isn't just hidden
+  behind `deleted_at`, it's actually gone from the row.
+
+  Returns `{:ok, message}`, `{:error, :not_found}`,
+  `{:error, :not_authorized}`, or `{:error, changeset}`.
+  """
+  def delete_message(message_id, %{user_id: req_user_id, channel_id: req_channel_id}) do
+    case fetch_message(message_id) do
+      nil ->
+        {:error, :not_found}
+
+      %Message{channel_id: channel_id} when channel_id != req_channel_id ->
+        {:error, :not_authorized}
+
+      %Message{user_id: user_id, channel_id: channel_id} = message ->
+        if user_id == req_user_id or channel_owner?(channel_id, req_user_id) do
+          message
+          |> Message.delete_changeset()
+          |> Repo.update()
+          |> case do
+            {:ok, updated} ->
+              {:ok,
+               updated
+               |> Repo.preload(:user)
+               |> Map.put(:reactions, list_reactions_for_message(message_id))}
+
+            error ->
+              error
+          end
+        else
+          {:error, :not_authorized}
+        end
+    end
+  end
+
+  defp channel_owner?(channel_id, user_id) do
+    case get_channel(channel_id) do
+      %Channel{server_id: server_id} -> Servers.owner?(server_id, user_id)
+      nil -> false
     end
   end
 

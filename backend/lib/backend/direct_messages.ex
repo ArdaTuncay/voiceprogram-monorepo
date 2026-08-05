@@ -280,6 +280,47 @@ defmodule Backend.DirectMessages do
     end
   end
 
+  @doc """
+  Soft-deletes `dm_message_id` on behalf of `attrs[:user_id]` — only the
+  message's original author may delete it (a DM has no owner/moderator
+  concept the way a server does — see `Backend.Chat.delete_message/2`'s
+  server-owner carve-out, which has no equivalent here), and only if it
+  still belongs to `attrs[:dm_room_id]` — same room-scoping guard as
+  `update_dm_message/2`.
+
+  Clears `content`/`file_url`/`file_type` outright (see
+  `DmMessage.delete_changeset/1`) — deleted content isn't just hidden
+  behind `deleted_at`, it's actually gone from the row.
+
+  Returns `{:ok, message}`, `{:error, :not_found}`,
+  `{:error, :not_authorized}`, or `{:error, changeset}`.
+  """
+  def delete_message(dm_message_id, %{user_id: req_user_id, dm_room_id: req_dm_room_id}) do
+    case fetch_message(dm_message_id) do
+      nil ->
+        {:error, :not_found}
+
+      %DmMessage{user_id: user_id, dm_room_id: dm_room_id}
+      when user_id != req_user_id or dm_room_id != req_dm_room_id ->
+        {:error, :not_authorized}
+
+      message ->
+        message
+        |> DmMessage.delete_changeset()
+        |> Repo.update()
+        |> case do
+          {:ok, updated} ->
+            {:ok,
+             updated
+             |> Repo.preload(:user)
+             |> Map.put(:reactions, list_reactions_for_message(dm_message_id))}
+
+          error ->
+            error
+        end
+    end
+  end
+
   defp fetch_message(dm_message_id) do
     case Ecto.UUID.cast(dm_message_id) do
       {:ok, _} -> Repo.get(DmMessage, dm_message_id)
