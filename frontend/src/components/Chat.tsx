@@ -48,6 +48,9 @@ import {
   Circle,
   Paperclip,
   Send,
+  Search,
+  Maximize2,
+  X,
 } from 'lucide-react';
 import './Chat.css';
 
@@ -154,6 +157,8 @@ export default function Chat({ user, onLogout }: Props) {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showUserSettingsModal, setShowUserSettingsModal] = useState(false);
+  const [isSearchBarOpen, setIsSearchBarOpen] = useState(false);
+  const [maximizedPeerId, setMaximizedPeerId] = useState<string | null>(null);
   const [createChannelRequest, setCreateChannelRequest] = useState<{
     type: ChannelType;
     parentId: string | null;
@@ -218,6 +223,32 @@ export default function Chat({ user, onLogout }: Props) {
     const timer = window.setTimeout(() => clearHighlight(), 2000);
     return () => window.clearTimeout(timer);
   }, [highlightedMessageId, clearHighlight]);
+
+  // Closing the search input (below) unmounts SearchBar entirely rather than
+  // just hiding it, which is also what resets its own internal query/filter
+  // state for free — no key/reset-prop needed. Switching channels closes it
+  // too, so a previous channel's open search doesn't carry over.
+  useEffect(() => {
+    setIsSearchBarOpen(false);
+  }, [activeChannelId]);
+
+  // If the maximized peer's screen share ends (they stopped sharing, or the
+  // voice room was left) while the overlay is open, close it instead of
+  // leaving it stuck showing a frozen/stale video element.
+  useEffect(() => {
+    if (maximizedPeerId && !(maximizedPeerId in voice.screenShares)) {
+      setMaximizedPeerId(null);
+    }
+  }, [voice.screenShares, maximizedPeerId]);
+
+  useEffect(() => {
+    if (!maximizedPeerId) return;
+    function handleEscape(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') setMaximizedPeerId(null);
+    }
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [maximizedPeerId]);
 
   // Make sure the microphone and peer connections are released if this
   // component ever unmounts while a voice room is active.
@@ -618,14 +649,25 @@ export default function Chat({ user, onLogout }: Props) {
             <header className="chat-header">
               <span className="chat-header-hash"><Hash size={20} /></span>
               <span className="chat-header-name">{activeChannelName}</span>
+              <button
+                className={`chat-header-search-btn${isSearchBarOpen ? ' active' : ''}`}
+                onClick={() => setIsSearchBarOpen((open) => !open)}
+                title="Mesajlarda ara"
+                aria-label="Mesajlarda ara"
+                aria-pressed={isSearchBarOpen}
+              >
+                <Search size={18} />
+              </button>
             </header>
 
-            <div className="chat-search-row">
-              <SearchBar
-                isSearching={isSearching}
-                onSearch={(filters) => void searchChannelMessages(activeChannelId, filters)}
-              />
-            </div>
+            {isSearchBarOpen && (
+              <div className="chat-search-row">
+                <SearchBar
+                  isSearching={isSearching}
+                  onSearch={(filters) => void searchChannelMessages(activeChannelId, filters)}
+                />
+              </div>
+            )}
 
             {isDraggingFile && (
               <div className="drag-drop-overlay">
@@ -651,6 +693,15 @@ export default function Chat({ user, onLogout }: Props) {
                           if (el) el.srcObject = stream;
                         }}
                       />
+                      <button
+                        type="button"
+                        className="screen-share-maximize-btn"
+                        onClick={() => setMaximizedPeerId(peerId)}
+                        title="Büyüt"
+                        aria-label="Büyüt"
+                      >
+                        <Maximize2 size={14} />
+                      </button>
                       <div className="screen-share-label">{sharerName}</div>
                     </div>
                   );
@@ -767,6 +818,46 @@ export default function Chat({ user, onLogout }: Props) {
       {lightboxUrl && (
         <div className="image-lightbox-overlay" onClick={() => setLightboxUrl(null)}>
           <img src={resolveFileUrl(lightboxUrl)} alt="ek büyük önizleme" className="image-lightbox-img" />
+        </div>
+      )}
+
+      {/* Screen-share "büyüt" overlay — layered on top of the small tiles in
+          screen-share-panel (which stay as-is underneath), reusing the same
+          MediaStream rather than requesting a new one. Closes via the X
+          button, clicking the backdrop, or ESC (see the effect above); also
+          auto-closes if the sharer's stream disappears from
+          voice.screenShares (see the other effect above). */}
+      {maximizedPeerId && voice.screenShares[maximizedPeerId] && (
+        <div
+          className="screen-share-maximize-overlay"
+          onClick={() => setMaximizedPeerId(null)}
+          role="presentation"
+        >
+          <div className="screen-share-maximize-box" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="screen-share-maximize-close-btn"
+              onClick={() => setMaximizedPeerId(null)}
+              title="Kapat"
+              aria-label="Kapat"
+            >
+              <X size={20} />
+            </button>
+            <video
+              autoPlay
+              playsInline
+              muted={maximizedPeerId === user.id}
+              className="screen-share-maximize-video"
+              ref={(el) => {
+                if (el) el.srcObject = voice.screenShares[maximizedPeerId];
+              }}
+            />
+            <div className="screen-share-maximize-label">
+              {maximizedPeerId === user.id
+                ? user.username
+                : voice.participants.find((p) => p.user_id === maximizedPeerId)?.username ?? 'Unknown'}
+            </div>
+          </div>
         </div>
       )}
 

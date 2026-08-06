@@ -416,6 +416,32 @@
   font-weight: 700;
 }
 
+/* Toggles .chat-search-row below — margin-left: auto pushes it (and any
+   header button after it, e.g. DMChatView's block button) to the header's
+   right edge regardless of what else is/isn't rendered before it. */
+.chat-header-search-btn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-1-5);
+  border-radius: 4px;
+}
+
+.chat-header-search-btn:hover {
+  color: var(--text-normal);
+  background: var(--bg-primary);
+}
+
+.chat-header-search-btn.active {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
 /* ── Search bar — its own centered row directly under the header, instead
    of squeezed into the header next to the channel name. That header row is
    already busy (name + invite/settings icons) and only had room for a
@@ -1471,5 +1497,89 @@
   background: rgba(0, 0, 0, 0.6);
   color: var(--interactive-active);
   font-size: 12px;
+  font-weight: 600;
+}
+
+/* Sits in the tile's top-right corner, clear of .screen-share-label
+   (bottom-left) so the two never overlap. */
+.screen-share-maximize-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--interactive-active);
+  cursor: pointer;
+}
+
+.screen-share-maximize-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* ── Screen share maximize overlay — same fixed/full-viewport dimmed-backdrop
+   pattern as .image-lightbox-overlay, just with a video (and its own close
+   button + label) instead of an <img>. ── */
+.screen-share-maximize-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screen-share-maximize-box {
+  position: relative;
+  max-width: 90vw;
+  max-height: 85vh;
+}
+
+.screen-share-maximize-video {
+  display: block;
+  max-width: 90vw;
+  max-height: 85vh;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  background: #000;
+  border-radius: 4px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.screen-share-maximize-close-btn {
+  position: absolute;
+  top: -44px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--interactive-active);
+  cursor: pointer;
+}
+
+.screen-share-maximize-close-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.screen-share-maximize-label {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--interactive-active);
+  font-size: 13px;
   font-weight: 600;
 }

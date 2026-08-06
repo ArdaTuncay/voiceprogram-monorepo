@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ChangeEvent, DragEvent, UIEvent } from 'react';
-import { AtSign, Ban, Paperclip, Send, AlertTriangle } from 'lucide-react';
+import { AtSign, Ban, Paperclip, Send, AlertTriangle, Search } from 'lucide-react';
 import { resolveFileUrl } from '../config';
 import { useDMStore } from '../stores/useDMStore';
 import { useFriendStore } from '../stores/useFriendStore';
@@ -94,6 +94,16 @@ export default function DMChatView({ currentUserId }: Props) {
   const otherName = activeRoom?.username ?? 'Bilinmeyen';
   const otherUserId = activeRoom?.user_id;
 
+  const [isSearchBarOpen, setIsSearchBarOpen] = useState(false);
+
+  // Closing the search input unmounts SearchBar entirely (see the
+  // conditional render below), which resets its own internal query/filter
+  // state for free. Switching to a different DM closes it too, so a
+  // previous room's open search doesn't carry over.
+  useEffect(() => {
+    setIsSearchBarOpen(false);
+  }, [activeRoomId]);
+
   const blockUser = useFriendStore((s) => s.blockUser);
   const [confirmingBlock, setConfirmingBlock] = useState(false);
   const [blocking, setBlocking] = useState(false);
@@ -160,6 +170,15 @@ export default function DMChatView({ currentUserId }: Props) {
       <header className="chat-header">
         <span className="chat-header-hash"><AtSign size={20} /></span>
         <span className="chat-header-name">{otherName}</span>
+        <button
+          className={`chat-header-search-btn${isSearchBarOpen ? ' active' : ''}`}
+          onClick={() => setIsSearchBarOpen((open) => !open)}
+          title="Mesajlarda ara"
+          aria-label="Mesajlarda ara"
+          aria-pressed={isSearchBarOpen}
+        >
+          <Search size={18} />
+        </button>
         {otherUserId && (
           <button
             className="invite-people-btn leave-server-btn"
@@ -196,7 +215,7 @@ export default function DMChatView({ currentUserId }: Props) {
         <div className="channel-status error"><AlertTriangle size={14} /> {blockError}</div>
       )}
 
-      {activeRoomId && (
+      {activeRoomId && isSearchBarOpen && (
         <div className="chat-search-row">
           <SearchBar isSearching={isSearching} onSearch={(filters) => void searchDmMessages(activeRoomId, filters)} />
         </div>

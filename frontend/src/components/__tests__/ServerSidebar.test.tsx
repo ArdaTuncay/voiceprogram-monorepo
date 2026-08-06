@@ -65,3 +65,62 @@ describe('ServerSidebar', () => {
     expect(onNavigate).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('ServerSidebar — sunucu ekleme menüsü', () => {
+  it('menü kapalıyken sadece tek bir "+" tetikleyici butonu var, ayrı bir katıl butonu yok', () => {
+    render(<ServerSidebar friendsActive={false} onSelectFriends={vi.fn()} onNavigate={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Sunucu Ekle' })).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Bir Sunucuya Katıl' })).toBeNull();
+    expect(screen.queryByText('Sunucu Oluştur')).toBeNull();
+  });
+
+  it('"+" butonuna tıklayınca iki seçenekli menü açılır', () => {
+    render(<ServerSidebar friendsActive={false} onSelectFriends={vi.fn()} onNavigate={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sunucu Ekle' }));
+
+    expect(screen.getByRole('menuitem', { name: /Sunucu Oluştur/ })).not.toBeNull();
+    expect(screen.getByRole('menuitem', { name: /Bir Sunucuya Katıl/ })).not.toBeNull();
+  });
+
+  it('"Sunucu Oluştur" seçilince Sunucu Oluştur modalı açılır ve menü kapanır', () => {
+    render(<ServerSidebar friendsActive={false} onSelectFriends={vi.fn()} onNavigate={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sunucu Ekle' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Sunucu Oluştur/ }));
+
+    expect(screen.getByRole('heading', { name: 'Sunucu Oluştur' })).not.toBeNull();
+    expect(screen.queryByRole('menuitem', { name: /Sunucu Oluştur/ })).toBeNull();
+  });
+
+  it('"Bir Sunucuya Katıl" seçilince Katıl modalı açılır ve menü kapanır', () => {
+    render(<ServerSidebar friendsActive={false} onSelectFriends={vi.fn()} onNavigate={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sunucu Ekle' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Bir Sunucuya Katıl/ }));
+
+    expect(screen.getByRole('heading', { name: 'Bir Sunucuya Katıl' })).not.toBeNull();
+    expect(screen.queryByRole('menuitem', { name: /Bir Sunucuya Katıl/ })).toBeNull();
+  });
+
+  it('dışarı tıklayınca menü kapanır', () => {
+    render(<ServerSidebar friendsActive={false} onSelectFriends={vi.fn()} onNavigate={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sunucu Ekle' }));
+    expect(screen.getByRole('menuitem', { name: /Sunucu Oluştur/ })).not.toBeNull();
+
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByRole('menuitem', { name: /Sunucu Oluştur/ })).toBeNull();
+  });
+
+  it('ESC ile menü kapanır', () => {
+    render(<ServerSidebar friendsActive={false} onSelectFriends={vi.fn()} onNavigate={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sunucu Ekle' }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByRole('menuitem', { name: /Sunucu Oluştur/ })).toBeNull();
+  });
+});
