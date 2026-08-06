@@ -28,6 +28,32 @@ defmodule BackendWeb.SecurityHeadersPlugTest do
                  ["max-age=31536000; includeSubDomains"]
       end)
     end
+
+    test "skips every header for /dev/* paths (LiveDashboard, mailbox preview)" do
+      for path <- ["/dev/mailbox", "/dev/dashboard", "/dev/mailbox/email/123.html"] do
+        conn = Plug.Test.conn(:get, path) |> BackendWeb.SecurityHeadersPlug.call([])
+
+        assert get_resp_header(conn, "x-content-type-options") == []
+        assert get_resp_header(conn, "referrer-policy") == []
+        assert get_resp_header(conn, "x-frame-options") == []
+        assert get_resp_header(conn, "content-security-policy") == []
+      end
+    end
+
+    test "does not exempt a path that merely contains \"/dev/\" past the start" do
+      conn = Plug.Test.conn(:get, "/api/dev/whatever") |> BackendWeb.SecurityHeadersPlug.call([])
+
+      assert get_resp_header(conn, "content-security-policy") == [@csp]
+    end
+
+    test "/dev/* is exempted even in :prod (the route itself never exists there — see moduledoc)" do
+      with_environment(:prod, fn ->
+        conn = Plug.Test.conn(:get, "/dev/mailbox") |> BackendWeb.SecurityHeadersPlug.call([])
+
+        assert get_resp_header(conn, "content-security-policy") == []
+        assert get_resp_header(conn, "strict-transport-security") == []
+      end)
+    end
   end
 
   describe "wired into the endpoint pipeline" do
@@ -49,6 +75,21 @@ defmodule BackendWeb.SecurityHeadersPlugTest do
       assert get_resp_header(conn, "referrer-policy") == ["strict-origin-when-cross-origin"]
       assert get_resp_header(conn, "x-frame-options") == ["DENY"]
       assert get_resp_header(conn, "content-security-policy") == [@csp]
+    end
+
+    test "a /dev/* request carries none of the security headers", %{conn: conn} do
+      # dev_routes is compile-time-gated (config/dev.exs only) so /dev/mailbox
+      # isn't actually a registered route in :test — this 404s at the router,
+      # but SecurityHeadersPlug runs before the router (see endpoint.ex) and
+      # only ever looks at conn.request_path, so the exemption already took
+      # effect regardless of what (if anything) the router does with it.
+      conn = get(conn, "/dev/mailbox")
+
+      assert conn.status == 404
+      assert get_resp_header(conn, "x-content-type-options") == []
+      assert get_resp_header(conn, "referrer-policy") == []
+      assert get_resp_header(conn, "x-frame-options") == []
+      assert get_resp_header(conn, "content-security-policy") == []
     end
 
     test "HSTS is absent from real endpoint responses outside :prod", %{conn: conn} do
