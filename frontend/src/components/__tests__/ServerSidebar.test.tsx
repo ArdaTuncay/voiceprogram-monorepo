@@ -123,4 +123,46 @@ describe('ServerSidebar — sunucu ekleme menüsü', () => {
 
     expect(screen.queryByRole('menuitem', { name: /Sunucu Oluştur/ })).toBeNull();
   });
+
+  it('dar viewport genişliğinde (~375px) menü hâlâ render edilir, ekranın dışına taşmaz ve tıklanabilir', () => {
+    // Regression test for the mobile bug: the dropdown used to be
+    // `position: absolute` relative to the trigger, which .server-sidebar's
+    // forced overflow-x (see ServerAddMenu.tsx's doc comment) silently
+    // clipped — invisible and unclickable regardless of viewport width. Now
+    // it's `position: fixed` with a JS-computed, viewport-clamped anchor, so
+    // this simulates a phone-width window and a button near the left edge
+    // (via a getBoundingClientRect stub, since jsdom doesn't lay anything
+    // out) and checks the anchor never runs past the right edge.
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 375 });
+    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 8,
+      right: 64,
+      top: 600,
+      bottom: 648,
+      width: 56,
+      height: 48,
+      x: 8,
+      y: 600,
+      toJSON: () => {},
+    } as DOMRect);
+
+    try {
+      render(<ServerSidebar friendsActive={false} onSelectFriends={vi.fn()} onNavigate={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sunucu Ekle' }));
+
+      const dropdown = screen.getByRole('menu');
+      expect(dropdown).not.toBeNull();
+      const left = parseFloat((dropdown as HTMLElement).style.left);
+      expect(left).toBeGreaterThanOrEqual(0);
+      expect(left).toBeLessThan(375);
+
+      fireEvent.click(screen.getByRole('menuitem', { name: /Sunucu Oluştur/ }));
+      expect(screen.getByRole('heading', { name: 'Sunucu Oluştur' })).not.toBeNull();
+    } finally {
+      rectSpy.mockRestore();
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth });
+    }
+  });
 });
