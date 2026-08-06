@@ -7,6 +7,7 @@ defmodule Backend.Chat do
   import Ecto.Query, warn: false
 
   alias Backend.Chat.{Channel, Message, MessageReaction}
+  alias Backend.Presence
   alias Backend.Repo
   alias Backend.Servers
 
@@ -45,6 +46,32 @@ defmodule Backend.Chat do
     |> where([c], c.type == "voice")
     |> select([c], c.id)
     |> Repo.all()
+  end
+
+  @doc """
+  Who's currently connected to voice room `room_id`, as a plain
+  `[%{user_id: ..., username: ...}]` list — every other bit of Presence
+  metadata (`muted`/`deafened`/`online_at`, see `BackendWeb.VoiceChannel`'s
+  `Presence.track/3` call) only matters to someone who's actually joined
+  the room's own `"voice:<id>"` topic, not to "who's in here" callers
+  elsewhere (the channel-list endpoint's `voice_occupants` field, and the
+  `"voice_presence_updated"` broadcast to the server-wide topic — see
+  `BackendWeb.VoiceChannel`'s `join/3`/`terminate/2`).
+
+  Reads `Presence.list/1` directly off the topic string rather than a
+  socket — same approach `list_voice_channel_ids/0`'s own doc points at
+  (`Backend.Telemetry.PeriodicReporter`), the only way to inspect a room's
+  presence from outside a process that's actually joined it. `join/3`
+  rejects a second connection from the same user in the same room (see its
+  "already_connected_elsewhere" check), so there's always at most one meta
+  per key here — no need to fold over `metas` for multiple devices.
+  """
+  def voice_occupants(room_id) do
+    "voice:#{room_id}"
+    |> Presence.list()
+    |> Enum.map(fn {user_id, %{metas: [meta | _]}} ->
+      %{user_id: user_id, username: meta[:username]}
+    end)
   end
 
   @doc """

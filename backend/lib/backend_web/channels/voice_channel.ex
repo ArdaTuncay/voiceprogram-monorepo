@@ -79,6 +79,15 @@ defmodule BackendWeb.VoiceChannel do
 
         send(self(), :after_join)
 
+        # Lets anyone viewing this room's server (not just people who've
+        # already joined this specific voice room's own topic) see who's in
+        # it, without joining "voice:<id>" themselves first — see
+        # Chat.voice_occupants/1's own doc for why this needs a plain
+        # `Presence.list/1` read rather than reusing `existing_peers` above
+        # (that's the pre-track list; this needs to include the peer who
+        # just joined).
+        broadcast_voice_presence(channel.server_id, room_id)
+
         {:ok, %{peers: existing_peers}, socket}
       end
     else
@@ -91,6 +100,40 @@ defmodule BackendWeb.VoiceChannel do
   def handle_info(:after_join, socket) do
     push(socket, "presence_state", Presence.list(socket))
     {:noreply, socket}
+  end
+
+  # Fires on every kind of departure — an explicit `leave()`, the socket
+  # closing (tab closed, network drop, browser crash), or the channel
+  # process crashing — so "who's in this voice room" broadcasts to
+  # "server:<id>" stay accurate even when the client never got a chance to
+  # signal anything on its way out. `channel`/`room_id` are looked up again
+  # (join/3 doesn't stash them in socket.assigns) rather than trusting
+  # anything that might have changed since join — the channel could have
+  # been deleted out from under an active call.
+  @impl true
+  def terminate(_reason, socket) do
+    "voice:" <> room_id = socket.topic
+
+    # Phoenix.Presence untracks this process automatically once it exits,
+    # but that happens asynchronously in the separate Tracker process (it
+    # monitors us and reacts to our :DOWN, rather than untracking inline as
+    # part of *our* termination) — reading voice_occupants/1 right now,
+    # before this call, could still include ourselves. Untracking
+    # explicitly and synchronously first guarantees the broadcast below
+    # reflects the list *after* this departure, not a split second before.
+    Presence.untrack(socket, socket.assigns.user_id)
+
+    case Chat.get_channel(room_id) do
+      nil -> :ok
+      channel -> broadcast_voice_presence(channel.server_id, room_id)
+    end
+  end
+
+  defp broadcast_voice_presence(server_id, room_id) do
+    BackendWeb.Endpoint.broadcast("server:#{server_id}", "voice_presence_updated", %{
+      channel_id: room_id,
+      users: Chat.voice_occupants(room_id)
+    })
   end
 
   # Mute/deafen are purely presence metadata — updating it broadcasts a

@@ -242,3 +242,101 @@ describe('Chat — ekran paylaşımı büyütme overlay', () => {
     expect(screen.queryByTitle('Kapat')).toBeNull();
   });
 });
+
+describe('Chat — ses bağlantısı sunucu değişince kesilmiyor, kanal gerçekten silinince kesiliyor', () => {
+  const serverA: Server = { id: 'srv-a', name: 'Sunucu A', owner_id: 'owner-1' };
+  const serverB: Server = { id: 'srv-b', name: 'Sunucu B', owner_id: 'owner-1' };
+  const voiceChannelA: Channel = { id: 'vc-a', name: 'ses-a', type: 'voice', parent_id: null, position: 0 };
+  const textChannelB: Channel = { id: 'ch-b', name: 'genel-b', type: 'text', parent_id: null, position: 0 };
+
+  it('switching to a different server while in a voice room does not hang up the call', () => {
+    useServerStore.setState({
+      servers: [serverA, serverB],
+      activeServerId: serverA.id,
+      channels: [voiceChannelA],
+    });
+    const { rerender } = render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    // Joins vc-a — handleVoiceRoomClick's "else" branch captures
+    // voiceRoomServerId = serverA.id internally before this rerender.
+    fireEvent.click(screen.getByText('ses-a'));
+
+    const joinedVoiceMock = makeVoiceMock({ activeRoomId: voiceChannelA.id });
+    vi.mocked(useVoiceChannel).mockReturnValue(joinedVoiceMock);
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    // Switching to server B replaces `channels` wholesale with server B's
+    // list — vc-a is no longer in it, but we're not viewing server A
+    // anymore either, which is exactly what the activeServerId ===
+    // voiceRoomServerId guard is for.
+    useServerStore.setState({ activeServerId: serverB.id, channels: [textChannelB] });
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    expect(joinedVoiceMock.leave).not.toHaveBeenCalled();
+  });
+
+  it('the voice channel actually being removed from the SAME server still hangs up the call', () => {
+    useServerStore.setState({
+      servers: [serverA],
+      activeServerId: serverA.id,
+      channels: [voiceChannelA],
+    });
+    const { rerender } = render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    fireEvent.click(screen.getByText('ses-a'));
+
+    const joinedVoiceMock = makeVoiceMock({ activeRoomId: voiceChannelA.id });
+    vi.mocked(useVoiceChannel).mockReturnValue(joinedVoiceMock);
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    // Still viewing server A, but the voice channel itself is gone from its
+    // list now (deleted) — activeServerId is unchanged.
+    useServerStore.setState({ channels: [] });
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    expect(joinedVoiceMock.leave).toHaveBeenCalled();
+  });
+});
+
+describe('Chat — ses kanalı doluluk önizlemesi (voice_occupants)', () => {
+  const server: Server = { id: 'srv-occ', name: 'Sunucu', owner_id: 'owner-1' };
+  const voiceChannel: Channel = {
+    id: 'vc-occ',
+    name: 'ses-occ',
+    type: 'voice',
+    parent_id: null,
+    position: 0,
+    voice_occupants: [
+      { user_id: 'u2', username: 'diğer-kullanıcı' },
+      { user_id: 'u3', username: 'başka-kullanıcı' },
+    ],
+  };
+
+  it('kanala katılmadan önce voice_occupants doluysa altında bir önizleme listesi render edilir', () => {
+    useServerStore.setState({ servers: [server], activeServerId: server.id, channels: [voiceChannel] });
+
+    render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    expect(screen.getByText('diğer-kullanıcı')).not.toBeNull();
+    expect(screen.getByText('başka-kullanıcı')).not.toBeNull();
+  });
+
+  it('voice_occupants boş/tanımsızsa önizleme render edilmez', () => {
+    const emptyVoiceChannel: Channel = { ...voiceChannel, voice_occupants: [] };
+    useServerStore.setState({ servers: [server], activeServerId: server.id, channels: [emptyVoiceChannel] });
+
+    render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    expect(screen.queryByText('diğer-kullanıcı')).toBeNull();
+  });
+
+  it('kullanıcı zaten o kanaldayken (isActive) önizleme gizlenir — VoiceOrbit ile çakışmaz', () => {
+    useServerStore.setState({ servers: [server], activeServerId: server.id, channels: [voiceChannel] });
+    vi.mocked(useVoiceChannel).mockReturnValue(makeVoiceMock({ activeRoomId: voiceChannel.id }));
+
+    render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    expect(screen.queryByText('diğer-kullanıcı')).toBeNull();
+    expect(screen.queryByText('başka-kullanıcı')).toBeNull();
+  });
+});

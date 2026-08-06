@@ -1279,6 +1279,47 @@
   padding: var(--space-1) var(--space-2) var(--space-2) var(--space-6);
 }
 
+/* Compact "who's in here" preview shown under a voice channel row you
+   haven't joined yet — deliberately smaller/quieter than
+   .voice-participant-avatar (that one's for the real, active-room orbit;
+   this is just a hint). Left-indented to match .voice-participant-list's
+   own padding, so it lines up with the (mutually exclusive, see Chat.tsx)
+   panel it visually replaces. */
+.voice-occupants-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px var(--space-2) var(--space-1-5) var(--space-6);
+}
+
+.voice-occupant-preview-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-width: 0;
+}
+
+.voice-occupant-preview-avatar {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--interactive-active);
+}
+
+.voice-occupant-preview-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .voice-participant {
   display: flex;
   align-items: center;

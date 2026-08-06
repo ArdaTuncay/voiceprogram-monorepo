@@ -2,6 +2,34 @@ defmodule Backend.ChatTest do
   use Backend.DataCase, async: true
 
   alias Backend.Chat
+  alias Backend.Presence
+
+  describe "voice_occupants/1" do
+    test "returns user_id + username for everyone currently tracked in the room, stripped of other Presence metadata" do
+      room_id = Ecto.UUID.generate()
+
+      {:ok, _} =
+        Presence.track(self(), "voice:#{room_id}", "user-1", %{
+          username: "Ada",
+          online_at: 1,
+          muted: true,
+          deafened: false
+        })
+
+      {:ok, _} = Presence.track(self(), "voice:#{room_id}", "user-2", %{username: "Grace"})
+
+      result = room_id |> Chat.voice_occupants() |> Enum.sort_by(& &1.user_id)
+
+      assert result == [
+               %{user_id: "user-1", username: "Ada"},
+               %{user_id: "user-2", username: "Grace"}
+             ]
+    end
+
+    test "returns an empty list for a room nobody is currently in" do
+      assert Chat.voice_occupants(Ecto.UUID.generate()) == []
+    end
+  end
 
   describe "toggle_reaction/4" do
     test "adds a reaction, then removes it on a second toggle" do

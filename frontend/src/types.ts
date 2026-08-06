@@ -121,6 +121,12 @@ export interface Channel {
   parent_id: string | null;
   /** Sort order among siblings (same `parent_id`) — ascending. */
   position: number;
+  /** Who's currently connected to this voice room — present (possibly `[]`)
+   * only for `type: 'voice'` channels, absent for text/category (see
+   * Backend.Chat.voice_occupants/1 and the channel-list endpoint's
+   * `channel_json/1`). Kept live via "voice_presence_updated" broadcasts
+   * (see VoicePresenceUpdatedNotification) rather than re-fetched. */
+  voice_occupants?: { user_id: string; username: string }[];
 }
 
 export interface Server {
@@ -182,6 +188,17 @@ export interface MemberKickedNotification {
 export interface MemberLeftNotification {
   server_id: string;
   user_id: string;
+}
+
+/** Broadcast to the shared "server:<id>" topic whenever a voice room's
+ * occupants change — someone joins or leaves `channel_id` (see
+ * BackendWeb.VoiceChannel's join/3 and terminate/2). Carries the room's
+ * full, freshly-computed occupant list rather than a diff — same
+ * "server echoes the full current state" convention as
+ * ChannelPositionsUpdatedNotification. */
+export interface VoicePresenceUpdatedNotification {
+  channel_id: string;
+  users: { user_id: string; username: string }[];
 }
 
 export interface Invite {

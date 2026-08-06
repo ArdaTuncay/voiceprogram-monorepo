@@ -28,14 +28,11 @@ import StatusIndicator from './StatusIndicator';
 import ChannelAddMenu from './ChannelAddMenu';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
 import UserSettingsModal from './UserSettingsModal';
+import VoiceStatusBar from './VoiceStatusBar';
 import VoiceOrbit from './VoiceOrbit';
 import type { OrbitParticipant } from './VoiceOrbit';
 import {
   Volume2,
-  Mic,
-  MicOff,
-  Headphones,
-  VolumeX,
   ScreenShare,
   ScreenShareOff,
   Hash,
@@ -159,6 +156,15 @@ export default function Chat({ user, onLogout }: Props) {
   const [showUserSettingsModal, setShowUserSettingsModal] = useState(false);
   const [isSearchBarOpen, setIsSearchBarOpen] = useState(false);
   const [maximizedPeerId, setMaximizedPeerId] = useState<string | null>(null);
+  // Which server/channel the active voice room belongs to — captured at the
+  // moment it's joined (see handleVoiceRoomClick), not derivable later from
+  // `channels` alone (that array gets replaced wholesale on every server
+  // switch, and Channel itself doesn't even carry a server_id). Read by the
+  // "did the channel disappear" safety effect below (only relevant while
+  // actually looking at this same server) and by the persistent
+  // VoiceStatusBar (needs the name to show while looking at anything else).
+  const [voiceRoomServerId, setVoiceRoomServerId] = useState<string | null>(null);
+  const [voiceRoomName, setVoiceRoomName] = useState<string | null>(null);
   const [createChannelRequest, setCreateChannelRequest] = useState<{
     type: ChannelType;
     parentId: string | null;
@@ -251,19 +257,42 @@ export default function Chat({ user, onLogout }: Props) {
   }, [maximizedPeerId]);
 
   // Make sure the microphone and peer connections are released if this
-  // component ever unmounts while a voice room is active.
-  const voiceLeaveRef = useRef(voice.leave);
-  voiceLeaveRef.current = voice.leave;
+  // component ever unmounts while a voice room is active. Wraps voice.leave()
+  // with clearing voiceRoomServerId/voiceRoomName (rather than doing that
+  // separately at each call site) so every non-"switching to a different
+  // room" leave path — this unmount cleanup, the safety effect below, and
+  // handleVoiceRoomClick's toggle-off click — stays in sync for free.
+  // Deliberately NOT used by join()'s own internal leave-then-rejoin (e.g.
+  // the reconnect effect further down calls voice.join() directly): that
+  // path's activeRoomId dips to null and back within the same logical
+  // "still in the same room" operation, and clearing here would wipe
+  // voiceRoomServerId out from under it with nothing to ever restore it.
+  const voiceLeaveRef = useRef<() => void>(() => {});
+  voiceLeaveRef.current = () => {
+    voice.leave();
+    setVoiceRoomServerId(null);
+    setVoiceRoomName(null);
+  };
   useEffect(() => () => voiceLeaveRef.current(), []);
 
   // If the voice room the user is currently in gets removed from the active
   // server's channel list (deleted, or the server itself got deleted/left),
-  // tear down the connection instead of leaving it silently dangling.
+  // tear down the connection instead of leaving it silently dangling. Gated
+  // on actually viewing the room's own server (activeServerId ===
+  // voiceRoomServerId): `channels` gets replaced wholesale by a DIFFERENT
+  // server's list (or emptied entirely) on every server switch / Arkadaşlar
+  // navigation — without this guard, that alone made voice.activeRoomId
+  // "disappear" from `channels` and incorrectly hung up the call just from
+  // navigating away, not from the channel actually being deleted.
   useEffect(() => {
-    if (voice.activeRoomId && !channels.some((c) => c.id === voice.activeRoomId)) {
+    if (
+      voice.activeRoomId &&
+      activeServerId === voiceRoomServerId &&
+      !channels.some((c) => c.id === voice.activeRoomId)
+    ) {
       voiceLeaveRef.current();
     }
-  }, [channels, voice.activeRoomId]);
+  }, [channels, voice.activeRoomId, activeServerId, voiceRoomServerId]);
 
   // If the Phoenix socket dropped and came back (a brief network blip, the
   // laptop sleeping, etc.) while we were in a voice room, rejoin it from
@@ -290,7 +319,7 @@ export default function Chat({ user, onLogout }: Props) {
   }, [reconnectedAt]);
 
   function handleLogout() {
-    voice.leave();
+    voiceLeaveRef.current();
     disconnectSocket();
     onLogout();
   }
@@ -307,8 +336,15 @@ export default function Chat({ user, onLogout }: Props) {
 
   function handleVoiceRoomClick(roomId: string) {
     if (voice.activeRoomId === roomId) {
-      voice.leave();
+      voiceLeaveRef.current();
     } else {
+      // Captured now, synchronously, rather than after join() resolves —
+      // nothing reads either value unless voice.activeRoomId is also
+      // truthy (both the safety effect above and VoiceStatusBar's render
+      // gate on it), so a join that ultimately fails just leaves harmless,
+      // unused stale values here instead of needing its own cleanup path.
+      setVoiceRoomServerId(activeServerId);
+      setVoiceRoomName(channels.find((c) => c.id === roomId)?.name ?? null);
       void voice.join(roomId);
     }
   }
@@ -367,6 +403,12 @@ export default function Chat({ user, onLogout }: Props) {
   const isServerOwner = activeServer?.owner_id === user.id;
   const channelGroups = groupChannelsByCategory(channels);
   const hasCategories = channelGroups.length > 1;
+  // `servers` (unlike `channels`) holds every server the user belongs to,
+  // not just the currently-viewed one's, so the voice room's server name
+  // stays resolvable here no matter what's currently on screen — only the
+  // channel's own name (voiceRoomName) needs to be captured separately at
+  // join time (see handleVoiceRoomClick).
+  const voiceRoomServerName = servers.find((s) => s.id === voiceRoomServerId)?.name ?? null;
 
   function renderChannelRow(ch: Channel) {
     if (ch.type === 'voice') {
@@ -385,24 +427,13 @@ export default function Chat({ user, onLogout }: Props) {
             <div className="voice-participant-list">
               <VoiceOrbit participants={buildOrbitParticipants(voice.participants, voice.speakingUserIds, voice.reconnectingPeerIds)} />
 
-              <div className="voice-controls-row">
-                <button
-                  className={`voice-control-btn${voice.isMuted ? ' active' : ''}`}
-                  onClick={voice.toggleMute}
-                  title={voice.isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
-                  aria-label={voice.isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
-                >
-                  {voice.isMuted ? <MicOff size={16} /> : <Mic size={16} />}
-                </button>
-                <button
-                  className={`voice-control-btn${voice.isDeafened ? ' active' : ''}`}
-                  onClick={voice.toggleDeafen}
-                  title={voice.isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
-                  aria-label={voice.isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
-                >
-                  {voice.isDeafened ? <VolumeX size={16} /> : <Headphones size={16} />}
-                </button>
-              </div>
+              <VoiceStatusBar
+                isMuted={voice.isMuted}
+                isDeafened={voice.isDeafened}
+                onToggleMute={voice.toggleMute}
+                onToggleDeafen={voice.toggleDeafen}
+                onLeave={() => voiceLeaveRef.current()}
+              />
 
               <button
                 className={`screen-share-btn${voice.isScreenSharing ? ' active' : ''}`}
@@ -411,6 +442,28 @@ export default function Chat({ user, onLogout }: Props) {
                 {voice.isScreenSharing ? <ScreenShareOff size={14} /> : <ScreenShare size={14} />}{' '}
                 {voice.isScreenSharing ? 'Ekranı Durdur' : 'Ekranı Paylaş'}
               </button>
+            </div>
+          )}
+
+          {/* Join-before-you-look-inside preview — who's already in this
+              room, without joining it yourself first (see
+              Backend.Chat.voice_occupants/1 + "voice_presence_updated").
+              Hidden once isActive, since VoiceOrbit above already shows
+              (a richer version of) the same "who's in here" information —
+              this would just be a redundant second list underneath it. */}
+          {!isActive && !!ch.voice_occupants?.length && (
+            <div className="voice-occupants-preview">
+              {ch.voice_occupants.map((occupant) => (
+                <div key={occupant.user_id} className="voice-occupant-preview-item">
+                  <div
+                    className="voice-occupant-preview-avatar"
+                    style={{ background: userColor(occupant.user_id) }}
+                  >
+                    {initials(occupant.username)}
+                  </div>
+                  <span className="voice-occupant-preview-name">{occupant.username}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -484,6 +537,23 @@ export default function Chat({ user, onLogout }: Props) {
         onSelectFriends={handleSelectFriends}
         onNavigate={() => setFriendsViewOpen(false)}
       />
+
+      {/* Always accessible while a voice room is active, regardless of
+          which server/DM/Arkadaşlar view is currently on screen — see the
+          "leave on server switch" bug this (and the safety-effect guard
+          above) fixes. */}
+      {voice.activeRoomId && (
+        <VoiceStatusBar
+          variant="fixed"
+          roomName={voiceRoomName}
+          serverName={voiceRoomServerName}
+          isMuted={voice.isMuted}
+          isDeafened={voice.isDeafened}
+          onToggleMute={voice.toggleMute}
+          onToggleDeafen={voice.toggleDeafen}
+          onLeave={() => voiceLeaveRef.current()}
+        />
+      )}
 
       {/* ── Left sidebar ── */}
       <aside className="channel-sidebar">

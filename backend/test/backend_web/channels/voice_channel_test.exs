@@ -89,6 +89,87 @@ defmodule BackendWeb.VoiceChannelTest do
              subscribe_and_join(socket2, "voice:#{channel.id}", %{})
   end
 
+  test "join broadcasts voice_presence_updated to the server topic, including the joiner",
+       %{owner: owner, server: server, channel: channel} do
+    owner_id = owner.id
+    channel_id = channel.id
+
+    {:ok, server_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+    {:ok, _reply, _server_socket} = subscribe_and_join(server_socket, "server:#{server.id}", %{})
+
+    {:ok, voice_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+    assert {:ok, _reply, _voice_socket} = subscribe_and_join(voice_socket, "voice:#{channel.id}", %{})
+
+    assert_broadcast "voice_presence_updated", %{
+      channel_id: ^channel_id,
+      users: [%{user_id: ^owner_id, username: _}]
+    }
+  end
+
+  test "a second peer joining broadcasts the full, updated occupant list (not just the newcomer)",
+       %{owner: owner, member: member, server: server, channel: channel} do
+    owner_id = owner.id
+    member_id = member.id
+    channel_id = channel.id
+
+    {:ok, server_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+    {:ok, _reply, _server_socket} = subscribe_and_join(server_socket, "server:#{server.id}", %{})
+
+    {:ok, owner_voice_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+    {:ok, _reply, _owner_voice_socket} =
+      subscribe_and_join(owner_voice_socket, "voice:#{channel.id}", %{})
+
+    # The owner's own join broadcast — not what this test is about, just
+    # drained so it doesn't get picked up by the assert_broadcast below.
+    assert_broadcast "voice_presence_updated", %{channel_id: ^channel_id}
+
+    {:ok, member_voice_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(member)})
+    {:ok, _reply, _member_voice_socket} =
+      subscribe_and_join(member_voice_socket, "voice:#{channel.id}", %{})
+
+    assert_broadcast "voice_presence_updated", %{channel_id: ^channel_id, users: users}
+    assert Enum.sort(Enum.map(users, & &1.user_id)) == Enum.sort([owner_id, member_id])
+  end
+
+  test "leaving broadcasts voice_presence_updated with that user removed from the list",
+       %{owner: owner, member: member, server: server, channel: channel} do
+    owner_id = owner.id
+    channel_id = channel.id
+
+    {:ok, server_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+    {:ok, _reply, _server_socket} = subscribe_and_join(server_socket, "server:#{server.id}", %{})
+
+    {:ok, owner_voice_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+    {:ok, _reply, _owner_voice_socket} =
+      subscribe_and_join(owner_voice_socket, "voice:#{channel.id}", %{})
+
+    assert_broadcast "voice_presence_updated", %{channel_id: ^channel_id}
+
+    {:ok, member_voice_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(member)})
+    {:ok, _reply, member_voice_socket} =
+      subscribe_and_join(member_voice_socket, "voice:#{channel.id}", %{})
+
+    assert_broadcast "voice_presence_updated", %{channel_id: ^channel_id}
+
+    # A graceful leave — `terminate/2` doesn't branch on `reason`, so this
+    # exercises the same broadcast a socket close or a crashed channel
+    # process would (see terminate/2's own doc comment); `leave/1` is just
+    # the reliable, standard way to actually trigger it from a test (unlike
+    # `Process.exit(pid, :kill)` — see the "hard-killed channel process"
+    # test above — a `:kill` signal bypasses `terminate/2` entirely, so it
+    # wouldn't exercise this code path at all). Phoenix.ChannelTest links
+    # the channel process to this test process (same as that other test),
+    # so it has to be unlinked first — otherwise the process's own
+    # `{:shutdown, :left}` exit on leave propagates here and kills the test.
+    Process.unlink(member_voice_socket.channel_pid)
+    leave(member_voice_socket)
+
+    assert_broadcast "voice_presence_updated", %{
+      channel_id: ^channel_id,
+      users: [%{user_id: ^owner_id, username: _}]
+    }
+  end
+
   test "update_status is rate-limited after 30 updates/min and stops applying past that",
        %{owner: owner, channel: channel} do
     {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})

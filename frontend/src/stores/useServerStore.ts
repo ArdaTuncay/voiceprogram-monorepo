@@ -10,6 +10,7 @@ import type {
   ServerUpdatedNotification,
   MemberLeftNotification,
   MemberStatusChangedNotification,
+  VoicePresenceUpdatedNotification,
   UserStatus,
 } from '../types';
 import {
@@ -113,6 +114,10 @@ interface ServerStoreState {
   /** No global state currently depends on this — reserved for a live-updating
    * member list (e.g. ServerSettingsModal's Members tab) to consume later. */
   handleMemberLeft: (payload: MemberLeftNotification) => void;
+  /** Updates one channel's `voice_occupants` in place — a no-op if that
+   * channel isn't in the currently-loaded `channels` list (we're not
+   * viewing its server, or it's since been deleted). */
+  handleVoicePresenceUpdated: (payload: VoicePresenceUpdatedNotification) => void;
 
   // Reducer driven by the personal "user:<id>" socket topic instead — see
   // stores/useSocketStore.ts.
@@ -350,6 +355,17 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
 
   handleMemberLeft: (_payload) => {
     // Intentionally a no-op for now — see the interface doc above.
+  },
+
+  handleVoicePresenceUpdated: (payload) => {
+    set((state) => {
+      if (!state.channels.some((c) => c.id === payload.channel_id)) return state;
+      return {
+        channels: state.channels.map((c) =>
+          c.id === payload.channel_id ? { ...c, voice_occupants: payload.users } : c
+        ),
+      };
+    });
   },
 
   removeServerAndDeselect: (serverId) => {

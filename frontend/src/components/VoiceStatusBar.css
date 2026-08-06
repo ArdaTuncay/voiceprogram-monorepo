@@ -1,0 +1,86 @@
+.voice-status-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Sits at the bottom-left corner of the whole layout, wide enough to cover
+   both the server-icon rail (72px) and the channel list (240px) beneath it
+   — a natural extension of that column rather than a floating card. */
+.voice-status-bar-fixed {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 312px;
+  z-index: 500;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+/* No positioning/background of its own — embedded inside the existing
+   voice-participant-list panel under the active channel's row, which
+   already provides that. */
+.voice-status-bar-inline {
+  margin-top: var(--space-1-5);
+}
+
+.voice-status-bar-room {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-width: 0;
+}
+
+.voice-status-bar-room-icon {
+  color: var(--success);
+  flex-shrink: 0;
+}
+
+.voice-status-bar-room-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.voice-status-bar-room-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-status-bar-server-name {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-status-bar-controls {
+  display: flex;
+  gap: var(--space-1-5);
+}
+
+/* Stacks mic above leave in one column, matched side-by-side by the (taller,
+   two-button) column's height via flexbox's default align-items: stretch —
+   deafen has no fixed height of its own, so it simply grows to match. */
+.voice-status-bar-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  flex: 1;
+}
+
+.voice-leave-btn {
+  color: var(--danger);
+}
+
+.voice-leave-btn:hover {
+  background: var(--danger);
+  color: var(--interactive-active);
+}

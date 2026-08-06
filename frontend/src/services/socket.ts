@@ -13,6 +13,7 @@ import type {
   MemberKickedNotification,
   MemberLeftNotification,
   MemberStatusChangedNotification,
+  VoicePresenceUpdatedNotification,
   Friendship,
   FriendRemovedNotification,
   NewDmMessageNotification,
@@ -382,6 +383,7 @@ export interface ServerChannelCallbacks {
   onChannelPositionsUpdated: (payload: ChannelPositionsUpdatedNotification) => void;
   onServerUpdated: (payload: ServerUpdatedNotification) => void;
   onMemberLeft: (payload: MemberLeftNotification) => void;
+  onVoicePresenceUpdated: (payload: VoicePresenceUpdatedNotification) => void;
 }
 
 /**
@@ -403,6 +405,9 @@ export function joinServerChannel(serverId: string, callbacks: ServerChannelCall
   );
   room.on('server_updated', (payload: ServerUpdatedNotification) => callbacks.onServerUpdated(payload));
   room.on('member_left', (payload: MemberLeftNotification) => callbacks.onMemberLeft(payload));
+  room.on('voice_presence_updated', (payload: VoicePresenceUpdatedNotification) =>
+    callbacks.onVoicePresenceUpdated(payload)
+  );
   room.join();
 
   return () => {

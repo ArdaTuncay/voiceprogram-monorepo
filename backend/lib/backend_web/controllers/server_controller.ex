@@ -197,13 +197,25 @@ defmodule BackendWeb.ServerController do
   end
 
   defp channel_json(channel) do
-    %{
+    base = %{
       id: channel.id,
       name: channel.name,
       type: channel.type,
       parent_id: channel.parent_id,
       position: channel.position
     }
+
+    # Only voice channels can have anyone "in" them at all — a text/category
+    # channel just never gets the field, rather than always shipping an
+    # always-empty `voice_occupants: []` that would never mean anything for
+    # those types. N+1 (one Presence.list/1 per voice channel) — same
+    # accepted-tradeoff pattern already used elsewhere in this codebase
+    # (e.g. unread counts).
+    if channel.type == "voice" do
+      Map.put(base, :voice_occupants, Chat.voice_occupants(channel.id))
+    else
+      base
+    end
   end
 
   defp format_errors(changeset) do

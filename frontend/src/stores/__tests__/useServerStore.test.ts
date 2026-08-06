@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useServerStore } from '../useServerStore';
 import { useDMStore } from '../useDMStore';
+import type { Channel } from '../../types';
 
 vi.mock('../../services/api', () => ({
   fetchServers: vi.fn().mockResolvedValue({ data: [] }),
@@ -42,6 +43,58 @@ describe('useServerStore.setActiveServerId — DM aktif oda resetleme', () => {
     useServerStore.getState().setActiveServerId('server-1');
 
     expect(useDMStore.getState().activeRoomId).toBeNull();
+  });
+});
+
+describe('useServerStore.handleVoicePresenceUpdated', () => {
+  beforeEach(() => {
+    useServerStore.getState().reset();
+  });
+
+  it('sadece channel_id eşleşen kanalın voice_occupants\'ını günceller, diğerlerine dokunmaz', () => {
+    const voiceChannel: Channel = { id: 'vc-1', name: 'ses', type: 'voice', parent_id: null, position: 0 };
+    const textChannel: Channel = { id: 'ch-1', name: 'genel', type: 'text', parent_id: null, position: 1 };
+    useServerStore.setState({ channels: [voiceChannel, textChannel] });
+
+    useServerStore.getState().handleVoicePresenceUpdated({
+      channel_id: 'vc-1',
+      users: [{ user_id: 'u1', username: 'Ada' }],
+    });
+
+    const channels = useServerStore.getState().channels;
+    expect(channels.find((c) => c.id === 'vc-1')?.voice_occupants).toEqual([
+      { user_id: 'u1', username: 'Ada' },
+    ]);
+    expect(channels.find((c) => c.id === 'ch-1')?.voice_occupants).toBeUndefined();
+  });
+
+  it('channel_id şu an yüklü channels listesinde yoksa no-op\'tur (state referansı değişmez)', () => {
+    const textChannel: Channel = { id: 'ch-1', name: 'genel', type: 'text', parent_id: null, position: 0 };
+    useServerStore.setState({ channels: [textChannel] });
+    const before = useServerStore.getState().channels;
+
+    useServerStore.getState().handleVoicePresenceUpdated({
+      channel_id: 'not-loaded',
+      users: [{ user_id: 'u1', username: 'Ada' }],
+    });
+
+    expect(useServerStore.getState().channels).toBe(before);
+  });
+
+  it('önceki occupant listesini merge etmek yerine tamamen değiştirir', () => {
+    const voiceChannel: Channel = {
+      id: 'vc-1',
+      name: 'ses',
+      type: 'voice',
+      parent_id: null,
+      position: 0,
+      voice_occupants: [{ user_id: 'stale', username: 'Eski' }],
+    };
+    useServerStore.setState({ channels: [voiceChannel] });
+
+    useServerStore.getState().handleVoicePresenceUpdated({ channel_id: 'vc-1', users: [] });
+
+    expect(useServerStore.getState().channels[0].voice_occupants).toEqual([]);
   });
 });
 

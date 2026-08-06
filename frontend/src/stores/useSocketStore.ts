@@ -68,6 +68,8 @@ export function useSocketSync(currentUser: User): void {
         useServerStore.getState().handleChannelPositionsUpdated(payload),
       onServerUpdated: (payload) => useServerStore.getState().handleServerUpdated(payload),
       onMemberLeft: (payload) => useServerStore.getState().handleMemberLeft(payload),
+      onVoicePresenceUpdated: (payload) =>
+        useServerStore.getState().handleVoicePresenceUpdated(payload),
     });
     return cleanup;
   }, [activeServerId]);
