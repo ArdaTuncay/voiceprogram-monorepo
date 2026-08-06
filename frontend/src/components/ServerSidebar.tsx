@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
-import { Home, Plus, LogIn, Users } from 'lucide-react';
+import { Home, Users } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
 import { serverInitials } from '../utils';
 import JoinServerModal from './JoinServerModal';
 import CreateServerModal from './CreateServerModal';
+import ServerAddMenu from './ServerAddMenu';
 import RadialServerSwitcher from './RadialServerSwitcher';
 import './ServerSidebar.css';
 
@@ -73,23 +74,10 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
       </div>
 
       <div className="server-create-area">
-        <button
-          className="server-icon server-icon-create"
-          onClick={() => setShowCreateModal(true)}
-          title="Sunucu Oluştur"
-          aria-label="Sunucu Oluştur"
-        >
-          <Plus size={20} strokeWidth={2} />
-        </button>
-
-        <button
-          className="server-icon server-icon-join"
-          onClick={() => setShowJoinModal(true)}
-          title="Bir Sunucuya Katıl"
-          aria-label="Bir Sunucuya Katıl"
-        >
-          <LogIn size={20} strokeWidth={2} />
-        </button>
+        <ServerAddMenu
+          onCreateServer={() => setShowCreateModal(true)}
+          onJoinServer={() => setShowJoinModal(true)}
+        />
       </div>
 
       {showCreateModal && <CreateServerModal onClose={() => setShowCreateModal(false)} />}
