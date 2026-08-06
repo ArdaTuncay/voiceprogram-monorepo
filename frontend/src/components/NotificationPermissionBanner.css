@@ -1,0 +1,63 @@
+/* ── Notification permission banner — fixed full-width bar pinned to the
+   top of the viewport, same positioning approach as .reconnect-banner
+   (Chat.css) since .chat-layout is a row flex container that a plain
+   docked child wouldn't span correctly. Sits below .reconnect-banner's
+   z-index so a simultaneous disconnect still takes visual priority. ── */
+.notification-permission-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2-5) var(--space-4);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-normal);
+  font-size: var(--font-size-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.notification-permission-banner-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.notification-permission-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-permission-banner-enable-btn {
+  flex-shrink: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 4px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: var(--space-1-5) var(--space-3);
+}
+
+.notification-permission-banner-enable-btn:hover {
+  background: var(--accent-hover);
+}
+
+.notification-permission-banner-close-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: var(--space-1);
+  border-radius: 4px;
+}
+
+.notification-permission-banner-close-btn:hover {
+  color: var(--text-normal);
+  background: var(--bg-input);
+}

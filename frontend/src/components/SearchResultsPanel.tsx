@@ -1,18 +1,13 @@
 import { X, Paperclip } from 'lucide-react';
 import type { ChatMessage } from '../types';
 import { userColor, initials } from '../utils';
+import { formatMessageTime } from '../utils/formatMessageTime';
 
 interface Props {
   results: ChatMessage[];
   isSearching: boolean;
   onSelectMessage: (messageId: string) => void;
   onClose: () => void;
-}
-
-function formatTime(raw: string): string {
-  // Elixir sends UTC without "Z"; append it so Date parses correctly.
-  const d = new Date(raw.includes('Z') ? raw : raw + 'Z');
-  return d.toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 /** Shared by Chat.tsx and DMChatView.tsx — the right-hand panel that opens
@@ -52,7 +47,7 @@ export default function SearchResultsPanel({ results, isSearching, onSelectMessa
                     <span className="search-result-author" style={{ color }}>
                       {name}
                     </span>
-                    <span className="search-result-time">{formatTime(msg.inserted_at)}</span>
+                    <span className="search-result-time">{formatMessageTime(msg.inserted_at)}</span>
                   </div>
                   {msg.content && <div className="search-result-content">{msg.content}</div>}
                   {msg.file_url && <div className="search-result-file-tag"><Paperclip size={12} /> Ek</div>}

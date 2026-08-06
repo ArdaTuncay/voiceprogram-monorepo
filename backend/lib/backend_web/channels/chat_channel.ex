@@ -29,6 +29,10 @@ defmodule BackendWeb.ChatChannel do
   @toggle_reaction_scale :timer.minutes(1)
   @toggle_reaction_limit 30
 
+  # "delete_message": same rarity/budget reasoning as "update_message".
+  @delete_message_scale :timer.minutes(1)
+  @delete_message_limit 10
+
   @impl true
   def join("chat:" <> channel_id, _params, socket) do
     case Chat.get_channel(channel_id) do
@@ -138,6 +142,38 @@ defmodule BackendWeb.ChatChannel do
   end
 
   @impl true
+  def handle_in("delete_message", %{"message_id" => message_id}, socket) do
+    key = {:chat, "delete_message", socket.assigns.channel_id, socket.assigns.user_id}
+
+    if ChannelRateLimiter.limited?(
+         key,
+         @delete_message_scale,
+         @delete_message_limit,
+         socket.assigns.user_id,
+         "chat_delete_message"
+       ) do
+      {:reply, {:error, %{reason: "rate_limited"}}, socket}
+    else
+      attrs = %{user_id: socket.assigns.user_id, channel_id: socket.assigns.channel_id}
+
+      case Chat.delete_message(message_id, attrs) do
+        {:ok, message} ->
+          broadcast!(socket, "message_deleted", serialize_message(message))
+          {:reply, :ok, socket}
+
+        {:error, :not_found} ->
+          {:reply, {:error, %{reason: "message not found"}}, socket}
+
+        {:error, :not_authorized} ->
+          {:reply, {:error, %{reason: "not authorized"}}, socket}
+
+        {:error, changeset} ->
+          {:reply, {:error, %{errors: format_errors(changeset)}}, socket}
+      end
+    end
+  end
+
+  @impl true
   def handle_in("typing", %{"is_typing" => is_typing}, socket) do
     broadcast_from!(socket, "user_typing", %{
       user_id: socket.assigns.user_id,
@@ -207,7 +243,12 @@ defmodule BackendWeb.ChatChannel do
       username: Backend.Accounts.display_username(message.user),
       inserted_at: message.inserted_at,
       is_edited: message.is_edited,
-      reactions: message.reactions
+      reactions: message.reactions,
+      # content/file_url/file_type are already nil by this point for a
+      # deleted message (see Message.delete_changeset/1) — this just gives
+      # the frontend an explicit signal to render its "message deleted"
+      # placeholder instead of an oddly-empty message.
+      is_deleted: !is_nil(message.deleted_at)
     }
   end
 

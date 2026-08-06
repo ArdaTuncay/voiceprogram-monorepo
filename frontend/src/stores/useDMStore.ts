@@ -7,7 +7,14 @@ import type {
   SearchFilters,
 } from '../types';
 import { fetchDmRooms, fetchDmRoomMessages, openDmRoom, searchDmMessages, uploadFile } from '../services/api';
-import { sendDmMessage, sendDmTyping, toggleDmReaction, editDmMessage } from '../services/socket';
+import {
+  sendDmMessage,
+  sendDmTyping,
+  toggleDmReaction,
+  editDmMessage,
+  deleteDmMessage,
+  sendDmMarkRead,
+} from '../services/socket';
 
 // Safety cap on how many older pages jumpToMessage will fetch while hunting
 // for a search result that isn't in the currently loaded window, so a
@@ -20,8 +27,9 @@ const MAX_JUMP_PAGE_FETCHES = 20;
 const MESSAGE_PAGE_SIZE = 50;
 
 // How long to wait after the last keystroke before telling the room the
-// user stopped typing — same debounce shape as useChatStore's channel typing.
-const TYPING_STOP_DELAY_MS = 2000;
+// user stopped typing — same debounce shape as useChatStore's channel typing
+// (a separate constant there, not shared with this one).
+const TYPING_STOP_DELAY_MS = 60000;
 let isTyping = false;
 let typingStopTimer: number | null = null;
 
@@ -35,7 +43,13 @@ function clearTypingTimer() {
 interface DMStoreState {
   rooms: DmRoom[];
   activeRoomId: string | null;
-  unreadRoomIds: Set<string>;
+  /** Per-room unread message count — seeded from the backend's own count
+   * (see `Backend.DirectMessages.unread_count/2`, via `DmRoom.unread_count`)
+   * on every `loadRooms`/`openRoomWithUser`, then kept in sync locally
+   * (incremented as `new_dm_message` notifications arrive, zeroed by
+   * `markRoomRead`) between full refreshes. Absent key means 0, same as
+   * the old Set's "not in the set" meaning "no unread". */
+  unreadCounts: Record<string, number>;
   roomsError: string;
 
   messages: ChatMessage[];
@@ -65,8 +79,11 @@ interface DMStoreState {
   loadRooms: () => Promise<void>;
   openRoomWithUser: (userId: string) => Promise<string | undefined>;
   setActiveRoomId: (roomId: string | null) => void;
-  markUnread: (roomId: string) => void;
-  markRead: (roomId: string) => void;
+  /** Tells the server (see `sendDmMarkRead`) the highest `seq` among
+   * `roomId`'s currently loaded messages, then zeroes `unreadCounts[roomId]`
+   * once the server confirms. No-ops if no messages are loaded for the
+   * room yet — there's nothing to report a read position for. */
+  markRoomRead: (roomId: string) => void;
 
   resetForRoomSwitch: () => void;
   setMessages: (messages: ChatMessage[]) => void;
@@ -107,6 +124,13 @@ interface DMStoreState {
   // convention as handleReactionToggled.
   handleMessageUpdated: (msg: ChatMessage) => void;
 
+  deleteMessage: (messageId: string) => void;
+  // Reducer driven by the room's "dm_message_deleted" socket event — see
+  // stores/useSocketStore.ts. Same shape as handleMessageUpdated; the
+  // broadcasted message already has content/file_url/file_type nulled
+  // out and is_deleted: true (see Backend.DirectMessages.delete_message/2).
+  handleMessageDeleted: (msg: ChatMessage) => void;
+
   // Reducer driven by the personal "user:<id>" socket topic — see
   // stores/useSocketStore.ts, which wires this to the actual event.
   handleNewDmMessage: (payload: NewDmMessageNotification) => void;
@@ -121,7 +145,7 @@ interface DMStoreState {
 export const useDMStore = create<DMStoreState>((set, get) => ({
   rooms: [],
   activeRoomId: null,
-  unreadRoomIds: new Set(),
+  unreadCounts: {},
   roomsError: '',
 
   messages: [],
@@ -146,33 +170,48 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
       set({ roomsError: error ?? 'Sohbetler alınamadı' });
       return;
     }
-    set({ rooms: data, roomsError: '' });
+    set({
+      rooms: data,
+      roomsError: '',
+      unreadCounts: Object.fromEntries(data.map((room) => [room.id, room.unread_count])),
+    });
   },
 
   openRoomWithUser: async (userId) => {
     const { data, error } = await openDmRoom(userId);
     if (error || !data) return error ?? 'Sohbet açılamadı';
 
-    set((state) => (state.rooms.some((r) => r.id === data.id) ? state : { rooms: [...state.rooms, data] }));
+    set((state) => ({
+      rooms: state.rooms.some((r) => r.id === data.id) ? state.rooms : [...state.rooms, data],
+      unreadCounts: { ...state.unreadCounts, [data.id]: data.unread_count },
+    }));
     get().setActiveRoomId(data.id);
     return undefined;
   },
 
   setActiveRoomId: (roomId) => {
-    if (roomId) get().markRead(roomId);
+    // Optimistic/instant — the badge shouldn't wait on a round trip just to
+    // disappear when the user clicks into a room. markRoomRead (triggered
+    // once that room's messages actually finish loading — see
+    // stores/useSocketStore.ts's joinDmChannel onJoined) does the real,
+    // server-confirmed version of this shortly after.
+    if (roomId) {
+      set((state) => ({ unreadCounts: { ...state.unreadCounts, [roomId]: 0 } }));
+    }
     set({ activeRoomId: roomId });
   },
 
-  markUnread: (roomId) =>
-    set((state) => ({ unreadRoomIds: new Set(state.unreadRoomIds).add(roomId) })),
+  markRoomRead: (roomId) => {
+    const messages = get().messages;
+    if (messages.length === 0) return;
 
-  markRead: (roomId) =>
-    set((state) => {
-      if (!state.unreadRoomIds.has(roomId)) return state;
-      const next = new Set(state.unreadRoomIds);
-      next.delete(roomId);
-      return { unreadRoomIds: next };
-    }),
+    const seq = messages.reduce((max, m) => (m.seq !== undefined && m.seq > max ? m.seq : max), 0);
+    if (seq === 0) return;
+
+    sendDmMarkRead(seq, () => {
+      set((state) => ({ unreadCounts: { ...state.unreadCounts, [roomId]: 0 } }));
+    });
+  },
 
   resetForRoomSwitch: () => {
     clearTypingTimer();
@@ -333,14 +372,40 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
       messages: state.messages.map((m) => (m.id === msg.id ? msg : m)),
     })),
 
-  handleNewDmMessage: (payload) => {
-    if (payload.dm_room_id === get().activeRoomId) return;
+  deleteMessage: (messageId) => deleteDmMessage(messageId),
 
-    get().markUnread(payload.dm_room_id);
+  handleMessageDeleted: (msg) =>
+    set((state) => ({
+      messages: state.messages.map((m) => (m.id === msg.id ? msg : m)),
+    })),
+
+  handleNewDmMessage: (payload) => {
+    // Already viewing this room — the room's own "shout" listener (see
+    // stores/useSocketStore.ts's joinDmChannel) is what actually appended
+    // this message to `messages` moments earlier over the same socket
+    // connection (the server sends "shout" before this personal-topic
+    // notification, in that order, for every "shout" push — see
+    // BackendWeb.DmChannel's handle_shout/2), so its seq is already the
+    // max in the list by the time markRoomRead reads it here. Stays/goes
+    // back to 0 rather than ever incrementing while active.
+    if (payload.dm_room_id === get().activeRoomId) {
+      get().markRoomRead(payload.dm_room_id);
+      return;
+    }
+
+    set((state) => ({
+      unreadCounts: {
+        ...state.unreadCounts,
+        [payload.dm_room_id]: (state.unreadCounts[payload.dm_room_id] ?? 0) + 1,
+      },
+    }));
+
     if (!get().rooms.some((r) => r.id === payload.dm_room_id)) {
       // First message in a room we don't have cached yet (e.g. someone just
       // opened a DM with us) — refetch to pick it up rather than trying to
-      // reconstruct a DmRoom view from a chat-message-shaped payload.
+      // reconstruct a DmRoom view from a chat-message-shaped payload. This
+      // also re-syncs unreadCounts from the backend's authoritative count
+      // for every room, superseding the increment above once it resolves.
       void get().loadRooms();
     }
   },
@@ -351,7 +416,7 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
     set({
       rooms: [],
       activeRoomId: null,
-      unreadRoomIds: new Set(),
+      unreadCounts: {},
       roomsError: '',
       messages: [],
       draft: '',

@@ -91,6 +91,7 @@ export interface ChannelCallbacks {
   onTyping: (payload: TypingNotification) => void;
   onReactionToggled: (payload: ReactionToggledPayload) => void;
   onMessageUpdated: (msg: ChatMessage) => void;
+  onMessageDeleted: (msg: ChatMessage) => void;
 }
 
 /** Joins the given text channel's socket topic (by channel id) and returns a cleanup function. */
@@ -114,6 +115,7 @@ export function joinChatChannel(channelId: string, callbacks: ChannelCallbacks):
     callbacks.onReactionToggled(payload)
   );
   textChannel.on('message_updated', (msg: ChatMessage) => callbacks.onMessageUpdated(msg));
+  textChannel.on('message_deleted', (msg: ChatMessage) => callbacks.onMessageDeleted(msg));
 
   textChannel
     .join()
@@ -148,6 +150,11 @@ export function editMessage(messageId: string, content: string): void {
   textChannel?.push('update_message', { message_id: messageId, content });
 }
 
+/** Soft-deletes a message; the server validates authorship/server-ownership and broadcasts "message_deleted". */
+export function deleteMessage(messageId: string): void {
+  textChannel?.push('delete_message', { message_id: messageId });
+}
+
 /**
  * Joins a DM room's socket topic (by room id) and returns a cleanup
  * function — same shape as `joinChatChannel` (join response, "shout",
@@ -175,6 +182,7 @@ export function joinDmChannel(roomId: string, callbacks: ChannelCallbacks): () =
     callbacks.onReactionToggled(payload)
   );
   dmChannel.on('dm_message_updated', (msg: ChatMessage) => callbacks.onMessageUpdated(msg));
+  dmChannel.on('dm_message_deleted', (msg: ChatMessage) => callbacks.onMessageDeleted(msg));
 
   dmChannel
     .join()
@@ -207,6 +215,23 @@ export function toggleDmReaction(messageId: string, emoji: string): void {
 /** Edits an existing DM message's content; the server validates authorship and broadcasts "dm_message_updated". */
 export function editDmMessage(messageId: string, content: string): void {
   dmChannel?.push('update_message', { message_id: messageId, content });
+}
+
+/** Soft-deletes a DM message; the server validates authorship and broadcasts "dm_message_deleted". */
+export function deleteDmMessage(messageId: string): void {
+  dmChannel?.push('delete_message', { message_id: messageId });
+}
+
+/**
+ * Tells the server the highest message `seq` the current user has read in
+ * the active DM room, invoking `onSuccess` once it confirms — unlike this
+ * file's other DM pushes (fire-and-forget, relying on a broadcast to
+ * update state), `"mark_read"` only ever affects the caller's own read
+ * position (see `BackendWeb.DmChannel`), so the direct reply is the only
+ * signal a caller gets and is worth actually waiting for.
+ */
+export function sendDmMarkRead(seq: number, onSuccess: () => void): void {
+  dmChannel?.push('mark_read', { seq }).receive('ok', onSuccess);
 }
 
 export interface VoiceChannelCallbacks {

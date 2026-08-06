@@ -1,7 +1,11 @@
 defmodule BackendWeb.DmChannelTest do
   use BackendWeb.ChannelCase, async: true
 
+  import Ecto.Query, only: [where: 2]
+
   alias Backend.DirectMessages
+  alias Backend.DirectMessages.DmRoomRead
+  alias Backend.Repo
 
   setup do
     a = user_fixture()
@@ -197,6 +201,30 @@ defmodule BackendWeb.DmChannelTest do
              room.id |> DirectMessages.list_messages() |> Enum.find(&(&1.id == message.id))
   end
 
+  test "mark_read updates the caller's own read position, without broadcasting anything", %{
+    a: a,
+    b: b,
+    room: room
+  } do
+    {:ok, message} =
+      DirectMessages.create_message(%{content: "hi", user_id: a.id, dm_room_id: room.id})
+
+    {:ok, b_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(b)})
+    {:ok, _, b_socket} = subscribe_and_join(b_socket, "dm:#{room.id}", %{})
+
+    ref = push(b_socket, "mark_read", %{"seq" => message.seq})
+    assert_reply ref, :ok, %{}
+    refute_broadcast "mark_read", %{}
+
+    assert DirectMessages.unread_count(b.id, room.id) == 0
+
+    # a never called mark_read — no read position was created for them at
+    # all, confirming the event only ever touches the caller's own row.
+    assert DmRoomRead
+           |> where(user_id: ^a.id, dm_room_id: ^room.id)
+           |> Repo.aggregate(:count) == 0
+  end
+
   test "toggle_reaction is rate-limited after 30 toggles/min", %{a: a, room: room} do
     {:ok, message} =
       DirectMessages.create_message(%{content: "react to me", user_id: a.id, dm_room_id: room.id})
@@ -212,6 +240,69 @@ defmodule BackendWeb.DmChannelTest do
     end
 
     ref = push(socket, "toggle_reaction", %{"message_id" => message.id, "emoji" => "🔥"})
+    assert_reply ref, :error, %{reason: "rate_limited"}
+  end
+
+  test "delete_message broadcasts dm_message_deleted with content wiped when the author deletes it",
+       %{a: a, room: room} do
+    {:ok, message} =
+      DirectMessages.create_message(%{content: "oops", user_id: a.id, dm_room_id: room.id})
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(a)})
+    {:ok, _, socket} = subscribe_and_join(socket, "dm:#{room.id}", %{})
+
+    ref = push(socket, "delete_message", %{"message_id" => message.id})
+    assert_reply ref, :ok
+
+    assert_broadcast "dm_message_deleted", %{
+      id: id,
+      content: nil,
+      file_url: nil,
+      file_type: nil,
+      is_deleted: true
+    }
+
+    assert id == message.id
+  end
+
+  test "delete_message is rejected for the other participant — DMs have no owner carve-out", %{
+    a: a,
+    b: b,
+    room: room
+  } do
+    {:ok, message} =
+      DirectMessages.create_message(%{content: "oops", user_id: a.id, dm_room_id: room.id})
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(b)})
+    {:ok, _, socket} = subscribe_and_join(socket, "dm:#{room.id}", %{})
+
+    ref = push(socket, "delete_message", %{"message_id" => message.id})
+    assert_reply ref, :error, %{reason: "not authorized"}
+
+    assert %{content: "oops"} =
+             room.id |> DirectMessages.list_messages() |> Enum.find(&(&1.id == message.id))
+  end
+
+  test "delete_message is rate-limited after 10 deletes/min", %{a: a, room: room} do
+    messages =
+      for n <- 1..11 do
+        {:ok, message} =
+          DirectMessages.create_message(%{content: "msg #{n}", user_id: a.id, dm_room_id: room.id})
+
+        message
+      end
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(a)})
+    {:ok, _, socket} = subscribe_and_join(socket, "dm:#{room.id}", %{})
+
+    {to_delete, [eleventh]} = Enum.split(messages, 10)
+
+    for message <- to_delete do
+      ref = push(socket, "delete_message", %{"message_id" => message.id})
+      assert_reply ref, :ok
+    end
+
+    ref = push(socket, "delete_message", %{"message_id" => eleventh.id})
     assert_reply ref, :error, %{reason: "rate_limited"}
   end
 end

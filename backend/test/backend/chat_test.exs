@@ -120,4 +120,100 @@ defmodule Backend.ChatTest do
       assert Chat.list_messages(channel.id, before_id: Ecto.UUID.generate()) == []
     end
   end
+
+  describe "delete_message/2" do
+    test "the author can delete their own message — content/file fields are actually wiped" do
+      owner = user_fixture()
+      server = server_fixture(owner)
+      channel = default_channel(server)
+      member = user_fixture()
+      add_member_fixture(server, member)
+
+      {:ok, message} =
+        Chat.create_message(%{
+          content: "oops",
+          file_url: "http://example.com/f.png",
+          file_type: "image/png",
+          user_id: member.id,
+          channel_id: channel.id
+        })
+
+      assert {:ok, deleted} =
+               Chat.delete_message(message.id, %{user_id: member.id, channel_id: channel.id})
+
+      assert deleted.content == nil
+      assert deleted.file_url == nil
+      assert deleted.file_type == nil
+      assert deleted.deleted_at != nil
+    end
+
+    test "the server owner can delete another member's message even though they didn't write it" do
+      owner = user_fixture()
+      server = server_fixture(owner)
+      channel = default_channel(server)
+      member = user_fixture()
+      add_member_fixture(server, member)
+
+      {:ok, message} =
+        Chat.create_message(%{content: "oops", user_id: member.id, channel_id: channel.id})
+
+      assert {:ok, deleted} =
+               Chat.delete_message(message.id, %{user_id: owner.id, channel_id: channel.id})
+
+      assert deleted.content == nil
+      assert deleted.deleted_at != nil
+    end
+
+    test "a member who neither wrote the message nor owns the server cannot delete it" do
+      owner = user_fixture()
+      server = server_fixture(owner)
+      channel = default_channel(server)
+      author = user_fixture()
+      other_member = user_fixture()
+      add_member_fixture(server, author)
+      add_member_fixture(server, other_member)
+
+      {:ok, message} =
+        Chat.create_message(%{content: "oops", user_id: author.id, channel_id: channel.id})
+
+      assert {:error, :not_authorized} =
+               Chat.delete_message(message.id, %{
+                 user_id: other_member.id,
+                 channel_id: channel.id
+               })
+
+      assert %{content: "oops"} =
+               channel.id |> Chat.list_messages() |> Enum.find(&(&1.id == message.id))
+    end
+
+    test "rejects a nonexistent message id" do
+      owner = user_fixture()
+      server = server_fixture(owner)
+      channel = default_channel(server)
+
+      assert {:error, :not_found} =
+               Chat.delete_message(Ecto.UUID.generate(), %{
+                 user_id: owner.id,
+                 channel_id: channel.id
+               })
+    end
+
+    test "rejects deleting a message scoped to a different channel, even for the server owner" do
+      owner = user_fixture()
+      server = server_fixture(owner)
+      channel = default_channel(server)
+
+      {:ok, other_channel} =
+        Backend.Servers.create_channel(server.id, %{"name" => "other", "type" => "text"})
+
+      {:ok, message} =
+        Chat.create_message(%{content: "hi", user_id: owner.id, channel_id: channel.id})
+
+      assert {:error, :not_authorized} =
+               Chat.delete_message(message.id, %{
+                 user_id: owner.id,
+                 channel_id: other_channel.id
+               })
+    end
+  end
 end

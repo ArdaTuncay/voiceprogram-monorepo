@@ -6,19 +6,29 @@ interface Props {
   reactions: Reaction[];
   currentUserId: string;
   onToggle: (emoji: string) => void;
+  /** Called when the mouse leaves the quick-react picker itself — MessageItem
+   * uses this to close its `reactionPickerForced` state (set by
+   * MessageContextMenu's "İfade Bırak"). Deliberately scoped to just this
+   * element rather than the whole `.message` row: the context menu that
+   * opens the picker is a `position: fixed` overlay, so it can render
+   * outside `.message`'s own box — moving the cursor onto it (to click
+   * "İfade Bırak" in the first place) already fires a real `mouseleave` on
+   * `.message`, which used to immediately undo the very state the click
+   * had just set. */
+  onPickerMouseLeave?: () => void;
 }
 
-/** Shared by Chat.tsx and DMChatView.tsx — the hover quick-react bar (shown
- * via CSS when the parent `.message` is hovered, see `.message-reaction-picker`
- * in Chat.css) plus the persistent row of reaction pills under a message's
+/** Shared by Chat.tsx and DMChatView.tsx — the quick-react picker (opened via
+ * MessageContextMenu's "İfade Bırak", see `.message.reaction-picker-open` in
+ * Chat.css) plus the persistent row of reaction pills under a message's
  * content. Both pieces just call `onToggle`; the actual add/remove state
  * lives server-side (see Backend.Chat.toggle_reaction/4) and comes back
  * through the "reaction_toggled" broadcast, so there's nothing optimistic
  * to reconcile here. */
-export default function MessageReactions({ reactions, currentUserId, onToggle }: Props) {
+export default function MessageReactions({ reactions, currentUserId, onToggle, onPickerMouseLeave }: Props) {
   return (
     <>
-      <div className="message-reaction-picker">
+      <div className="message-reaction-picker" onMouseLeave={onPickerMouseLeave}>
         {QUICK_EMOJIS.map((emoji) => (
           <button
             key={emoji}

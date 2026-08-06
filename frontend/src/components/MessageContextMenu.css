@@ -1,0 +1,46 @@
+/* Transparent — unlike .radial-switcher-overlay's dimmed backdrop, a
+   message action menu is low-emphasis enough that darkening the whole
+   screen would be overkill. Still fixed/full-viewport purely so any click
+   outside the menu itself (which stops propagation) reaches this and
+   closes it. */
+.message-context-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+}
+
+.message-context-menu {
+  position: fixed;
+  z-index: 1501;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: 160px;
+  max-width: min(220px, calc(100vw - var(--space-4)));
+  background: var(--bg-secondary);
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: var(--space-1);
+  gap: var(--space-1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.message-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--text-normal);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  padding: var(--space-2);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.message-context-menu-item:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}

@@ -593,7 +593,10 @@
   z-index: 1;
 }
 
-.message:hover .message-reaction-picker {
+/* Opens only via MessageContextMenu's "İfade Bırak" (see MessageItem.tsx's
+   reactionPickerForced state, toggled off again on mouse-leave) — plain
+   hovering the message no longer reveals this on its own. */
+.message.reaction-picker-open .message-reaction-picker {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
@@ -679,6 +682,14 @@
   padding: var(--space-1) 0;
 }
 
+/* Grouped messages skip .message-avatar entirely (not just hide it), so
+   this stands in for its width (40px, see .message-avatar) plus .message's
+   own gap (var(--space-4)) to keep content lined up with ungrouped rows
+   above/below it. */
+.message-content-grouped {
+  padding-left: calc(40px + var(--space-4));
+}
+
 .message-header {
   display: flex;
   align-items: baseline;
@@ -709,25 +720,11 @@
   flex-shrink: 0;
 }
 
-.message-edit-btn {
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  line-height: 1;
-  padding: var(--space-1) var(--space-1-5);
-  margin-left: auto;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.1s, background 0.1s;
-}
-
-.message:hover .message-edit-btn {
-  opacity: 1;
-}
-
-.message-edit-btn:hover {
-  background: var(--bg-tertiary);
+.message-deleted-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--font-size-sm);
+  margin: 0;
 }
 
 .message-edit-box {
@@ -1386,6 +1383,23 @@
   height: 8px;
   border-radius: 50%;
   background: var(--danger);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Same slot/role as .unread-dot (far right of a .channel-item row), just
+   wide enough to hold a count instead of being a bare dot. */
+.unread-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--danger);
+  color: var(--interactive-active);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
   flex-shrink: 0;
   margin-left: auto;
 }

@@ -206,4 +206,87 @@ defmodule BackendWeb.ChatChannelTest do
     ref = push(socket, "toggle_reaction", %{"message_id" => message.id, "emoji" => "🔥"})
     assert_reply ref, :error, %{reason: "rate_limited"}
   end
+
+  test "delete_message broadcasts message_deleted with content wiped when the author deletes it", %{
+    member: member,
+    channel: channel
+  } do
+    {:ok, message} =
+      Chat.create_message(%{content: "oops", user_id: member.id, channel_id: channel.id})
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(member)})
+    {:ok, _, socket} = subscribe_and_join(socket, "chat:#{channel.id}", %{})
+
+    ref = push(socket, "delete_message", %{"message_id" => message.id})
+    assert_reply ref, :ok
+
+    assert_broadcast "message_deleted", %{
+      id: id,
+      content: nil,
+      file_url: nil,
+      file_type: nil,
+      is_deleted: true
+    }
+
+    assert id == message.id
+  end
+
+  test "the server owner can delete another member's message", %{
+    owner: owner,
+    member: member,
+    channel: channel
+  } do
+    {:ok, message} =
+      Chat.create_message(%{content: "oops", user_id: member.id, channel_id: channel.id})
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+    {:ok, _, socket} = subscribe_and_join(socket, "chat:#{channel.id}", %{})
+
+    ref = push(socket, "delete_message", %{"message_id" => message.id})
+    assert_reply ref, :ok
+
+    assert_broadcast "message_deleted", %{id: id, is_deleted: true}
+    assert id == message.id
+  end
+
+  test "delete_message is rejected for a member who neither wrote the message nor owns the server",
+       %{server: server, member: member, channel: channel} do
+    other_member = user_fixture()
+    add_member_fixture(server, other_member)
+
+    {:ok, message} =
+      Chat.create_message(%{content: "oops", user_id: member.id, channel_id: channel.id})
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(other_member)})
+    {:ok, _, socket} = subscribe_and_join(socket, "chat:#{channel.id}", %{})
+
+    ref = push(socket, "delete_message", %{"message_id" => message.id})
+    assert_reply ref, :error, %{reason: "not authorized"}
+
+    assert %{content: "oops"} =
+             channel.id |> Chat.list_messages() |> Enum.find(&(&1.id == message.id))
+  end
+
+  test "delete_message is rate-limited after 10 deletes/min", %{owner: owner, channel: channel} do
+    messages =
+      for n <- 1..11 do
+        {:ok, message} =
+          Chat.create_message(%{content: "msg #{n}", user_id: owner.id, channel_id: channel.id})
+
+        message
+      end
+
+    {:ok, socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+    {:ok, _, socket} = subscribe_and_join(socket, "chat:#{channel.id}", %{})
+
+    {to_delete, [eleventh]} = Enum.split(messages, 10)
+
+    for message <- to_delete do
+      ref = push(socket, "delete_message", %{"message_id" => message.id})
+      assert_reply ref, :ok
+    end
+
+    ref = push(socket, "delete_message", %{"message_id" => eleventh.id})
+    assert_reply ref, :error, %{reason: "rate_limited"}
+  end
 end

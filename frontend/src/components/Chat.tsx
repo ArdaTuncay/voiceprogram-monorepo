@@ -11,7 +11,7 @@ import { useChatStore } from '../stores/useChatStore';
 import { useDMStore } from '../stores/useDMStore';
 import { useSocketSync } from '../stores/useSocketStore';
 import { useConnectionStore } from '../stores/useConnectionStore';
-import { userColor, initials } from '../utils';
+import { userColor, initials, shouldGroupMessages } from '../utils';
 import { getMediaPreferences, supportsOutputDeviceSelection } from '../services/mediaPreferences';
 import ServerSidebar from './ServerSidebar';
 import InviteModal from './InviteModal';
@@ -26,6 +26,7 @@ import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
 import StatusIndicator from './StatusIndicator';
 import ChannelAddMenu from './ChannelAddMenu';
+import NotificationPermissionBanner from './NotificationPermissionBanner';
 import UserSettingsModal from './UserSettingsModal';
 import VoiceOrbit from './VoiceOrbit';
 import type { OrbitParticipant } from './VoiceOrbit';
@@ -59,6 +60,10 @@ function typingIndicatorText(usernames: (string | null)[]): string {
   const names = usernames.map((name) => name || 'Bilinmeyen');
   if (names.length <= 2) return `${names.join(', ')} yazıyor...`;
   return `${names.slice(0, 2).join(', ')} ve ${names.length - 2} kişi daha yazıyor...`;
+}
+
+function formatUnreadBadge(count: number): string {
+  return count > 9 ? '9+' : String(count);
 }
 
 function buildOrbitParticipants(
@@ -122,6 +127,7 @@ export default function Chat({ user, onLogout }: Props) {
   const setLightboxUrl = useChatStore((s) => s.setLightboxUrl);
   const toggleReaction = useChatStore((s) => s.toggleReaction);
   const editMessage = useChatStore((s) => s.editMessage);
+  const deleteMessage = useChatStore((s) => s.deleteMessage);
   const searchResults = useChatStore((s) => s.searchResults);
   const isSearching = useChatStore((s) => s.isSearching);
   const isSearchPanelOpen = useChatStore((s) => s.isSearchPanelOpen);
@@ -136,7 +142,7 @@ export default function Chat({ user, onLogout }: Props) {
 
   const dmRooms = useDMStore((s) => s.rooms);
   const activeDmRoomId = useDMStore((s) => s.activeRoomId);
-  const unreadRoomIds = useDMStore((s) => s.unreadRoomIds);
+  const unreadCounts = useDMStore((s) => s.unreadCounts);
   const loadDmRooms = useDMStore((s) => s.loadRooms);
   const setActiveDmRoomId = useDMStore((s) => s.setActiveRoomId);
 
@@ -260,6 +266,11 @@ export default function Chat({ user, onLogout }: Props) {
 
   function handleSelectFriends() {
     setActiveServerId(null);
+    // Opening Friends never opens a DM — it replaces whatever DM view was
+    // showing, so any previously-active room stops counting as "currently
+    // viewed" (see useServerStore's setActiveServerId, which handles this
+    // same reset for the server-select case).
+    useDMStore.getState().setActiveRoomId(null);
     setFriendsViewOpen(true);
   }
 
@@ -425,6 +436,8 @@ export default function Chat({ user, onLogout }: Props) {
 
   return (
     <div className="chat-layout">
+      <NotificationPermissionBanner />
+
       {/* Only after we've actually been connected before — never during the
           initial page-load handshake, where this would be a misleading
           flash rather than a real "you got disconnected" signal. */}
@@ -541,7 +554,7 @@ export default function Chat({ user, onLogout }: Props) {
 
             <nav className="channel-list">
               {dmRooms.map((room) => {
-                const unread = unreadRoomIds.has(room.id);
+                const unreadCount = unreadCounts[room.id] ?? 0;
                 const color = userColor(room.user_id);
                 const name = room.username ?? 'Bilinmeyen';
                 return (
@@ -563,8 +576,10 @@ export default function Chat({ user, onLogout }: Props) {
                         className="dm-room-status-dot"
                       />
                     </div>
-                    <span className={unread ? 'channel-name-unread' : undefined}>{name}</span>
-                    {unread && <span className="unread-dot" />}
+                    <span className={unreadCount > 0 ? 'channel-name-unread' : undefined}>{name}</span>
+                    {unreadCount > 0 && (
+                      <span className="unread-badge">{formatUnreadBadge(unreadCount)}</span>
+                    )}
                   </div>
                 );
               })}
@@ -653,15 +668,18 @@ export default function Chat({ user, onLogout }: Props) {
                   <p>Bu, #{activeChannelName} kanalının başlangıcı. Merhaba de!</p>
                 </div>
 
-                {messages.map((msg) => (
+                {messages.map((msg, index) => (
                   <MessageItem
                     key={msg.id}
                     message={msg}
                     currentUserId={user.id}
                     onToggleReaction={(emoji) => toggleReaction(msg.id, emoji)}
                     onEditMessage={(content) => editMessage(msg.id, content)}
+                    onDeleteMessage={() => deleteMessage(msg.id)}
                     onImageClick={setLightboxUrl}
+                    isServerOwner={isServerOwner}
                     isHighlighted={msg.id === highlightedMessageId}
+                    isGrouped={shouldGroupMessages(messages[index - 1], msg)}
                   />
                 ))}
                 <div ref={bottomRef} />

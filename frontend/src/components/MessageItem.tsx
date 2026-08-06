@@ -1,29 +1,37 @@
 import { useState } from 'react';
-import type { KeyboardEvent } from 'react';
-import { Pencil } from 'lucide-react';
+import type { KeyboardEvent, MouseEvent } from 'react';
 import type { ChatMessage } from '../types';
 import { resolveFileUrl } from '../config';
 import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
 import { userColor, initials } from '../utils';
+import { formatMessageTime } from '../utils/formatMessageTime';
 import MessageContent from './MessageContent';
 import MessageReactions from './MessageReactions';
+import MessageContextMenu from './MessageContextMenu';
 
 interface Props {
   message: ChatMessage;
   currentUserId: string;
   onToggleReaction: (emoji: string) => void;
   onEditMessage: (content: string) => void;
+  onDeleteMessage: () => void;
   onImageClick: (fileUrl: string) => void;
+  /** Lets the delete option's author-only gate also pass for the server's
+   * owner (moderation) — Chat.tsx passes this, DMChatView never does. A
+   * DM has no such concept, so simply never passing it (rather than also
+   * threading an `isDM` flag) already makes delete there author-only,
+   * same as edit. */
+  isServerOwner?: boolean;
   /** True while this message is the target of a just-completed search
    * "jump to message" — flashes a highlight background (see Chat.css
    * `.message-highlighted`). */
   isHighlighted?: boolean;
-}
-
-function formatTime(raw: string): string {
-  // Elixir sends UTC without "Z"; append it so Date parses correctly.
-  const d = new Date(raw.includes('Z') ? raw : raw + 'Z');
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  /** True when this message immediately follows another from the same
+   * author within the same minute (see utils.ts's shouldGroupMessages) —
+   * Discord-style consecutive-message grouping. Suppresses the
+   * avatar/name/timestamp header entirely (not just visually), including
+   * for a deleted message's placeholder — there's no special case for it. */
+  isGrouped?: boolean;
 }
 
 /** Shared by Chat.tsx and DMChatView.tsx — a single message row, including
@@ -36,18 +44,32 @@ export default function MessageItem({
   currentUserId,
   onToggleReaction,
   onEditMessage,
+  onDeleteMessage,
   onImageClick,
+  isServerOwner,
   isHighlighted,
+  isGrouped,
 }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   // KORUMA: Eğer message.content null ise state'e boş dize ('') veriyoruz
   const [editDraft, setEditDraft] = useState(message.content || '');
   const editTextareaRef = useAutoGrowTextarea(editDraft);
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+  // Set by MessageContextMenu's "İfade Bırak" (see the matching
+  // `.message.reaction-picker-open` rule in Chat.css), cleared by
+  // MessageReactions' own onMouseLeave — deliberately NOT tied to
+  // `.message`'s onMouseLeave: the context menu that sets this is a
+  // `position: fixed` overlay that can render outside `.message`'s own
+  // box, so moving the cursor onto it to click "İfade Bırak" already fires
+  // a real mouseleave on `.message`, which used to undo this in the same
+  // instant it was set.
+  const [reactionPickerForced, setReactionPickerForced] = useState(false);
 
   const color = userColor(message.user_id);
   const name = message.username ?? 'Unknown';
   const isOwnMessage = message.user_id === currentUserId;
-  
+  const canDelete = isOwnMessage || !!isServerOwner;
+
   // KORUMA: editDraft'ın null/undefined olma ihtimaline karşı güvenli trim kontrolü
   const canSave = (editDraft || '').trim() !== '' || !!message.file_url;
 
@@ -77,32 +99,45 @@ export default function MessageItem({
     }
   }
 
-  return (
-    <div id={`message-${message.id}`} className={`message${isHighlighted ? ' message-highlighted' : ''}`}>
-      <div className="message-avatar" style={{ background: color }} title={name}>
-        {initials(name)}
-      </div>
-      <div className="message-body">
-        <div className="message-header">
-          <span className="message-author" style={{ color }}>
-            {name}
-          </span>
-          <span className="message-timestamp">{formatTime(message.inserted_at)}</span>
-          {message.is_edited && <span className="message-edited-tag">(düzenlendi)</span>}
-          {isOwnMessage && !isEditing && (
-            <button
-              type="button"
-              className="message-edit-btn"
-              onClick={startEditing}
-              title="Mesajı düzenle"
-              aria-label="Mesajı düzenle"
-            >
-              <Pencil size={14} />
-            </button>
-          )}
-        </div>
+  function handleDeleteClick() {
+    if (window.confirm('Bu mesajı silmek istediğine emin misin?')) {
+      onDeleteMessage();
+    }
+  }
 
-        {isEditing ? (
+  function handleContextMenu(e: MouseEvent<HTMLDivElement>) {
+    if (message.is_deleted) return;
+    e.preventDefault();
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
+  }
+
+  return (
+    <div
+      id={`message-${message.id}`}
+      className={`message${isHighlighted ? ' message-highlighted' : ''}${reactionPickerForced ? ' reaction-picker-open' : ''}`}
+      onContextMenu={handleContextMenu}
+    >
+      {!isGrouped && (
+        <div className="message-avatar" style={{ background: color }} title={name}>
+          {initials(name)}
+        </div>
+      )}
+      <div className={`message-body${isGrouped ? ' message-content-grouped' : ''}`}>
+        {!isGrouped && (
+          <div className="message-header">
+            <span className="message-author" style={{ color }}>
+              {name}
+            </span>
+            <span className="message-timestamp">{formatMessageTime(message.inserted_at)}</span>
+            {!message.is_deleted && message.is_edited && (
+              <span className="message-edited-tag">(düzenlendi)</span>
+            )}
+          </div>
+        )}
+
+        {message.is_deleted ? (
+          <p className="message-deleted-placeholder">Bu mesaj silindi</p>
+        ) : isEditing ? (
           <div className="message-edit-box">
             <textarea
               ref={editTextareaRef}
@@ -137,8 +172,26 @@ export default function MessageItem({
           </>
         )}
 
-        <MessageReactions reactions={message.reactions} currentUserId={currentUserId} onToggle={onToggleReaction} />
+        <MessageReactions
+          reactions={message.reactions}
+          currentUserId={currentUserId}
+          onToggle={onToggleReaction}
+          onPickerMouseLeave={() => setReactionPickerForced(false)}
+        />
       </div>
+
+      {contextMenuPos && (
+        <MessageContextMenu
+          x={contextMenuPos.x}
+          y={contextMenuPos.y}
+          canEdit={isOwnMessage}
+          canDelete={canDelete}
+          onEdit={startEditing}
+          onDelete={handleDeleteClick}
+          onReact={() => setReactionPickerForced(true)}
+          onClose={() => setContextMenuPos(null)}
+        />
+      )}
     </div>
   );
 }

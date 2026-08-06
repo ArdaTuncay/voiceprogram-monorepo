@@ -47,6 +47,7 @@ export function useSocketSync(currentUser: User): void {
         useChatStore.getState().setTypingUser(payload.user_id, payload.username, payload.is_typing),
       onReactionToggled: (payload) => useChatStore.getState().handleReactionToggled(payload),
       onMessageUpdated: (msg) => useChatStore.getState().handleMessageUpdated(msg),
+      onMessageDeleted: (msg) => useChatStore.getState().handleMessageDeleted(msg),
     });
     return cleanup;
   }, [activeChannelId]);
@@ -79,7 +80,17 @@ export function useSocketSync(currentUser: User): void {
     if (!activeRoomId) return;
 
     const cleanup = joinDmChannel(activeRoomId, {
-      onJoined: (resp) => useDMStore.getState().setMessages(resp.messages),
+      onJoined: (resp) => {
+        useDMStore.getState().setMessages(resp.messages);
+        // Deliberately after setMessages, not from setActiveRoomId itself —
+        // that fires synchronously, before this join's messages (the ones
+        // markRoomRead needs to find the true latest seq in) have loaded,
+        // which risked marking the room read against a stale/empty message
+        // list (or briefly a *different* room's, left over from before this
+        // switch). This is the first point where `messages` is guaranteed
+        // to actually belong to `activeRoomId`.
+        useDMStore.getState().markRoomRead(activeRoomId);
+      },
       onShout: (msg) => useDMStore.getState().addMessage(msg),
       onError: () => {},
       onPresenceChange: () => {},
@@ -87,6 +98,7 @@ export function useSocketSync(currentUser: User): void {
         useDMStore.getState().setTyping(payload.is_typing ? payload.username : null),
       onReactionToggled: (payload) => useDMStore.getState().handleReactionToggled(payload),
       onMessageUpdated: (msg) => useDMStore.getState().handleMessageUpdated(msg),
+      onMessageDeleted: (msg) => useDMStore.getState().handleMessageDeleted(msg),
     });
     return cleanup;
   }, [activeRoomId]);
@@ -106,20 +118,6 @@ export function useSocketSync(currentUser: User): void {
     void useFriendStore.getState().refreshFriendships();
     void useServerStore.getState().resyncActiveServer();
   }, [reconnectedAt]);
-
-  // Ask for desktop notification permission once, up front — only if the
-  // user's preference already has desktop notifications on (see
-  // UserSettingsModal's Bildirimler tab, which also requests permission
-  // directly at the moment someone flips that toggle on).
-  useEffect(() => {
-    if (
-      getNotificationPreferences().desktop &&
-      typeof Notification !== 'undefined' &&
-      Notification.permission === 'default'
-    ) {
-      void Notification.requestPermission();
-    }
-  }, []);
 
   // Joins the personal notification topic once for the whole session — it
   // carries messages for every channel across every server the user is in
@@ -144,7 +142,7 @@ export function useSocketSync(currentUser: User): void {
         if (prefs.desktop && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           const notification = new Notification(
             `#${payload.channel_name} — ${payload.username ?? 'Bilinmeyen'}`,
-            { body: payload.content, tag: payload.channel_id }
+            { body: payload.content, tag: payload.channel_id, renotify: true }
           );
           notification.onclick = () => {
             window.focus();
@@ -164,6 +162,8 @@ export function useSocketSync(currentUser: User): void {
       onNewDmMessage: (payload) => {
         useDMStore.getState().handleNewDmMessage(payload);
 
+        if (payload.dm_room_id === useDMStore.getState().activeRoomId) return;
+
         const prefs = getNotificationPreferences();
         // mentionsOnly doesn't apply here — a DM is always "about you" by
         // definition, there's no @-mention concept in a 1:1 conversation.
@@ -175,6 +175,7 @@ export function useSocketSync(currentUser: User): void {
           const notification = new Notification(payload.username ?? 'Bilinmeyen', {
             body: payload.content,
             tag: payload.dm_room_id,
+            renotify: true,
           });
           notification.onclick = () => {
             window.focus();
