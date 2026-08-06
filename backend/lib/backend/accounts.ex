@@ -6,7 +6,9 @@ defmodule Backend.Accounts do
 
   import Ecto.Query, warn: false
 
-  alias Backend.Accounts.User
+  require Logger
+
+  alias Backend.Accounts.{User, UserNotifier}
   alias Backend.Friends.Friendship
   alias Backend.Repo
   alias Backend.Servers.{Server, ServerMember}
@@ -233,6 +235,77 @@ defmodule Backend.Accounts do
       nil -> {:error, :not_found}
       user -> user |> Ecto.Changeset.change(status: status) |> Repo.update()
     end
+  end
+
+  @doc """
+  Generates a fresh, cryptographically random email verification token for
+  `user`, persists it together with when it was generated (for a future
+  resend/expiry check) and returns the raw token as `{:ok, updated_user,
+  raw_token}` — the only place the plaintext token is ever available,
+  since `Backend.Accounts.UserNotifier` and the not-yet-built verify
+  endpoint only ever see the persisted (currently unhashed — see note
+  below) column.
+
+  Stored as plain text for now, not hashed — a deliberate, temporary
+  simplification for this step; hashing before persisting is a follow-up
+  once something actually consumes/verifies this column.
+  """
+  def generate_email_verification_token(%User{} = user) do
+    raw_token = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+
+    user
+    |> Ecto.Changeset.change(
+      email_verification_token: raw_token,
+      email_verification_sent_at: DateTime.truncate(DateTime.utc_now(), :second)
+    )
+    |> Repo.update()
+    |> case do
+      {:ok, updated_user} -> {:ok, updated_user, raw_token}
+      {:error, _changeset} = error -> error
+    end
+  end
+
+  @doc """
+  Generates a fresh verification token for `user` and emails it via
+  `Backend.Accounts.UserNotifier` — the single place both `POST
+  /api/users/register` and `POST /api/resend-verification` go through, so
+  they share one failure policy: token generation, mail delivery, *or* an
+  unexpected exception raised by either (e.g. the mail provider's HTTP
+  client) is logged and swallowed, never propagated. A transient mail
+  outage must not fail registration or crash the resend endpoint — it
+  should only delay the user actually receiving their link, not cost them
+  the account they just created.
+
+  Always returns `:ok`.
+  """
+  def send_verification_email(%User{} = user) do
+    case generate_email_verification_token(user) do
+      {:ok, updated_user, token} ->
+        case UserNotifier.deliver_verification_email(updated_user, token) do
+          {:ok, _} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning(
+              "doğrulama e-postası gönderilemedi user_id=#{user.id} reason=#{inspect(reason)}"
+            )
+        end
+
+      {:error, reason} ->
+        Logger.warning(
+          "doğrulama token'ı üretilemedi user_id=#{user.id} reason=#{inspect(reason)}"
+        )
+    end
+
+    :ok
+  rescue
+    exception ->
+      Logger.warning(
+        "doğrulama e-postası gönderimi sırasında beklenmeyen hata user_id=#{user.id}: " <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      :ok
   end
 
   @doc """

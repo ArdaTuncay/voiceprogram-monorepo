@@ -29,6 +29,30 @@ config :backend, BackendWeb.Endpoint,
 # instead of baking Mix.env() into the compiled build.
 config :backend, :environment, config_env()
 
+# Read once, all envs — the single source of truth for "where does the
+# frontend live", shared by prod's CORS/WebSocket origin restriction below
+# and by Backend.Accounts.UserNotifier's verification-email link (which
+# needs a real frontend URL in every env, not just prod). Accepts a
+# comma-separated list (e.g. a production domain plus Vercel preview
+# URLs) — see the prod block below for why.
+frontend_origins =
+  case System.get_env("FRONTEND_URL") do
+    nil -> nil
+    value -> value |> String.split(",") |> Enum.map(&String.trim/1)
+  end
+
+# UserNotifier links against the *first* configured origin when several
+# are set — a mailed link needs exactly one canonical destination, not a
+# list. Falls back to the Vite dev server's default port when unset
+# (dev/test only; prod's FRONTEND_URL is enforced as required below).
+frontend_url =
+  case frontend_origins do
+    [first | _] -> first
+    nil -> "http://localhost:5173"
+  end
+
+config :backend, :frontend_url, frontend_url
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -109,14 +133,8 @@ if config_env() == :prod do
   # backend (e.g. Render/Railway), unlike in dev where a proxy makes them
   # look same-origin. Both the CORS plug (for /api fetches) and Phoenix's
   # own WebSocket origin check need to know that origin explicitly, or
-  # they'll reject the frontend's requests. Accepts a comma-separated list
-  # (e.g. a production domain plus Vercel preview URLs).
-  frontend_origins =
-    case System.get_env("FRONTEND_URL") do
-      nil -> nil
-      value -> value |> String.split(",") |> Enum.map(&String.trim/1)
-    end
-
+  # they'll reject the frontend's requests. `frontend_origins` was already
+  # parsed above (shared with :frontend_url, used by UserNotifier).
   config :backend, :cors_origins, frontend_origins || "*"
 
   # check_origin must not silently fall back to `false` (which disables
@@ -215,6 +233,34 @@ if config_env() == :prod do
     ],
     check_origin: check_origin,
     secret_key_base: secret_key_base
+
+  # Transactional email (e-posta doğrulama vb. — bu adımda sadece Backend.Mailer
+  # bağlanıyor, henüz hiçbir yer çağırmıyor). Brevo API üzerinden gönderim
+  # yapılıyor; adapter bir HTTP client istiyor, config/prod.exs zaten
+  # `config :swoosh, api_client: Swoosh.ApiClient.Req` ile Req'i seçmiş ve
+  # `req` mix.exs'te zaten bağımlılık — yeni paket eklemeye gerek kalmadı.
+  # Her iki env var da zorunlu (DATABASE_URL/SECRET_KEY_BASE ile aynı desen):
+  # eksikse boot sırasında net bir mesajla raise edilir, aksi halde mailer
+  # sessizce yanlış/boş bir gönderen adresiyle ayakta kalabilirdi.
+  brevo_api_key =
+    System.get_env("BREVO_API_KEY") ||
+      raise """
+      environment variable BREVO_API_KEY is missing.
+      Brevo (Sendinblue) transactional email API anahtarınızı ayarlayın.
+      """
+
+  mailer_from_email =
+    System.get_env("MAILER_FROM_EMAIL") ||
+      raise """
+      environment variable MAILER_FROM_EMAIL is missing.
+      Örnek: MAILER_FROM_EMAIL=no-reply@example.com
+      """
+
+  config :backend, Backend.Mailer,
+    adapter: Swoosh.Adapters.Brevo,
+    api_key: brevo_api_key
+
+  config :backend, :mailer_from, mailer_from_email
 
   # ## SSL Support
   #

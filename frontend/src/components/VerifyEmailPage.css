@@ -1,0 +1,61 @@
+.verify-email-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-tertiary);
+  padding: var(--space-5);
+}
+
+.verify-email-card {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  padding: var(--space-8);
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+.verify-email-mascot {
+  width: 96px;
+  height: auto;
+  margin: 0 auto var(--space-4);
+  display: block;
+}
+
+.verify-email-card h1 {
+  color: var(--text-heading);
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 var(--space-2);
+}
+
+.verify-email-card .subtitle {
+  color: var(--text-muted);
+  font-size: 16px;
+  margin: 0 0 var(--space-6);
+}
+
+.verify-email-loading {
+  color: var(--text-muted);
+  font-size: 16px;
+  margin: 0;
+}
+
+.verify-email-submit {
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  color: var(--on-accent);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  padding: var(--space-3);
+  transition: background 0.15s;
+  width: 100%;
+}
+
+.verify-email-submit:hover {
+  background: var(--accent-hover);
+}

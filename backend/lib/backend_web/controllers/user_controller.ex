@@ -8,17 +8,25 @@ defmodule BackendWeb.UserController do
   plug BackendWeb.RateLimiterPlug,
        [scale: :timer.minutes(1), limit: 5] when action in [:login, :register]
 
+  @doc """
+  Registers a new user. No longer logs the caller in — see
+  `Backend.Accounts.User`'s `email_verified` column: an account starts
+  unverified, and `login/2` below refuses to issue a token until it is.
+  Sending the verification email (via `Accounts.send_verification_email/1`)
+  can never fail this request; a mail-provider outage still leaves the
+  account created, just without (yet) a delivered link — the user can
+  always ask for another one via `POST /api/resend-verification`.
+  """
   def register(conn, params) do
     case Accounts.create_user(params) do
       {:ok, user} ->
+        :ok = Accounts.send_verification_email(user)
+
         conn
         |> put_status(:created)
         |> json(%{
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          friend_request_privacy: user.friend_request_privacy,
-          token: Accounts.generate_user_token(user)
+          message: "Kayıt başarılı, lütfen e-postanızı kontrol edip hesabınızı doğrulayın",
+          email_verification_required: true
         })
 
       {:error, changeset} ->
@@ -30,6 +38,11 @@ defmodule BackendWeb.UserController do
 
   def login(conn, %{"email" => email, "password" => password}) do
     case Accounts.authenticate_user(email, password) do
+      {:ok, %{email_verified: false}} ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{error: "email_not_verified"})
+
       {:ok, user} ->
         json(conn, %{
           id: user.id,

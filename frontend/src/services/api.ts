@@ -10,7 +10,9 @@ import type {
   Friendship,
   DmRoom,
   LinkPreview,
+  MessageResponse,
   MessagesPage,
+  RegisterResponse,
   SearchFilters,
   SearchResultsPage,
   TurnCredentialsResponse,
@@ -44,6 +46,23 @@ async function post<T>(path: string, body: Record<string, string>): Promise<ApiR
         );
         return { error: messages.join(', ') };
       }
+      return { error: err.error ?? 'An error occurred' };
+    }
+    return { data: json as T };
+  } catch {
+    return { error: 'Network error — is the backend running on port 4000?' };
+  }
+}
+
+/** Unauthenticated GET — for the handful of routes outside the
+ * `:authenticated` pipeline that aren't a plain POST (see router.ex's first
+ * scope: healthz, register, login, and this one, verify-email). */
+async function get<T>(path: string): Promise<ApiResult<T>> {
+  try {
+    const resp = await fetch(`${API_BASE_URL}/api${path}`);
+    const json = await resp.json();
+    if (!resp.ok) {
+      const err = json as ApiError;
       return { error: err.error ?? 'An error occurred' };
     }
     return { data: json as T };
@@ -129,16 +148,23 @@ function authedPatch<T>(path: string, body: Record<string, string>): Promise<Api
   });
 }
 
-export async function registerUser(
+/** No longer logs the caller in — the account starts unverified, and
+ * `loginUser` below refuses to issue a token until `GET
+ * /api/verify-email/:token` (see VerifyEmailPage) flips it. */
+export function registerUser(
   username: string,
   email: string,
   password: string
-): Promise<ApiResult<AuthResponse>> {
-  const result = await post<AuthResponse>('/users/register', { username, email, password });
-  if (result.data) storeToken(result.data.token);
-  return result;
+): Promise<ApiResult<RegisterResponse>> {
+  return post<RegisterResponse>('/users/register', { username, email, password });
 }
 
+/** On an unverified account, `result.error` is the literal string
+ * `"email_not_verified"` (see BackendWeb.UserController.login/2) rather than
+ * a human-readable message — callers must check for that exact value
+ * themselves and show their own copy instead of displaying it raw (see
+ * PROJECT_ARCHITECTURE.md §7 item 12 for the same raw-reason-string pitfall
+ * elsewhere). */
 export async function loginUser(
   email: string,
   password: string
@@ -146,6 +172,23 @@ export async function loginUser(
   const result = await post<AuthResponse>('/users/login', { email, password });
   if (result.data) storeToken(result.data.token);
   return result;
+}
+
+/** GET /api/verify-email/:token — flips the account's email_verified flag.
+ * `result.error` is `"invalid_token"` or `"token_expired"` on failure (see
+ * BackendWeb.VerificationController.verify/2), also meant to be matched on
+ * rather than shown raw. */
+export function verifyEmail(token: string): Promise<ApiResult<MessageResponse>> {
+  return get<MessageResponse>(`/verify-email/${encodeURIComponent(token)}`);
+}
+
+/** POST /api/resend-verification — always resolves to the same generic
+ * success message regardless of whether the email is registered/already
+ * verified (see BackendWeb.VerificationController.resend/2's anti-enumeration
+ * note), so there's no special-casing needed here beyond the usual
+ * network-error path. */
+export function resendVerification(email: string): Promise<ApiResult<MessageResponse>> {
+  return post<MessageResponse>('/resend-verification', { email });
 }
 
 export function fetchServers(): Promise<ApiResult<Server[]>> {

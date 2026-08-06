@@ -5,7 +5,7 @@ defmodule Backend.Fixtures do
   the same helpers instead of hand-rolling users/servers/channels per file.
   """
 
-  alias Backend.{Accounts, Chat, DirectMessages, Friends, Servers}
+  alias Backend.{Accounts, Chat, DirectMessages, Friends, Repo, Servers}
 
   @doc "Creates a user with a unique username/email. Pass attrs to override."
   def user_fixture(attrs \\ %{}) do
@@ -20,6 +20,18 @@ defmodule Backend.Fixtures do
 
     {:ok, user} = Accounts.create_user(attrs)
     user
+  end
+
+  @doc """
+  Like `user_fixture/1`, but with `email_verified: true` — for tests
+  exercising endpoints (like login) that now refuse an unverified account.
+  Goes straight to `Repo.update` rather than register's real verify-email
+  flow, since that flow is exactly what dedicated verification tests cover.
+  """
+  def verified_user_fixture(attrs \\ %{}) do
+    user = user_fixture(attrs)
+    {:ok, verified} = user |> Ecto.Changeset.change(email_verified: true) |> Repo.update()
+    verified
   end
 
   @doc "Signs a valid auth token for the given user, for use in socket connect params."

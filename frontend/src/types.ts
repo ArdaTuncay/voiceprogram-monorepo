@@ -12,6 +12,20 @@ export interface AuthResponse extends User {
   token: string;
 }
 
+/** `POST /api/users/register`'ın artık döndürdüğü şey — bir token/User değil,
+ * çünkü hesap e-posta doğrulanana kadar giriş yapılamıyor (bkz.
+ * BackendWeb.UserController.register/2). */
+export interface RegisterResponse {
+  message: string;
+  email_verification_required: boolean;
+}
+
+/** `GET /api/verify-email/:token` (başarı) ve `POST /api/resend-verification`
+ * ortak dönüş şekli — ikisi de sadece kullanıcıya gösterilecek bir mesaj taşır. */
+export interface MessageResponse {
+  message: string;
+}
+
 export interface Reaction {
   emoji: string;
   count: number;

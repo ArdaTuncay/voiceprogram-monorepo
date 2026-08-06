@@ -5,7 +5,10 @@ import { forceLogout } from './services/session';
 import { useSessionStore } from './stores/useSessionStore';
 import Auth from './components/Auth';
 import Chat from './components/Chat';
+import VerifyEmailPage from './components/VerifyEmailPage';
 import './App.css';
+
+const VERIFY_EMAIL_PATH_PREFIX = '/verify-email/';
 
 // A stored user with no token (or vice versa) isn't a valid session.
 function loadSession(): User | null {
@@ -45,6 +48,15 @@ export default function App() {
     if (!forcedLogoutAt) return;
     setUser(null);
   }, [forcedLogoutAt]);
+
+  // No client router in this app (see the rest of this component) — a mail
+  // client opens this path directly, so it's matched off the raw URL,
+  // entirely isolated from the user-state branches below (nothing here
+  // reads/writes `user` or any store).
+  if (window.location.pathname.startsWith(VERIFY_EMAIL_PATH_PREFIX)) {
+    const token = window.location.pathname.slice(VERIFY_EMAIL_PATH_PREFIX.length);
+    return <VerifyEmailPage token={token} />;
+  }
 
   if (!user) {
     return <Auth onAuth={handleAuth} />;
