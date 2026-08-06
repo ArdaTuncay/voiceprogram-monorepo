@@ -468,6 +468,15 @@ export function useVoiceChannel(user: User) {
 
   async function callPeer(peerId: string) {
     const pc = await createPeerConnection(peerId);
+    await renegotiateWithPeer(peerId, pc);
+  }
+
+  /** Creates a fresh offer for an already-connected peer and sends it — the
+   * shared renegotiation step used both when screen sharing starts (one
+   * loop iteration per already-connected peer, see startScreenShare) and
+   * when answering a newcomer/rejoiner whose own offer had no video m-line
+   * to negotiate an active screen share against (see handleOffer below). */
+  async function renegotiateWithPeer(peerId: string, pc: RTCPeerConnection) {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     sendVoiceOffer({ from: user.id, to: peerId, sdp: offer });
@@ -541,6 +550,31 @@ export function useVoiceChannel(user: User) {
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     sendVoiceAnswer({ from: user.id, to: payload.from, sdp: answer });
+
+    // The offer we just answered only describes what payload.from is
+    // sending — if we're screen-sharing and their offer had no video
+    // m-line (e.g. they're a newcomer or a peer rejoining after leaving,
+    // neither of whom is sharing themselves), JSEP means our answer
+    // couldn't include our screen video either, even though
+    // createPeerConnection already added it as a local track on this
+    // connection. Detect that — the track's transceiver has no `mid`,
+    // i.e. it was never actually included in a completed offer/answer
+    // round — and follow up with a second, video-carrying offer: the same
+    // per-peer renegotiation startScreenShare does for peers already
+    // connected when sharing starts. Harmless/no-op once this connection's
+    // video *has* been negotiated (mid is then non-null), so a later
+    // renegotiation offer from the same peer (e.g. an ICE restart) won't
+    // re-trigger this. Any resulting offer/offer glare is resolved by this
+    // same handleOffer's polite/impolite tie-break above — that logic only
+    // looks at signalingState, not why we ended up with a pending local
+    // offer, so it already covers this path too.
+    const screenTrack = screenStreamRef.current?.getVideoTracks()[0];
+    if (screenTrack) {
+      const transceiver = pc.getTransceivers().find((t) => t.sender.track === screenTrack);
+      if (transceiver && transceiver.mid === null) {
+        void renegotiateWithPeer(payload.from, pc);
+      }
+    }
   }
 
   async function handleAnswer(payload: VoiceSignalPayload) {
@@ -610,11 +644,9 @@ export function useVoiceChannel(user: User) {
       videoTrack.onended = () => void stopScreenShare();
 
       await Promise.all(
-        Array.from(peersRef.current.entries()).map(async ([peerId, pc]) => {
+        Array.from(peersRef.current.entries()).map(([peerId, pc]) => {
           pc.addTrack(videoTrack, stream);
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          sendVoiceOffer({ from: user.id, to: peerId, sdp: offer });
+          return renegotiateWithPeer(peerId, pc);
         })
       );
     } catch (err) {

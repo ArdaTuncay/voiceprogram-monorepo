@@ -10,10 +10,11 @@ import type { User } from '../../types';
 import type { VoiceChannelCallbacks, VoiceChannelHandle } from '../../services/socket';
 import {
   deferred,
+  FakeMediaStream,
+  FakeMediaStreamTrack,
   FakeRTCPeerConnection,
   installWebrtcMocks,
   makeFakeStream,
-  type FakeMediaStream,
 } from './webrtcTestUtils';
 import { setMediaPreferences } from '../../services/mediaPreferences';
 
@@ -741,5 +742,135 @@ describe.sequential('useVoiceChannel — saved microphone device preference', ()
 
     expect(result.current.error).toBe('');
     expect(getUserMedia).toHaveBeenCalledWith({ audio: { deviceId: { exact: 'still-plugged-in' } } });
+  });
+});
+
+// Same .sequential/FakeRTCPeerConnection.instances constraint as every
+// other describe block above — see the first one's comment.
+describe.sequential('useVoiceChannel — screen share renegotiation for a peer whose own offer had no video', () => {
+  let getUserMedia: ReturnType<typeof vi.fn>;
+  let getDisplayMedia: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ({ getUserMedia, getDisplayMedia } = installWebrtcMocks());
+    getUserMedia.mockResolvedValue(makeFakeStream());
+  });
+
+  afterEach(() => {
+    cleanupActiveHooks();
+    vi.unstubAllGlobals();
+  });
+
+  it('answering a newcomer while already screen-sharing follows up with a second, video-carrying offer', async () => {
+    // We're alone in the room and start sharing before anyone else
+    // connects — the newcomer's own offer (below) is theirs alone, so it
+    // never has our video in it.
+    const channel = mockJoinChannel([]);
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    const screenStream = new FakeMediaStream([new FakeMediaStreamTrack('video')]);
+    getDisplayMedia.mockResolvedValue(screenStream);
+    await act(async () => {
+      await result.current.startScreenShare();
+    });
+    expect(result.current.isScreenSharing).toBe(true);
+
+    // A newcomer calls us: getOrCreatePeerConnection has nothing for them
+    // yet, so this goes through createPeerConnection, which — per the fix —
+    // adds our current screen track to the new connection regardless.
+    await act(async () => {
+      channel.callbacks.onOffer({
+        from: 'aaa-peer',
+        to: testUser.id,
+        sdp: { type: 'offer', sdp: 'newcomer-offer-audio-only' },
+      });
+      await flushMicrotasks();
+    });
+
+    const pc = FakeRTCPeerConnection.instances[0];
+    expect(pc).toBeDefined();
+
+    // Answered first, same as any normal incoming offer ...
+    expect(pc.createAnswer).toHaveBeenCalledTimes(1);
+    expect(sendVoiceAnswer).toHaveBeenCalledWith(expect.objectContaining({ to: 'aaa-peer' }));
+
+    // ... our screen video track was added to this connection (this is the
+    // sender the eventual real offer's video m-line would be built from) ...
+    const screenVideoTrack = screenStream.getVideoTracks()[0];
+    expect(pc.addTrack).toHaveBeenCalledWith(screenVideoTrack, expect.anything());
+
+    // ... and since the newcomer's own offer had no video m-line for it to
+    // be negotiated against (the fake's transceiver.mid, like the real
+    // thing here, is never set to non-null by an unnegotiated addTrack —
+    // see FakeRTCRtpTransceiver's doc comment), handleOffer follows up with
+    // a second offer for the same peer, carrying that track.
+    expect(pc.createOffer).toHaveBeenCalledTimes(1);
+    expect(sendVoiceOffer).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'aaa-peer', sdp: expect.objectContaining({ type: 'offer' }) })
+    );
+  });
+
+  it('a peer leaving and rejoining while we keep sharing gets the same follow-up renegotiation on their brand-new connection', async () => {
+    const channel = mockJoinChannel(['aaa-peer']);
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+    // We called them first, as the existing peer at join time.
+    await waitFor(() =>
+      expect(sendVoiceOffer).toHaveBeenCalledWith(expect.objectContaining({ to: 'aaa-peer' }))
+    );
+
+    const screenStream = new FakeMediaStream([new FakeMediaStreamTrack('video')]);
+    getDisplayMedia.mockResolvedValue(screenStream);
+    await act(async () => {
+      await result.current.startScreenShare();
+    });
+    expect(result.current.isScreenSharing).toBe(true);
+
+    const firstPc = FakeRTCPeerConnection.instances[0];
+
+    // aaa-peer leaves: presence drops them, which closePeer()s (closes and
+    // removes) their only connection. onPresenceChange first needs to see
+    // them present at all — knownPeerIdsRef starts empty — before a
+    // follow-up call without them registers as a departure.
+    await act(async () => {
+      channel.callbacks.onPresenceChange([{ user_id: 'aaa-peer', username: 'peer', online_at: 0 }]);
+    });
+    await act(async () => {
+      channel.callbacks.onPresenceChange([]);
+    });
+    expect(firstPc.close).toHaveBeenCalled();
+
+    // aaa-peer rejoins. From our side this is indistinguishable from a
+    // first-time newcomer: peersRef has nothing for them anymore, so this
+    // is a brand-new createPeerConnection — the exact path the original bug
+    // report described (leave, then rejoin, screen share never reappears).
+    await act(async () => {
+      channel.callbacks.onOffer({
+        from: 'aaa-peer',
+        to: testUser.id,
+        sdp: { type: 'offer', sdp: 'rejoin-offer-audio-only' },
+      });
+      await flushMicrotasks();
+    });
+
+    const rejoinPc = FakeRTCPeerConnection.instances[1];
+    expect(rejoinPc).toBeDefined();
+    expect(rejoinPc).not.toBe(firstPc);
+
+    const screenVideoTrack = screenStream.getVideoTracks()[0];
+    expect(rejoinPc.addTrack).toHaveBeenCalledWith(screenVideoTrack, expect.anything());
+    expect(sendVoiceAnswer).toHaveBeenCalledWith(expect.objectContaining({ to: 'aaa-peer' }));
+    expect(rejoinPc.createOffer).toHaveBeenCalledTimes(1);
+    expect(sendVoiceOffer).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'aaa-peer', sdp: expect.objectContaining({ type: 'offer' }) })
+    );
   });
 });

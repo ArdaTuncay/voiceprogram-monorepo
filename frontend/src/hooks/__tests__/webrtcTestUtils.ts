@@ -67,6 +67,32 @@ export function makeFakeStream(): FakeMediaStream {
  * `.concurrent`, or two tests' instances will interleave and `instances[0]`
  * will silently pick up the wrong connection.
  */
+/** Minimal fake of the two `RTCRtpSender`/`RTCRtpTransceiver` fields
+ * useVoiceChannel.ts actually reads: `sender.track` (stopScreenShare's
+ * getSenders().find(...), handleOffer's getTransceivers().find(...)) and
+ * `mid` (handleOffer's "was this transceiver ever actually negotiated"
+ * check). `mid` starts `null` and — deliberately, matching the rest of this
+ * file's fakes (see the `.sequential`/hand-set-signalingState note in
+ * useVoiceChannel.test.ts) — no fake method here ever sets it to something
+ * else; a test that needs to assert "already negotiated" behavior sets it
+ * by hand, the same way tests set `signalingState` by hand for glare. */
+export class FakeRTCRtpSender {
+  track: FakeMediaStreamTrack | null;
+
+  constructor(track: FakeMediaStreamTrack | null) {
+    this.track = track;
+  }
+}
+
+export class FakeRTCRtpTransceiver {
+  sender: FakeRTCRtpSender;
+  mid: string | null = null;
+
+  constructor(sender: FakeRTCRtpSender) {
+    this.sender = sender;
+  }
+}
+
 export class FakeRTCPeerConnection {
   static instances: FakeRTCPeerConnection[] = [];
 
@@ -76,7 +102,23 @@ export class FakeRTCPeerConnection {
   ontrack: ((event: RTCTrackEvent) => void) | null = null;
   onconnectionstatechange: (() => void) | null = null;
 
-  addTrack = vi.fn();
+  // Backs addTrack/removeTrack/getSenders/getTransceivers below — a real
+  // addTrack() creates a transceiver per track (reusing a compatible
+  // existing one instead, but nothing here needs that nuance), which is
+  // exactly what handleOffer's mid-based "was this negotiated yet" check
+  // needs a fake transceiver to exist for at all.
+  transceivers: FakeRTCRtpTransceiver[] = [];
+
+  addTrack = vi.fn((track: FakeMediaStreamTrack, ..._streams: FakeMediaStream[]) => {
+    const sender = new FakeRTCRtpSender(track);
+    this.transceivers.push(new FakeRTCRtpTransceiver(sender));
+    return sender;
+  });
+  removeTrack = vi.fn((sender: FakeRTCRtpSender) => {
+    sender.track = null;
+  });
+  getSenders = vi.fn((): FakeRTCRtpSender[] => this.transceivers.map((t) => t.sender));
+  getTransceivers = vi.fn((): FakeRTCRtpTransceiver[] => this.transceivers);
   createOffer = vi.fn(
     async (): Promise<RTCSessionDescriptionInit> => ({ type: 'offer', sdp: 'fake-offer-sdp' })
   );
