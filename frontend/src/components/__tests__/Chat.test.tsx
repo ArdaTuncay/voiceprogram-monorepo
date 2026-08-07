@@ -254,6 +254,7 @@ describe('Chat — ses bağlantısı sunucu değişince kesilmiyor, kanal gerçe
       servers: [serverA, serverB],
       activeServerId: serverA.id,
       channels: [voiceChannelA],
+      channelsServerId: serverA.id,
     });
     const { rerender } = render(<Chat user={testUser} onLogout={vi.fn()} />);
 
@@ -266,10 +267,15 @@ describe('Chat — ses bağlantısı sunucu değişince kesilmiyor, kanal gerçe
     rerender(<Chat user={testUser} onLogout={vi.fn()} />);
 
     // Switching to server B replaces `channels` wholesale with server B's
-    // list — vc-a is no longer in it, but we're not viewing server A
+    // list (channelsServerId caught up too, as if its fetch already
+    // resolved) — vc-a is no longer in it, but we're not viewing server A
     // anymore either, which is exactly what the activeServerId ===
     // voiceRoomServerId guard is for.
-    useServerStore.setState({ activeServerId: serverB.id, channels: [textChannelB] });
+    useServerStore.setState({
+      activeServerId: serverB.id,
+      channels: [textChannelB],
+      channelsServerId: serverB.id,
+    });
     rerender(<Chat user={testUser} onLogout={vi.fn()} />);
 
     expect(joinedVoiceMock.leave).not.toHaveBeenCalled();
@@ -280,6 +286,7 @@ describe('Chat — ses bağlantısı sunucu değişince kesilmiyor, kanal gerçe
       servers: [serverA],
       activeServerId: serverA.id,
       channels: [voiceChannelA],
+      channelsServerId: serverA.id,
     });
     const { rerender } = render(<Chat user={testUser} onLogout={vi.fn()} />);
 
@@ -289,12 +296,57 @@ describe('Chat — ses bağlantısı sunucu değişince kesilmiyor, kanal gerçe
     vi.mocked(useVoiceChannel).mockReturnValue(joinedVoiceMock);
     rerender(<Chat user={testUser} onLogout={vi.fn()} />);
 
-    // Still viewing server A, but the voice channel itself is gone from its
-    // list now (deleted) — activeServerId is unchanged.
+    // Still viewing server A, channels genuinely reloaded for server A
+    // (channelsServerId unchanged), but the voice channel itself is gone
+    // from that fresh list now (deleted).
     useServerStore.setState({ channels: [] });
     rerender(<Chat user={testUser} onLogout={vi.fn()} />);
 
     expect(joinedVoiceMock.leave).toHaveBeenCalled();
+  });
+
+  it('returning to the voice room\'s own server while channelsServerId hasn\'t caught up yet (fetch still in flight) does not hang up the call', () => {
+    useServerStore.setState({
+      servers: [serverA, serverB],
+      activeServerId: serverA.id,
+      channels: [voiceChannelA],
+      channelsServerId: serverA.id,
+    });
+    const { rerender } = render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    fireEvent.click(screen.getByText('ses-a'));
+
+    const joinedVoiceMock = makeVoiceMock({ activeRoomId: voiceChannelA.id });
+    vi.mocked(useVoiceChannel).mockReturnValue(joinedVoiceMock);
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    // Navigate to server B, its fetch has already resolved.
+    useServerStore.setState({
+      activeServerId: serverB.id,
+      channels: [textChannelB],
+      channelsServerId: serverB.id,
+    });
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+    expect(joinedVoiceMock.leave).not.toHaveBeenCalled();
+
+    // Navigate BACK to server A — activeServerId flips synchronously (as
+    // setActiveServerId does for real), but channelsServerId/channels
+    // haven't caught up yet (loadChannelsForActiveServer's fetch for A is
+    // still in flight) — this is the exact race window the bug report
+    // described: activeServerId === voiceRoomServerId is now true, but
+    // channels still (wrongly) looks like it doesn't contain the room.
+    useServerStore.setState({ activeServerId: serverA.id });
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    expect(joinedVoiceMock.leave).not.toHaveBeenCalled();
+
+    // Once the real fetch for A resolves (channels + channelsServerId both
+    // catch up together, as loadChannelsForActiveServer's single `set`
+    // call does), the room is correctly found again and nothing changes.
+    useServerStore.setState({ channels: [voiceChannelA], channelsServerId: serverA.id });
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    expect(joinedVoiceMock.leave).not.toHaveBeenCalled();
   });
 });
 

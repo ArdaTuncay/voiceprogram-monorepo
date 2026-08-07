@@ -102,6 +102,7 @@ export default function Chat({ user, onLogout }: Props) {
   const servers = useServerStore((s) => s.servers);
   const activeServerId = useServerStore((s) => s.activeServerId);
   const channels = useServerStore((s) => s.channels);
+  const channelsServerId = useServerStore((s) => s.channelsServerId);
   const activeChannelId = useServerStore((s) => s.activeChannelId);
   const unreadChannelIds = useServerStore((s) => s.unreadChannelIds);
   const channelError = useServerStore((s) => s.channelError);
@@ -278,21 +279,27 @@ export default function Chat({ user, onLogout }: Props) {
   // If the voice room the user is currently in gets removed from the active
   // server's channel list (deleted, or the server itself got deleted/left),
   // tear down the connection instead of leaving it silently dangling. Gated
-  // on actually viewing the room's own server (activeServerId ===
-  // voiceRoomServerId): `channels` gets replaced wholesale by a DIFFERENT
-  // server's list (or emptied entirely) on every server switch / Arkadaşlar
-  // navigation — without this guard, that alone made voice.activeRoomId
-  // "disappear" from `channels` and incorrectly hung up the call just from
-  // navigating away, not from the channel actually being deleted.
+  // on BOTH activeServerId === voiceRoomServerId (actually viewing the
+  // room's own server — without this, `channels` getting replaced by a
+  // DIFFERENT server's list on every server switch alone hung up the call)
+  // AND channelsServerId === activeServerId (channels has actually finished
+  // loading for the server we're now viewing). The second check matters on
+  // its own too: switching back to the voice room's own server sets
+  // activeServerId synchronously, but `channels` isn't touched at all until
+  // loadChannelsForActiveServer()'s fetch resolves — during that window
+  // `channels` is still the *previous* server's list (or `[]`), so without
+  // this the room's own channel briefly, wrongly, looks "gone" and this
+  // effect hung up the call before the real list ever arrived.
   useEffect(() => {
     if (
       voice.activeRoomId &&
       activeServerId === voiceRoomServerId &&
+      channelsServerId === activeServerId &&
       !channels.some((c) => c.id === voice.activeRoomId)
     ) {
       voiceLeaveRef.current();
     }
-  }, [channels, voice.activeRoomId, activeServerId, voiceRoomServerId]);
+  }, [channels, channelsServerId, voice.activeRoomId, activeServerId, voiceRoomServerId]);
 
   // If the Phoenix socket dropped and came back (a brief network blip, the
   // laptop sleeping, etc.) while we were in a voice room, rejoin it from

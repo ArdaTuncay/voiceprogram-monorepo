@@ -59,6 +59,18 @@ interface ServerStoreState {
   servers: Server[];
   activeServerId: string | null;
   channels: Channel[];
+  /** Which server `channels` actually belongs to right now — `null` until
+   * the first successful `loadChannelsForActiveServer()` response. Lags
+   * behind `activeServerId` while a fetch for a newly-selected server is
+   * still in flight (see setActiveServerId → loadChannelsForActiveServer):
+   * `channels` isn't touched at all during that window, so it silently
+   * keeps whatever it held before (the previous server's list, or `[]`) —
+   * without this, anything gating on "does channels reflect the *current*
+   * server" (see Chat.tsx's voice-safety effect, which used to hang up an
+   * active call just from navigating back to its own server while this
+   * fetch was still pending) has no way to tell "channels is genuinely
+   * empty for this server" apart from "channels just hasn't loaded yet". */
+  channelsServerId: string | null;
   activeChannelId: string | null;
   unreadChannelIds: Set<string>;
   /** Servers (other than the one currently open) with an unread message
@@ -131,6 +143,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
   servers: [],
   activeServerId: null,
   channels: [],
+  channelsServerId: null,
   activeChannelId: null,
   unreadChannelIds: new Set(),
   unreadServerIds: new Set(),
@@ -186,7 +199,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     // the user had long since left it.
     useDMStore.getState().setActiveRoomId(null);
     if (!serverId) {
-      set({ channels: [], activeChannelId: null });
+      set({ channels: [], channelsServerId: null, activeChannelId: null });
       return;
     }
     get().loadChannelsForActiveServer();
@@ -199,6 +212,10 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     const { data, error } = await fetchServerChannels(serverId);
     // The user may have switched servers again while this was in flight —
     // don't clobber the (now current) channel list with a stale response.
+    // (Also what keeps channelsServerId race-safe below: only a call whose
+    // captured serverId still matches the *current* activeServerId ever
+    // gets to stamp it, regardless of the order multiple in-flight fetches
+    // actually resolve in.)
     if (get().activeServerId !== serverId) return;
 
     if (error || !data) {
@@ -222,7 +239,12 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
           ? currentActiveChannelId
           : (data.find((c) => c.type === 'text')?.id ?? null);
 
-    set({ channels: data, activeChannelId: nextActiveChannelId, pendingChannelId: null });
+    set({
+      channels: data,
+      channelsServerId: serverId,
+      activeChannelId: nextActiveChannelId,
+      pendingChannelId: null,
+    });
   },
 
   // Silently re-syncs the active server's channel list and member statuses
@@ -376,6 +398,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
         servers: state.servers.filter((s) => s.id !== serverId),
         activeServerId: state.activeServerId === serverId ? null : state.activeServerId,
         channels: state.activeServerId === serverId ? [] : state.channels,
+        channelsServerId: state.activeServerId === serverId ? null : state.channelsServerId,
         activeChannelId: state.activeServerId === serverId ? null : state.activeChannelId,
         unreadServerIds: nextUnreadServerIds,
       };
@@ -387,6 +410,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
       servers: [],
       activeServerId: null,
       channels: [],
+      channelsServerId: null,
       activeChannelId: null,
       unreadChannelIds: new Set(),
       unreadServerIds: new Set(),

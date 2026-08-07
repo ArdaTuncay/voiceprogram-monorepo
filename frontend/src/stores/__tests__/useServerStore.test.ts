@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useServerStore } from '../useServerStore';
 import { useDMStore } from '../useDMStore';
-import type { Channel } from '../../types';
+import { fetchServerChannels } from '../../services/api';
+import type { Channel, Server } from '../../types';
 
 vi.mock('../../services/api', () => ({
   fetchServers: vi.fn().mockResolvedValue({ data: [] }),
@@ -13,6 +14,10 @@ vi.mock('../../services/api', () => ({
   updateChannelPositions: vi.fn(),
   leaveServer: vi.fn(),
 }));
+
+function flushMicrotasks(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 describe('useServerStore.setActiveServerId — DM aktif oda resetleme', () => {
   beforeEach(() => {
@@ -95,6 +100,54 @@ describe('useServerStore.handleVoicePresenceUpdated', () => {
     useServerStore.getState().handleVoicePresenceUpdated({ channel_id: 'vc-1', users: [] });
 
     expect(useServerStore.getState().channels[0].voice_occupants).toEqual([]);
+  });
+});
+
+describe('useServerStore.loadChannelsForActiveServer — yarış koruması ve channelsServerId', () => {
+  beforeEach(() => {
+    useServerStore.getState().reset();
+    vi.clearAllMocks();
+  });
+
+  it('sunucu A yüklenirken B\'ye geçilip B\'nin fetch\'i önce dönerse, sonradan gelen A yanıtı state\'i bozmaz', async () => {
+    const serverA: Server = { id: 'server-a', name: 'A', owner_id: 'owner-1' };
+    const serverB: Server = { id: 'server-b', name: 'B', owner_id: 'owner-1' };
+    const channelA: Channel = { id: 'ch-a', name: 'a-genel', type: 'text', parent_id: null, position: 0 };
+    const channelB: Channel = { id: 'ch-b', name: 'b-genel', type: 'text', parent_id: null, position: 0 };
+
+    useServerStore.setState({ servers: [serverA, serverB] });
+
+    let resolveA!: (value: { data: Channel[]; error?: string }) => void;
+    let resolveB!: (value: { data: Channel[]; error?: string }) => void;
+    const pendingA = new Promise<{ data: Channel[]; error?: string }>((res) => {
+      resolveA = res;
+    });
+    const pendingB = new Promise<{ data: Channel[]; error?: string }>((res) => {
+      resolveB = res;
+    });
+
+    vi.mocked(fetchServerChannels).mockReturnValueOnce(pendingA).mockReturnValueOnce(pendingB);
+
+    // Selecting A kicks off fetch A (captures serverId = 'server-a'
+    // internally); switching to B before it resolves kicks off fetch B —
+    // activeServerId is now 'server-b' while fetch A is still pending.
+    useServerStore.getState().setActiveServerId(serverA.id);
+    useServerStore.getState().setActiveServerId(serverB.id);
+
+    // B resolves first.
+    resolveB({ data: [channelB] });
+    await flushMicrotasks();
+
+    expect(useServerStore.getState().channels).toEqual([channelB]);
+    expect(useServerStore.getState().channelsServerId).toBe(serverB.id);
+
+    // The stale A response arrives after — must NOT overwrite B's (still
+    // current) channels/channelsServerId.
+    resolveA({ data: [channelA] });
+    await flushMicrotasks();
+
+    expect(useServerStore.getState().channels).toEqual([channelB]);
+    expect(useServerStore.getState().channelsServerId).toBe(serverB.id);
   });
 });
 
