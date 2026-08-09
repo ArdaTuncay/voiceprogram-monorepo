@@ -52,3 +52,45 @@
   top: -2px;
   right: -2px;
 }
+
+.voice-orbit-volume-anchor {
+  display: inline-flex;
+}
+
+.voice-orbit-volume-trigger {
+  all: unset;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+/* position: fixed with a JS-computed anchor, not CSS position: absolute —
+   same overflow-clipping reasoning as ServerAddMenu's own dropdown (see its
+   doc comment): a voice-orbit-participant ancestor sitting inside a
+   scrollable sidebar could clip an absolutely-positioned popover the same
+   way. */
+.voice-orbit-volume-popover {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: max-content;
+  min-width: 140px;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: var(--space-2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.voice-orbit-volume-slider {
+  flex: 1;
+}
+
+.voice-orbit-volume-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 2.5em;
+  text-align: right;
+}

@@ -70,6 +70,7 @@ function buildOrbitParticipants(
   participants: PresenceUser[],
   speakingUserIds: Set<string>,
   reconnectingPeerIds: Set<string>,
+  peerVolumes: Record<string, number>,
 ): OrbitParticipant[] {
   return participants.map((p) => {
     const speaking = speakingUserIds.has(p.user_id);
@@ -94,6 +95,7 @@ function buildOrbitParticipants(
       isDeafened: !!p.deafened,
       isReconnecting: reconnecting,
       statusText,
+      volume: peerVolumes[p.user_id] ?? 1,
     };
   });
 }
@@ -432,7 +434,16 @@ export default function Chat({ user, onLogout }: Props) {
 
           {isActive && (
             <div className="voice-participant-list">
-              <VoiceOrbit participants={buildOrbitParticipants(voice.participants, voice.speakingUserIds, voice.reconnectingPeerIds)} />
+              <VoiceOrbit
+                participants={buildOrbitParticipants(
+                  voice.participants,
+                  voice.speakingUserIds,
+                  voice.reconnectingPeerIds,
+                  voice.peerVolumes,
+                )}
+                currentUserId={user.id}
+                onVolumeChange={voice.setPeerVolume}
+              />
 
               <VoiceStatusBar
                 isMuted={voice.isMuted}
@@ -767,7 +778,15 @@ export default function Chat({ user, onLogout }: Props) {
                         muted={peerId === user.id}
                         className="screen-share-video"
                         ref={(el) => {
-                          if (el) el.srcObject = stream;
+                          // Only reassign srcObject when the stream actually
+                          // changed — an inline ref callback like this one
+                          // re-runs on every re-render (new function
+                          // identity each time), so without this check the
+                          // video would restart/flicker on every unrelated
+                          // re-render even though it's the same stream.
+                          if (el && el.srcObject !== stream) {
+                            el.srcObject = stream;
+                          }
                         }}
                       />
                       <button
@@ -978,6 +997,10 @@ export default function Chat({ user, onLogout }: Props) {
           ref={(el) => {
             if (!el) return;
             el.srcObject = stream;
+            // Per-peer playback volume (see VoiceOrbit's popover, which
+            // calls voice.setPeerVolume) — defaults to full volume when
+            // this peer has no saved preference.
+            el.volume = voice.peerVolumes[peerId] ?? 1;
             // Applies the saved output-device preference (see
             // UserSettingsModal's Ses & Görüntü tab) — a no-op string
             // ("") means "system default", and setSinkId isn't available

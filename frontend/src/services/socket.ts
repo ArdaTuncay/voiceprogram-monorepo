@@ -14,6 +14,7 @@ import type {
   MemberLeftNotification,
   MemberStatusChangedNotification,
   VoicePresenceUpdatedNotification,
+  ScreenShareStoppedNotification,
   Friendship,
   FriendRemovedNotification,
   NewDmMessageNotification,
@@ -240,6 +241,7 @@ export interface VoiceChannelCallbacks {
   onOffer: (payload: VoiceSignalPayload) => void;
   onAnswer: (payload: VoiceSignalPayload) => void;
   onIceCandidate: (payload: VoiceSignalPayload) => void;
+  onScreenShareStopped: (payload: ScreenShareStoppedNotification) => void;
 }
 
 export interface VoiceChannelHandle {
@@ -276,6 +278,9 @@ export function joinVoiceChannel(
   room.on('video_offer', (payload: VoiceSignalPayload) => callbacks.onOffer(payload));
   room.on('video_answer', (payload: VoiceSignalPayload) => callbacks.onAnswer(payload));
   room.on('ice_candidate', (payload: VoiceSignalPayload) => callbacks.onIceCandidate(payload));
+  room.on('screen_share_stopped', (payload: ScreenShareStoppedNotification) =>
+    callbacks.onScreenShareStopped(payload)
+  );
 
   return new Promise((resolve, reject) => {
     room
@@ -310,6 +315,17 @@ export function sendIceCandidate(payload: VoiceSignalPayload): void {
 /** Broadcasts the current user's mute/deafen state to the rest of the voice room. */
 export function sendVoiceStatus(muted: boolean, deafened: boolean): void {
   voiceChannel?.push('update_status', { muted, deafened });
+}
+
+/**
+ * Explicit "I just stopped screen sharing" signal, sent alongside (not
+ * instead of) the WebRTC renegotiation stopScreenShare() already does —
+ * see useVoiceChannel.ts's stopScreenShare and ScreenShareStoppedNotification's
+ * own doc comment for why the renegotiation alone isn't relied on to clear a
+ * peer's screenShares tile.
+ */
+export function sendScreenShareStopped(): void {
+  voiceChannel?.push('screen_share_stopped', {});
 }
 
 /**

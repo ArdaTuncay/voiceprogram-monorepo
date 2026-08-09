@@ -233,6 +233,42 @@ defmodule BackendWeb.VoiceChannelTest do
     assert Task.await(third_task, 2000) == 1
   end
 
+  test "screen_share_stopped is relayed to other peers in the room, tagged with the sender's user_id",
+       %{owner: owner, member: member, channel: channel} do
+    owner_id = owner.id
+    parent = self()
+
+    {:ok, owner_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+    {:ok, _, owner_socket} = subscribe_and_join(owner_socket, "voice:#{channel.id}", %{})
+
+    # Same reasoning as spawn_peer/collect_relayed_signals below: sockets
+    # connected directly in this test process would all share this test
+    # process as their transport_pid, so broadcast_from! would exclude them
+    # too — a separate Task is the only way to see what a *different* peer
+    # actually receives.
+    task =
+      Task.async(fn ->
+        {:ok, socket} =
+          connect(BackendWeb.UserSocket, %{"token" => token_for(member)}, test_process: parent)
+
+        {:ok, _, _socket} = subscribe_and_join(socket, "voice:#{channel.id}", %{})
+        send(parent, :peer_ready)
+
+        receive do
+          %Phoenix.Socket.Message{event: "screen_share_stopped", payload: payload} -> payload
+        after
+          1000 -> :timeout
+        end
+      end)
+
+    Sandbox.allow(Backend.Repo, self(), task.pid)
+    assert_receive :peer_ready, 1000
+
+    push(owner_socket, "screen_share_stopped", %{})
+
+    assert %{user_id: ^owner_id} = Task.await(task, 2000)
+  end
+
   # Joins `topic` as `user` from a *separate* process, so `broadcast_from!`
   # (which excludes only the sender's own transport_pid) actually has
   # someone else to deliver to — every socket connected directly in the

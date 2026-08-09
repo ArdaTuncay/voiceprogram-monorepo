@@ -210,6 +210,15 @@ export interface Invite {
   uses_count: number;
 }
 
+/** Explicit "I just stopped screen sharing" signal (BackendWeb.VoiceChannel's
+ * "screen_share_stopped") — independent of the WebRTC renegotiation that
+ * also happens alongside it, so a peer's screenShares tile clears reliably
+ * even if that peer's remote video track's 'ended' event never fires (see
+ * useVoiceChannel.ts's stopScreenShare/onScreenShareStopped). */
+export interface ScreenShareStoppedNotification {
+  user_id: string;
+}
+
 export interface VoiceSignalPayload {
   from: string;
   to: string;

@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, cleanup, fireEvent } from '@testing-library/react';
 import VoiceOrbit from '../VoiceOrbit';
 import type { OrbitParticipant } from '../VoiceOrbit';
 
@@ -109,5 +109,77 @@ describe('VoiceOrbit', () => {
     expect(container.querySelector('.voice-participant-status.reconnecting')?.textContent).toContain(
       'Yeniden Bağlanıyor...',
     );
+  });
+});
+
+describe('VoiceOrbit — kişi bazlı ses seviyesi popover', () => {
+  it('onVolumeChange verilmeden avatarlar tıklanabilir/interaktif render edilmez (mevcut davranış korunur)', () => {
+    const { container } = render(<VoiceOrbit participants={makeParticipants(2)} currentUserId="user-0" />);
+    expect(container.querySelectorAll('.voice-orbit-volume-trigger')).toHaveLength(0);
+  });
+
+  it('kendi avatarına tıklayınca popover açılmaz', () => {
+    const onVolumeChange = vi.fn();
+    const { container } = render(
+      <VoiceOrbit participants={makeParticipants(2)} currentUserId="user-0" onVolumeChange={onVolumeChange} />,
+    );
+
+    // user-0 is the current user — no volume trigger wraps its avatar at all.
+    expect(container.querySelectorAll('.voice-orbit-volume-trigger')).toHaveLength(1);
+    expect(container.querySelector('.voice-orbit-volume-popover')).toBeNull();
+  });
+
+  it("bir peer'ın avatarına tıklayınca ses seviyesi popover'ı açılır", () => {
+    const onVolumeChange = vi.fn();
+    const { container } = render(
+      <VoiceOrbit participants={makeParticipants(2)} currentUserId="user-0" onVolumeChange={onVolumeChange} />,
+    );
+
+    const trigger = container.querySelector<HTMLElement>('.voice-orbit-volume-trigger')!;
+    fireEvent.click(trigger);
+
+    expect(container.querySelector('.voice-orbit-volume-popover')).not.toBeNull();
+    expect(container.querySelector('input[type="range"]')).not.toBeNull();
+  });
+
+  it('slider hareket ettirilince onVolumeChange (peerId, 0-1 değer) ile çağrılır', () => {
+    const onVolumeChange = vi.fn();
+    const { container } = render(
+      <VoiceOrbit participants={makeParticipants(2)} currentUserId="user-0" onVolumeChange={onVolumeChange} />,
+    );
+
+    fireEvent.click(container.querySelector<HTMLElement>('.voice-orbit-volume-trigger')!);
+    const slider = container.querySelector<HTMLInputElement>('input[type="range"]')!;
+    fireEvent.change(slider, { target: { value: '40' } });
+
+    expect(onVolumeChange).toHaveBeenCalledWith('user-1', 0.4);
+  });
+
+  it('ESC ile popover kapanır', () => {
+    const onVolumeChange = vi.fn();
+    const { container } = render(
+      <VoiceOrbit participants={makeParticipants(2)} currentUserId="user-0" onVolumeChange={onVolumeChange} />,
+    );
+
+    fireEvent.click(container.querySelector<HTMLElement>('.voice-orbit-volume-trigger')!);
+    expect(container.querySelector('.voice-orbit-volume-popover')).not.toBeNull();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(container.querySelector('.voice-orbit-volume-popover')).toBeNull();
+  });
+
+  it("dışarı tıklayınca popover kapanır", () => {
+    const onVolumeChange = vi.fn();
+    const { container } = render(
+      <VoiceOrbit participants={makeParticipants(2)} currentUserId="user-0" onVolumeChange={onVolumeChange} />,
+    );
+
+    fireEvent.click(container.querySelector<HTMLElement>('.voice-orbit-volume-trigger')!);
+    expect(container.querySelector('.voice-orbit-volume-popover')).not.toBeNull();
+
+    fireEvent.mouseDown(document.body);
+
+    expect(container.querySelector('.voice-orbit-volume-popover')).toBeNull();
   });
 });

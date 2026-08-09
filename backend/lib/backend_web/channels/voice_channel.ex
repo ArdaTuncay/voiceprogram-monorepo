@@ -160,6 +160,21 @@ defmodule BackendWeb.VoiceChannel do
     {:noreply, socket}
   end
 
+  # Explicit "I just stopped screen sharing" signal — independent of the
+  # WebRTC renegotiation useVoiceChannel.ts's stopScreenShare also does
+  # alongside this (removeTrack + a fresh offer). That renegotiation alone
+  # isn't relied on to tell every peer: whether a remote track's 'ended'
+  # event actually fires when a transceiver is renegotiated down to
+  # recvonly/inactive is a real-browser-timing detail this channel can't
+  # see from here, so this gives clients a second, unambiguous way to know
+  # to clear that peer's tile. Same shape as ChatChannel's "typing": no
+  # persistence, just a relay.
+  @impl true
+  def handle_in("screen_share_stopped", _payload, socket) do
+    broadcast_from!(socket, "screen_share_stopped", %{user_id: socket.assigns.user_id})
+    {:noreply, socket}
+  end
+
   # SDP offers, SDP answers and ICE candidates are opaque to the server —
   # it only relays them to every other peer in the room. Each payload
   # carries "to"/"from" user ids so the intended recipient can pick it out;

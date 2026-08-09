@@ -25,6 +25,7 @@ vi.mock('../../services/socket', () => ({
   sendIceCandidate: vi.fn(),
   sendVoiceStatus: vi.fn(),
   sendIceDiagnostics: vi.fn(),
+  sendScreenShareStopped: vi.fn(),
 }));
 
 // getIceServers() (useVoiceChannel.ts) calls this directly — mocked here
@@ -40,8 +41,10 @@ import {
   sendVoiceAnswer,
   sendVoiceOffer,
   sendIceDiagnostics,
+  sendScreenShareStopped,
 } from '../../services/socket';
 import { fetchTurnCredentials } from '../../services/api';
+import { getPeerVolumes, setPeerVolumes } from '../../services/voicePreferences';
 
 // Chosen so the lexicographic relationship to 'me' (this file's shared test
 // user) is unambiguous at a glance, not incidental: 'aaa-peer' < 'me' <
@@ -872,5 +875,175 @@ describe.sequential('useVoiceChannel — screen share renegotiation for a peer w
     expect(sendVoiceOffer).toHaveBeenCalledWith(
       expect.objectContaining({ to: 'aaa-peer', sdp: expect.objectContaining({ type: 'offer' }) })
     );
+  });
+});
+
+describe('useVoiceChannel — per-peer volume preference (voicePreferences.ts-backed)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    cleanupActiveHooks();
+    localStorage.clear();
+  });
+
+  it('initializes peerVolumes from a previously saved localStorage value', () => {
+    setPeerVolumes({ 'peer-1': 0.3 });
+
+    const { result } = renderVoiceChannel(testUser);
+
+    expect(result.current.peerVolumes).toEqual({ 'peer-1': 0.3 });
+  });
+
+  it('defaults to an empty peerVolumes map when nothing is saved', () => {
+    const { result } = renderVoiceChannel(testUser);
+
+    expect(result.current.peerVolumes).toEqual({});
+  });
+
+  it("setPeerVolume updates peerVolumes state and persists it to localStorage", () => {
+    const { result } = renderVoiceChannel(testUser);
+
+    act(() => {
+      result.current.setPeerVolume('peer-2', 0.6);
+    });
+
+    expect(result.current.peerVolumes).toEqual({ 'peer-2': 0.6 });
+    expect(getPeerVolumes()).toEqual({ 'peer-2': 0.6 });
+  });
+
+  it('setPeerVolume for a second peer leaves the first peer\'s saved volume untouched', () => {
+    const { result } = renderVoiceChannel(testUser);
+
+    act(() => {
+      result.current.setPeerVolume('peer-1', 0.2);
+    });
+    act(() => {
+      result.current.setPeerVolume('peer-2', 0.8);
+    });
+
+    expect(result.current.peerVolumes).toEqual({ 'peer-1': 0.2, 'peer-2': 0.8 });
+  });
+});
+
+// Same .sequential/FakeRTCPeerConnection.instances constraint as every
+// other describe block above — see the first one's comment.
+describe.sequential('useVoiceChannel — screenShares update behavior', () => {
+  let getUserMedia: ReturnType<typeof vi.fn>;
+  let getDisplayMedia: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ({ getUserMedia, getDisplayMedia } = installWebrtcMocks());
+    getUserMedia.mockResolvedValue(makeFakeStream());
+  });
+
+  afterEach(() => {
+    cleanupActiveHooks();
+    vi.unstubAllGlobals();
+  });
+
+  it('firing pc.ontrack twice with the same MediaStream for a video track does not produce a new screenShares object', async () => {
+    mockJoinChannel(['aaa-peer']);
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    const pc = FakeRTCPeerConnection.instances[0];
+    const videoTrack = new FakeMediaStreamTrack('video');
+    const stream = new FakeMediaStream([videoTrack]);
+
+    act(() => {
+      pc.ontrack?.({ track: videoTrack, streams: [stream] } as unknown as RTCTrackEvent);
+    });
+
+    const firstScreenShares = result.current.screenShares;
+    expect(firstScreenShares['aaa-peer']).toBe(stream);
+
+    act(() => {
+      pc.ontrack?.({ track: videoTrack, streams: [stream] } as unknown as RTCTrackEvent);
+    });
+
+    expect(result.current.screenShares).toBe(firstScreenShares);
+  });
+
+  it('firing pc.ontrack with a genuinely different MediaStream still updates screenShares', async () => {
+    mockJoinChannel(['aaa-peer']);
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    const pc = FakeRTCPeerConnection.instances[0];
+    const firstTrack = new FakeMediaStreamTrack('video');
+    const firstStream = new FakeMediaStream([firstTrack]);
+    act(() => {
+      pc.ontrack?.({ track: firstTrack, streams: [firstStream] } as unknown as RTCTrackEvent);
+    });
+
+    const secondTrack = new FakeMediaStreamTrack('video');
+    const secondStream = new FakeMediaStream([secondTrack]);
+    act(() => {
+      pc.ontrack?.({ track: secondTrack, streams: [secondStream] } as unknown as RTCTrackEvent);
+    });
+
+    expect(result.current.screenShares['aaa-peer']).toBe(secondStream);
+  });
+
+  it('stopScreenShare sends an explicit screen_share_stopped signal after renegotiating with every peer', async () => {
+    mockJoinChannel(['aaa-peer']);
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    const screenStream = new FakeMediaStream([new FakeMediaStreamTrack('video')]);
+    getDisplayMedia.mockResolvedValue(screenStream);
+    await act(async () => {
+      await result.current.startScreenShare();
+    });
+    expect(sendScreenShareStopped).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.stopScreenShare();
+    });
+
+    expect(sendScreenShareStopped).toHaveBeenCalledTimes(1);
+  });
+
+  it('an incoming onScreenShareStopped signal clears that peer\'s screenShares entry, idempotently', async () => {
+    const channel = mockJoinChannel(['aaa-peer']);
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    const pc = FakeRTCPeerConnection.instances[0];
+    const videoTrack = new FakeMediaStreamTrack('video');
+    const stream = new FakeMediaStream([videoTrack]);
+    act(() => {
+      pc.ontrack?.({ track: videoTrack, streams: [stream] } as unknown as RTCTrackEvent);
+    });
+    expect(result.current.screenShares['aaa-peer']).toBe(stream);
+
+    act(() => {
+      channel.callbacks.onScreenShareStopped({ user_id: 'aaa-peer' });
+    });
+
+    expect(result.current.screenShares['aaa-peer']).toBeUndefined();
+
+    // Idempotent: a second signal for a peer already cleared (e.g. the
+    // fallback track.onended also firing) is a no-op, not an error.
+    act(() => {
+      channel.callbacks.onScreenShareStopped({ user_id: 'aaa-peer' });
+    });
+
+    expect(result.current.screenShares['aaa-peer']).toBeUndefined();
   });
 });
