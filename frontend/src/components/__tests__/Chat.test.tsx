@@ -49,6 +49,7 @@ function makeVoiceMock(overrides: Partial<ReturnType<typeof useVoiceChannel>> = 
     speakingUserIds: new Set(),
     remoteStreams: {},
     screenShares: {},
+    peerVolumes: {},
     isScreenSharing: false,
     isMuted: false,
     isDeafened: false,
@@ -60,6 +61,7 @@ function makeVoiceMock(overrides: Partial<ReturnType<typeof useVoiceChannel>> = 
     stopScreenShare: vi.fn(),
     toggleMute: vi.fn(),
     toggleDeafen: vi.fn(),
+    setPeerVolume: vi.fn(),
     ...overrides,
   };
 }
@@ -240,6 +242,32 @@ describe('Chat — ekran paylaşımı büyütme overlay', () => {
     rerender(<Chat user={testUser} onLogout={vi.fn()} />);
 
     expect(screen.queryByTitle('Kapat')).toBeNull();
+  });
+});
+
+describe('Chat — kişi bazlı ses seviyesi', () => {
+  const peerId = 'u2';
+  const fakeStream = {} as MediaStream;
+
+  it("audio elementine peerVolumes'taki kayıtlı değer volume olarak uygulanır", () => {
+    vi.mocked(useVoiceChannel).mockReturnValue(
+      makeVoiceMock({ remoteStreams: { [peerId]: fakeStream }, peerVolumes: { [peerId]: 0.4 } }),
+    );
+    const { container } = render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    const audio = container.querySelector('audio');
+    expect(audio).not.toBeNull();
+    expect(audio!.volume).toBeCloseTo(0.4);
+  });
+
+  it("peerVolumes'ta bu peer için kayıt yoksa varsayılan ses seviyesi (1) uygulanır", () => {
+    vi.mocked(useVoiceChannel).mockReturnValue(
+      makeVoiceMock({ remoteStreams: { [peerId]: fakeStream }, peerVolumes: {} }),
+    );
+    const { container } = render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    const audio = container.querySelector('audio');
+    expect(audio!.volume).toBe(1);
   });
 });
 

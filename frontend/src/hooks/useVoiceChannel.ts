@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import type { User, PresenceUser, VoiceSignalPayload } from '../types';
+import type { User, PresenceUser, VoiceSignalPayload, ScreenShareStoppedNotification } from '../types';
 import {
   joinVoiceChannel,
   sendVoiceOffer,
@@ -7,9 +7,11 @@ import {
   sendIceCandidate,
   sendVoiceStatus,
   sendIceDiagnostics,
+  sendScreenShareStopped,
 } from '../services/socket';
 import { fetchTurnCredentials } from '../services/api';
 import { resolveMicConstraint } from '../services/mediaPreferences';
+import { getPeerVolumes, updatePeerVolume } from '../services/voicePreferences';
 
 // How long to wait on a VITE_TURN_API_URL fetch before giving up on it and
 // falling back to the static/STUN-only config — a hung managed-TURN-provider
@@ -239,6 +241,11 @@ export function useVoiceChannel(user: User) {
   const [speakingUserIds, setSpeakingUserIds] = useState<Set<string>>(new Set());
   const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
   const [screenShares, setScreenShares] = useState<Record<string, MediaStream>>({});
+  // Per-peer playback volume (0-1), independent of any room — persisted in
+  // localStorage (see voicePreferences.ts) rather than reset per join/leave,
+  // same "outlives the current voice session" treatment as the mic/speaker
+  // device preferences in mediaPreferences.ts.
+  const [peerVolumes, setPeerVolumes] = useState<Record<string, number>>(() => getPeerVolumes());
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
@@ -276,6 +283,10 @@ export function useVoiceChannel(user: User) {
     (window as unknown as { __e2eVoicePeers?: Map<string, RTCPeerConnection> }).__e2eVoicePeers =
       peersRef.current;
   }
+
+  const setPeerVolume = useCallback((peerId: string, volume: number) => {
+    setPeerVolumes(updatePeerVolume(peerId, volume));
+  }, []);
 
   const setSpeaking = useCallback((id: string, speaking: boolean) => {
     setSpeakingUserIds((prev) => {
@@ -403,7 +414,15 @@ export function useVoiceChannel(user: User) {
     pc.ontrack = (event) => {
       const stream = event.streams[0];
       if (event.track.kind === 'video') {
-        setScreenShares((prev) => ({ ...prev, [peerId]: stream }));
+        // ontrack can re-fire for a peer whose screen-share stream hasn't
+        // actually changed (e.g. an unrelated renegotiation on the same
+        // connection, like an ICE restart) — skip the update entirely when
+        // it's the same MediaStream reference already in state, rather than
+        // spreading into a brand-new Record every time. A new Record
+        // reference here would re-render every screen-share tile (not just
+        // this peer's), which combined with Chat.tsx's video ref re-running
+        // on every render was the actual cause of the visible flicker.
+        setScreenShares((prev) => (prev[peerId] === stream ? prev : { ...prev, [peerId]: stream }));
         event.track.onended = () => {
           setScreenShares((prev) => {
             if (!(peerId in prev)) return prev;
@@ -585,6 +604,22 @@ export function useVoiceChannel(user: User) {
     flushPendingCandidates(payload.from, pc);
   }
 
+  /** Explicit counterpart to the screen-share video track's own `onended`
+   * handler above (see `pc.ontrack`) — clears the same `screenShares` entry
+   * the same idempotent way, but triggered by a dedicated signal
+   * (`sendScreenShareStopped`) rather than depending on that remote track
+   * actually firing `'ended'` at the right moment, which real-browser
+   * renegotiation timing doesn't reliably guarantee. Both handlers staying
+   * live is deliberate — whichever fires first wins, the other is a no-op. */
+  function handleScreenShareStopped(payload: ScreenShareStoppedNotification) {
+    setScreenShares((prev) => {
+      if (!(payload.user_id in prev)) return prev;
+      const next = { ...prev };
+      delete next[payload.user_id];
+      return next;
+    });
+  }
+
   async function handleIceCandidate(payload: VoiceSignalPayload) {
     if (payload.to !== user.id || !payload.candidate) return;
     const pc = peersRef.current.get(payload.from);
@@ -614,6 +649,12 @@ export function useVoiceChannel(user: User) {
         sendVoiceOffer({ from: user.id, to: peerId, sdp: offer });
       })
     );
+
+    // Explicit, renegotiation-independent signal that every peer's
+    // screenShares should drop us — see handleScreenShareStopped/
+    // ScreenShareStoppedNotification's own doc comments for why the
+    // removeTrack renegotiation above isn't relied on alone.
+    sendScreenShareStopped();
 
     stream.getTracks().forEach((track) => track.stop());
     screenStreamRef.current = null;
@@ -776,6 +817,7 @@ export function useVoiceChannel(user: User) {
         onOffer: (payload) => void handleOffer(payload),
         onAnswer: (payload) => void handleAnswer(payload),
         onIceCandidate: (payload) => void handleIceCandidate(payload),
+        onScreenShareStopped: (payload) => handleScreenShareStopped(payload),
       });
 
       if (joinGenerationRef.current !== myGeneration) {
@@ -820,6 +862,7 @@ export function useVoiceChannel(user: User) {
     speakingUserIds,
     remoteStreams,
     screenShares,
+    peerVolumes,
     isScreenSharing,
     isMuted,
     isDeafened,
@@ -831,5 +874,6 @@ export function useVoiceChannel(user: User) {
     stopScreenShare,
     toggleMute,
     toggleDeafen,
+    setPeerVolume,
   };
 }
