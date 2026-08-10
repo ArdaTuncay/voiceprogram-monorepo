@@ -1,0 +1,26 @@
+{
+  "name": "zircle-desktop",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Zircle - sesli+yazılı sohbet uygulaması (masaüstü istemcisi)",
+  "author": "Arda Tuncay",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.zircle.desktop",
+    "productName": "Zircle",
+    "win": {
+      "target": "nsis"
+    },
+    "extraResources": [
+      { "from": "../frontend/dist-electron", "to": "dist-electron" }
+    ]
+  }
+}

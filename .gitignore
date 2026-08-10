@@ -8,7 +8,12 @@ node_modules/
 /backend/doc/
 /backend/.fetch
 /frontend/dist/
+/frontend/dist-electron/
 dist-ssr/
+
+# ── Desktop (Electron) ──
+/desktop/node_modules/
+/desktop/dist/
 
 # ── Elixir/Erlang ──
 *.beam
