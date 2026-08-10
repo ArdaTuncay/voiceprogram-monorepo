@@ -26,6 +26,7 @@ let mainWindow = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
+    title: 'Zircle',
     width: 1280,
     height: 800,
   });
