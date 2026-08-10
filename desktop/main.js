@@ -18,7 +18,9 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-const DIST_DIR = path.join(__dirname, '../frontend/dist-electron');
+const DIST_DIR = app.isPackaged
+  ? path.join(process.resourcesPath, 'dist-electron')
+  : path.join(__dirname, '../frontend/dist-electron');
 
 function createWindow() {
   const win = new BrowserWindow({

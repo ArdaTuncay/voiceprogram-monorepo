@@ -16,6 +16,9 @@
     "productName": "Zircle",
     "win": {
       "target": "nsis"
-    }
+    },
+    "extraResources": [
+      { "from": "../frontend/dist-electron", "to": "dist-electron" }
+    ]
   }
 }
