@@ -1,0 +1,21 @@
+{
+  "name": "zircle-desktop",
+  "private": true,
+  "version": "0.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.zircle.desktop",
+    "productName": "Zircle",
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
