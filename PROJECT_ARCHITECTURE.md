@@ -2,7 +2,7 @@
 
 > **Bu doküman kimin için?** Bu projeyi (Zircle — Discord benzeri topluluk/sesli sohbet uygulaması) daha önce hiç görmemiş bir yapay zekanın, tek bir soru sormadan sistemi %100 anlayıp kaldığı yerden devam edebilmesi için yazılmıştır. Her iddia gerçek kod dosyaları okunarak doğrulanmıştır; dosya yolları ve satır numaraları birebir verilmiştir. Kodun kendisiyle çelişen hiçbir varsayım yapılmamıştır — aksine, aşağıda birkaç yerde **popüler ama bu projede geçerli olmayan varsayımlar açıkça düzeltilmiştir** (örn. "Tailwind CSS kullanılıyor" — kullanılmıyor; "Ecto.Multi ile race condition çözülüyor" — çözülmüyor, farklı bir desen kullanılıyor).
 >
-> **Repo kökü:** `C:\Users\ardat\Desktop\VoiceProgram`
+> **Repo kökü:** proje kök dizini (monorepo)
 > **Backend:** `backend/` — Elixir 1.x / Phoenix 1.8.9 / Bandit 1.12.0 / Ecto 3.14 / PostgreSQL
 > **Frontend:** `frontend/` — React 19 / TypeScript / Vite / Zustand / Phoenix JS client (düz CSS, Tailwind YOK)
 
