@@ -1,7 +1,15 @@
 import { create } from 'zustand';
-import type { ChatMessage, PresenceUser, ReactionToggledPayload, SearchFilters } from '../types';
+import type {
+  ChatMessage,
+  PresenceUser,
+  PushFailure,
+  ReactionToggledPayload,
+  SearchFilters,
+} from '../types';
 import { shout, sendTyping, toggleReaction, editMessage, deleteMessage } from '../services/socket';
 import { fetchChannelMessages, searchChannelMessages, uploadFile } from '../services/api';
+import { chatActionErrorMessage } from '../utils/errorMessages';
+import type { ChatAction } from '../utils/errorMessages';
 import { useServerStore } from './useServerStore';
 
 // Safety cap on how many older pages jumpToMessage will fetch while hunting
@@ -28,6 +36,33 @@ function clearTypingTimer() {
   }
 }
 
+/**
+ * The `onFailure` callback for one chat push (see services/socket.ts) —
+ * PROJECT_ARCHITECTURE.md §7 item 11. Turns the failure into `actionError`
+ * feedback, but only while the user is still in the channel the push was
+ * made from: Phoenix doesn't cancel a pending push's timeout when its
+ * channel is left, so without this check a failure from the previous
+ * channel could surface — and restore a draft — in the next one.
+ * `onRejected` runs for a definite rejection only, never for a timeout: a
+ * timed-out push may still be delivered (see PushFailure), and acting on it
+ * as if it failed could end in the same message being sent twice.
+ */
+function chatPushFailureHandler(action: ChatAction, onRejected?: () => void) {
+  const channelId = useServerStore.getState().activeChannelId;
+  return (failure: PushFailure) => {
+    if (useServerStore.getState().activeChannelId !== channelId) return;
+    useChatStore.setState({ actionError: chatActionErrorMessage(action, failure) });
+    if (failure.kind === 'error') onRejected?.();
+  };
+}
+
+/** Puts a rejected message's text back in the composer — composer state
+ * only, never the message list — unless the user has already started typing
+ * something new, which then wins. */
+function restoreDraftIfEmpty(content: string) {
+  if (content && !useChatStore.getState().draft) useChatStore.setState({ draft: content });
+}
+
 interface ChatStoreState {
   messages: ChatMessage[];
   draft: string;
@@ -35,6 +70,11 @@ interface ChatStoreState {
   typingUsers: Record<string, string | null>;
   isUploading: boolean;
   uploadError: string;
+  /** Feedback for a send/edit/delete/reaction push the server rejected (or,
+   * for a send, never confirmed) — shown in the same slot under the
+   * composer as uploadError. Feedback only: `messages` is still changed by
+   * the server's broadcasts alone, never by a push's reply. */
+  actionError: string;
   isDraggingFile: boolean;
   lightboxUrl: string | null;
   /** Whether an older page of history is known to exist for the active
@@ -121,6 +161,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   typingUsers: {},
   isUploading: false,
   uploadError: '',
+  actionError: '',
   isDraggingFile: false,
   lightboxUrl: null,
   hasMoreMessages: true,
@@ -166,6 +207,9 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       messages: [],
       onlineUsers: [],
       typingUsers: {},
+      // About an action in the channel being left, so it doesn't follow the
+      // user into the next one.
+      actionError: '',
       hasMoreMessages: true,
       isLoadingOlderMessages: false,
       searchQuery: '',
@@ -263,8 +307,15 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     const content = get().draft.trim();
     if (!content) return;
     get().stopTypingNow();
-    shout(content);
-    set({ draft: '' });
+    // Cleared before the push, not after, so a failure callback that runs
+    // early can't have its restored draft wiped by this.
+    set({ draft: '', actionError: '' });
+    shout(
+      content,
+      undefined,
+      undefined,
+      chatPushFailureHandler('send', () => restoreDraftIfEmpty(content))
+    );
   },
 
   handleFileSelected: async (file) => {
@@ -289,8 +340,16 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     }
 
     get().stopTypingNow();
-    shout(get().draft.trim(), data.file_url, data.file_type);
-    set({ draft: '' });
+    const content = get().draft.trim();
+    set({ draft: '', actionError: '' });
+    // Only the text can be put back on a rejection — the attachment would
+    // have to be picked (and uploaded) again.
+    shout(
+      content,
+      data.file_url,
+      data.file_type,
+      chatPushFailureHandler('send', () => restoreDraftIfEmpty(content))
+    );
   },
 
   setDraggingFile: (value) => set({ isDraggingFile: value }),
@@ -299,7 +358,8 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   // No optimistic local update — same "single source of truth via the
   // broadcast" convention the rest of the store follows (see sendMessage),
   // since the server echoes "reaction_toggled" back to the sender too.
-  toggleReaction: (messageId, emoji) => toggleReaction(messageId, emoji),
+  toggleReaction: (messageId, emoji) =>
+    toggleReaction(messageId, emoji, chatPushFailureHandler('react')),
 
   handleReactionToggled: (payload) =>
     set((state) => ({
@@ -308,14 +368,15 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       ),
     })),
 
-  editMessage: (messageId, content) => editMessage(messageId, content),
+  editMessage: (messageId, content) =>
+    editMessage(messageId, content, chatPushFailureHandler('edit')),
 
   handleMessageUpdated: (msg) =>
     set((state) => ({
       messages: state.messages.map((m) => (m.id === msg.id ? msg : m)),
     })),
 
-  deleteMessage: (messageId) => deleteMessage(messageId),
+  deleteMessage: (messageId) => deleteMessage(messageId, chatPushFailureHandler('delete')),
 
   handleMessageDeleted: (msg) =>
     set((state) => ({
@@ -332,6 +393,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       typingUsers: {},
       isUploading: false,
       uploadError: '',
+      actionError: '',
       isDraggingFile: false,
       lightboxUrl: null,
       hasMoreMessages: true,

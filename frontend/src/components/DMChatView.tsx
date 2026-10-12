@@ -25,6 +25,7 @@ export default function DMChatView({ currentUserId }: Props) {
   const typingUsername = useDMStore((s) => s.typingUsername);
   const isUploading = useDMStore((s) => s.isUploading);
   const uploadError = useDMStore((s) => s.uploadError);
+  const actionError = useDMStore((s) => s.actionError);
   const isDraggingFile = useDMStore((s) => s.isDraggingFile);
   const lightboxUrl = useDMStore((s) => s.lightboxUrl);
   const hasMoreMessages = useDMStore((s) => s.hasMoreMessages);
@@ -295,6 +296,7 @@ export default function DMChatView({ currentUserId }: Props) {
 
         {isUploading && <div className="upload-status">Yükleniyor…</div>}
         {uploadError && <div className="upload-status upload-status-error"><AlertTriangle size={14} /> {uploadError}</div>}
+        {actionError && <div className="upload-status upload-status-error" role="alert"><AlertTriangle size={14} /> {actionError}</div>}
 
         {typingUsername && (
           <div className="typing-indicator">

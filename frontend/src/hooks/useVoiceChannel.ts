@@ -12,6 +12,11 @@ import {
 import { fetchTurnCredentials } from '../services/api';
 import { resolveMicConstraint } from '../services/mediaPreferences';
 import { getPeerVolumes, updatePeerVolume } from '../services/voicePreferences';
+import {
+  microphoneErrorMessage,
+  screenShareErrorMessage,
+  voiceJoinErrorMessage,
+} from '../utils/errorMessages';
 
 // How long to wait on a VITE_TURN_API_URL fetch before giving up on it and
 // falling back to the static/STUN-only config — a hung managed-TURN-provider
@@ -691,7 +696,9 @@ export function useVoiceChannel(user: User) {
         })
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ekran paylaşımı başlatılamadı');
+      // null for a cancelled picker — nothing went wrong, nothing to show.
+      const message = screenShareErrorMessage(err);
+      if (message) setError(message);
     }
   }
 
@@ -772,6 +779,10 @@ export function useVoiceChannel(user: User) {
     setError('');
 
     let stream: MediaStream | null = null;
+    // Which step a failure in the catch below came from — the microphone or
+    // the server's join — since each gets its own wording (both used to
+    // surface as the raw error message: PROJECT_ARCHITECTURE.md §7 #12).
+    let failedStep: 'microphone' | 'join' = 'microphone';
 
     try {
       const micConstraint = await resolveMicConstraint();
@@ -805,6 +816,7 @@ export function useVoiceChannel(user: User) {
       localStreamRef.current = stream;
       watchSpeaking(user.id, stream);
 
+      failedStep = 'join';
       const { leave: leaveChannel, existingPeerIds } = await joinVoiceChannel(roomId, {
         onPresenceChange: (users) => {
           setParticipants(users);
@@ -850,7 +862,7 @@ export function useVoiceChannel(user: User) {
       stopWatchingSpeaking(user.id);
 
       if (joinGenerationRef.current === myGeneration) {
-        setError(err instanceof Error ? err.message : 'Mikrofona erişilemedi');
+        setError(failedStep === 'join' ? voiceJoinErrorMessage(err) : microphoneErrorMessage(err));
         localStreamRef.current = null;
       }
     }

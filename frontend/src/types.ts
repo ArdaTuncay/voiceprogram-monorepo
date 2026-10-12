@@ -84,6 +84,15 @@ export interface ReactionToggledPayload {
   reactions: Reaction[];
 }
 
+/** Why a fire-and-forget channel push (see services/socket.ts) didn't
+ * succeed: either the server replied `{:error, ...}` — `reason` is its
+ * reason string ("rate_limited", "blocked", "not authorized", ...), absent
+ * for a changeset `errors` reply — or no reply arrived before Phoenix's push
+ * timeout. A timed-out push isn't necessarily lost: one made while the
+ * socket was down stays in the channel's push buffer and is still sent on
+ * rejoin, even after its timeout has fired. */
+export type PushFailure = { kind: 'error'; reason?: string } | { kind: 'timeout' };
+
 export interface UploadResult {
   file_url: string;
   file_type: string;

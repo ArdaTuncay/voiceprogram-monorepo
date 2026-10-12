@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { User } from '../types';
 import { registerUser, loginUser, resendVerification } from '../services/api';
+import { AUTH_REQUEST_ERRORS } from '../utils/errorMessages';
 import mascot from '../assets/zircle-mascot.svg';
 import './Auth.css';
 
@@ -31,28 +32,36 @@ export default function Auth({ onAuth }: Props) {
     setError('');
     setLoading(true);
 
-    if (mode === 'register') {
-      const result = await registerUser(username.trim(), email.trim(), password);
-      setLoading(false);
+    // services/api.ts's post() already never rejects and never stays pending
+    // past its own timeout — this is a second, local guarantee on top of
+    // that: whatever happens below, the button is never left stuck on
+    // "Please wait…" with no error shown (PROJECT_ARCHITECTURE.md §7 #15).
+    try {
+      if (mode === 'register') {
+        const result = await registerUser(username.trim(), email.trim(), password);
 
-      if (result.error) {
+        if (result.error) {
+          setError(result.error);
+        } else if (result.data) {
+          setPendingVerificationEmail(email.trim());
+        }
+        return;
+      }
+
+      const trimmedEmail = email.trim();
+      const result = await loginUser(trimmedEmail, password);
+
+      if (result.error === 'email_not_verified') {
+        setPendingVerificationEmail(trimmedEmail);
+      } else if (result.error) {
         setError(result.error);
       } else if (result.data) {
-        setPendingVerificationEmail(email.trim());
+        onAuth(result.data);
       }
-      return;
-    }
-
-    const trimmedEmail = email.trim();
-    const result = await loginUser(trimmedEmail, password);
-    setLoading(false);
-
-    if (result.error === 'email_not_verified') {
-      setPendingVerificationEmail(trimmedEmail);
-    } else if (result.error) {
-      setError(result.error);
-    } else if (result.data) {
-      onAuth(result.data);
+    } catch {
+      setError(AUTH_REQUEST_ERRORS.unexpected);
+    } finally {
+      setLoading(false);
     }
   }
 
