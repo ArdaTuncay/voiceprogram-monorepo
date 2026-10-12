@@ -119,3 +119,76 @@ export function chatActionErrorMessage(action: ChatAction, failure: PushFailure)
     'Lütfen tekrar deneyin.';
   return `${CHAT_ACTION_FAILED[action]} ${detail}`;
 }
+
+/** The reason services/socket.ts's joinVoiceChannel rejects with when the
+ * server never answered the join at all — alongside the `reason` strings
+ * BackendWeb.VoiceChannel's join/3 itself replies with. */
+export const VOICE_JOIN_TIMEOUT_REASON = 'timeout';
+
+const VOICE_JOIN_REASONS = new Map<string, string>([
+  [
+    'already_connected_elsewhere',
+    'Bu ses kanalına zaten başka bir sekmeden veya cihazdan bağlısınız. Önce oradan ayrılıp tekrar deneyin.',
+  ],
+  ['channel not found', 'Ses kanalı bulunamadı, silinmiş olabilir.'],
+  ['not authorized', 'Bu ses kanalına katılma yetkiniz yok.'],
+  [VOICE_JOIN_TIMEOUT_REASON, 'Ses kanalına bağlanılamadı, sunucu yanıt vermedi. Lütfen tekrar deneyin.'],
+]);
+
+/** A rejected voice join — joinVoiceChannel rejects with the reason as the
+ * Error's message — mapped to Turkish; never the raw reason. */
+export function voiceJoinErrorMessage(err: unknown): string {
+  const reason = err instanceof Error ? err.message : undefined;
+  return (
+    (reason !== undefined && VOICE_JOIN_REASONS.get(reason)) ||
+    'Ses kanalına katılınamadı. Lütfen tekrar deneyin.'
+  );
+}
+
+/** getUserMedia/getDisplayMedia reject with a DOMException whose `name`
+ * says what went wrong — the `message` is browser-specific English. */
+function mediaErrorName(err: unknown): string | undefined {
+  if (typeof err === 'object' && err !== null && 'name' in err && typeof err.name === 'string') {
+    return err.name;
+  }
+  return undefined;
+}
+
+const MICROPHONE_ERRORS = new Map<string, string>([
+  [
+    'NotAllowedError',
+    'Mikrofon izni verilmedi. Tarayıcı ayarlarından bu siteye mikrofon izni verip tekrar deneyin.',
+  ],
+  ['NotFoundError', 'Mikrofon bulunamadı. Bir mikrofonun bağlı olduğundan emin olun.'],
+  ['NotReadableError', 'Mikrofona erişilemedi, başka bir uygulama tarafından kullanılıyor olabilir.'],
+  [
+    'OverconstrainedError',
+    'Seçili mikrofon kullanılamıyor. Ayarlardan başka bir mikrofon seçip tekrar deneyin.',
+  ],
+]);
+
+/** A failed getUserMedia while joining a voice channel. */
+export function microphoneErrorMessage(err: unknown): string {
+  const name = mediaErrorName(err);
+  return (name !== undefined && MICROPHONE_ERRORS.get(name)) || 'Mikrofona erişilemedi. Lütfen tekrar deneyin.';
+}
+
+const SCREEN_SHARE_ERRORS = new Map<string, string>([
+  ['NotFoundError', 'Paylaşılabilecek bir ekran bulunamadı.'],
+  ['NotReadableError', 'Ekran şu anda yakalanamıyor, başka bir uygulama engelliyor olabilir.'],
+]);
+
+/**
+ * A failed screen share start, or `null` when there's nothing to report:
+ * NotAllowedError is what cancelling the browser's screen picker rejects
+ * with (and the desktop app's own picker too — see desktop/main.js), i.e.
+ * the user changing their mind. An OS-level screen-recording denial rejects
+ * with the same name, and the two can only be told apart by
+ * browser-specific message text — so both count as a cancel, rather than
+ * every cancel showing an error.
+ */
+export function screenShareErrorMessage(err: unknown): string | null {
+  const name = mediaErrorName(err);
+  if (name === 'NotAllowedError') return null;
+  return (name !== undefined && SCREEN_SHARE_ERRORS.get(name)) || 'Ekran paylaşımı başlatılamadı.';
+}

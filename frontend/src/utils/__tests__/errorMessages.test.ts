@@ -5,6 +5,10 @@ import {
   changesetErrorsMessage,
   chatActionErrorMessage,
   httpStatusErrorMessage,
+  microphoneErrorMessage,
+  screenShareErrorMessage,
+  VOICE_JOIN_TIMEOUT_REASON,
+  voiceJoinErrorMessage,
 } from '../errorMessages';
 
 describe('changesetErrorMessage — registration validations (Backend.Accounts.User)', () => {
@@ -127,5 +131,59 @@ describe('chatActionErrorMessage', () => {
     const message = chatActionErrorMessage('send', { kind: 'timeout' });
     expect(message).toContain('doğrulanamadı');
     expect(message).not.toContain('gönderilemedi');
+  });
+});
+
+describe('voiceJoinErrorMessage', () => {
+  it.each([
+    ['already_connected_elsewhere', 'başka bir sekmeden veya cihazdan'],
+    ['channel not found', 'Ses kanalı bulunamadı'],
+    ['not authorized', 'katılma yetkiniz yok'],
+    [VOICE_JOIN_TIMEOUT_REASON, 'sunucu yanıt vermedi'],
+  ])('maps "%s"', (reason, expected) => {
+    expect(voiceJoinErrorMessage(new Error(reason))).toContain(expected);
+  });
+
+  it('falls back to a generic message — never the raw text — for anything else', () => {
+    expect(voiceJoinErrorMessage(new Error('Failed to join voice channel'))).toBe(
+      'Ses kanalına katılınamadı. Lütfen tekrar deneyin.'
+    );
+    expect(voiceJoinErrorMessage('not even an Error')).toBe(
+      'Ses kanalına katılınamadı. Lütfen tekrar deneyin.'
+    );
+  });
+});
+
+describe('microphoneErrorMessage', () => {
+  it.each([
+    ['NotAllowedError', 'Mikrofon izni verilmedi'],
+    ['NotFoundError', 'Mikrofon bulunamadı'],
+    ['NotReadableError', 'başka bir uygulama tarafından kullanılıyor'],
+    ['OverconstrainedError', 'Seçili mikrofon kullanılamıyor'],
+  ])('maps a %s by its name, not its (browser-specific) message', (name, expected) => {
+    expect(microphoneErrorMessage(new DOMException('some English text', name))).toContain(expected);
+  });
+
+  it('falls back to a generic message — e.g. for a TypeError when mediaDevices is missing', () => {
+    expect(microphoneErrorMessage(new TypeError("Cannot read properties of undefined (reading 'getUserMedia')"))).toBe(
+      'Mikrofona erişilemedi. Lütfen tekrar deneyin.'
+    );
+  });
+});
+
+describe('screenShareErrorMessage', () => {
+  it('returns null (nothing to show) for a cancelled picker', () => {
+    expect(screenShareErrorMessage(new DOMException('Permission denied', 'NotAllowedError'))).toBeNull();
+  });
+
+  it.each([
+    ['NotFoundError', 'Paylaşılabilecek bir ekran bulunamadı'],
+    ['NotReadableError', 'yakalanamıyor'],
+  ])('maps a %s', (name, expected) => {
+    expect(screenShareErrorMessage(new DOMException('x', name))).toContain(expected);
+  });
+
+  it('falls back to a generic message for anything else', () => {
+    expect(screenShareErrorMessage(new Error('renegotiation blew up'))).toBe('Ekran paylaşımı başlatılamadı.');
   });
 });

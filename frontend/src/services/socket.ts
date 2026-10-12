@@ -25,6 +25,7 @@ import { getStoredToken } from './tokenStorage';
 import { resolveSocketUrl } from '../config';
 import { useConnectionStore } from '../stores/useConnectionStore';
 import { forceLogout } from './session';
+import { VOICE_JOIN_TIMEOUT_REASON } from '../utils/errorMessages';
 
 let socket: Socket | null = null;
 let textChannel: Channel | null = null;
@@ -332,9 +333,35 @@ export function joinVoiceChannel(
   );
 
   return new Promise((resolve, reject) => {
+    // Only the *first* join attempt's outcome is acted on here. Phoenix
+    // re-sends this same join push on every automatic rejoin (after a
+    // network drop, a server restart, ...), and these hooks fire again for
+    // each of those replies — a rejoin that errors or times out must be left
+    // to Phoenix's own retry loop, never turned into a leave() that would
+    // quietly end a call that was already up.
+    let settled = false;
+
+    // A join that failed outright is left explicitly: otherwise Phoenix keeps
+    // retrying it in the background (it schedules a rejoin after an error or
+    // timeout reply), and once a retry got through — e.g. after the user's
+    // other session left the room — the server would have this user in the
+    // room while this client never set up any audio for it: a ghost
+    // participant (PROJECT_ARCHITECTURE.md §7 #12).
+    const failInitialJoin = (reason: string) => {
+      if (settled) return;
+      settled = true;
+      room.leave();
+      if (voiceChannel === room) voiceChannel = null;
+      // The raw reason, mapped to user-facing copy by the caller (see
+      // utils/errorMessages.ts's voiceJoinErrorMessage).
+      reject(new Error(reason));
+    };
+
     room
       .join()
       .receive('ok', (resp: { peers: string[] }) => {
+        if (settled) return;
+        settled = true;
         resolve({
           existingPeerIds: resp.peers,
           leave: () => {
@@ -344,8 +371,9 @@ export function joinVoiceChannel(
         });
       })
       .receive('error', (resp: { reason?: string }) => {
-        reject(new Error(resp.reason ?? 'Failed to join voice channel'));
-      });
+        failInitialJoin(resp.reason ?? 'Failed to join voice channel');
+      })
+      .receive('timeout', () => failInitialJoin(VOICE_JOIN_TIMEOUT_REASON));
   });
 }
 
