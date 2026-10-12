@@ -24,34 +24,89 @@ import { API_BASE_URL } from '../config';
 import { getStoredToken, storeToken } from './tokenStorage';
 import { forceLogout } from './session';
 import { disconnectSocket } from './socket';
+import {
+  AUTH_REQUEST_ERRORS,
+  changesetErrorsMessage,
+  httpStatusErrorMessage,
+} from '../utils/errorMessages';
 
 interface ApiResult<T> {
   data?: T;
   error?: string;
 }
 
+/** How long post() waits for a response before giving up — generous on
+ * purpose, since a backend on a sleeping free-tier instance can take tens
+ * of seconds to cold-start on the first request. */
+export const AUTH_REQUEST_TIMEOUT_MS = 30_000;
+
+class RequestTimeoutError extends Error {}
+
+/**
+ * Unauthenticated POST — register, login and resend-verification. Always
+ * resolves, never rejects, and never stays pending past
+ * AUTH_REQUEST_TIMEOUT_MS: `fetch` has no timeout of its own, so a request
+ * that never got a response (a stalled connection, a cold-starting backend)
+ * used to leave Auth's submit button stuck on "Please wait…" with no error
+ * shown — PROJECT_ARCHITECTURE.md §7 item 15. The deadline is raced against
+ * the request rather than relying on the abort alone: aborting is what
+ * actually cancels the request, but the race is what guarantees this
+ * function's own await settles on time no matter how the request behaves.
+ */
 async function post<T>(path: string, body: Record<string, string>): Promise<ApiResult<T>> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new RequestTimeoutError());
+    }, AUTH_REQUEST_TIMEOUT_MS);
+  });
+
   try {
-    const resp = await fetch(`${API_BASE_URL}/api${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const json = await resp.json();
-    if (!resp.ok) {
-      const err = json as ApiError;
-      if (err.errors) {
-        const messages = Object.entries(err.errors).flatMap(([field, errs]) =>
-          errs.map((e) => `${field} ${e}`)
-        );
-        return { error: messages.join(', ') };
-      }
-      return { error: err.error ?? 'An error occurred' };
-    }
-    return { data: json as T };
-  } catch {
-    return { error: 'Network error — is the backend running on port 4000?' };
+    return await Promise.race([sendPost<T>(path, body, controller.signal), deadline]);
+  } catch (err) {
+    return {
+      error:
+        err instanceof RequestTimeoutError ? AUTH_REQUEST_ERRORS.timeout : AUTH_REQUEST_ERRORS.network,
+    };
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+async function sendPost<T>(
+  path: string,
+  body: Record<string, string>,
+  signal: AbortSignal
+): Promise<ApiResult<T>> {
+  const resp = await fetch(`${API_BASE_URL}/api${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  let json: unknown;
+  try {
+    json = await resp.json();
+  } catch {
+    // Not the JSON every backend response carries (see
+    // httpStatusErrorMessage for what does this) — used to fall through to
+    // the outer catch and be reported as a network error instead.
+    return { error: httpStatusErrorMessage(resp.status) };
+  }
+
+  if (!resp.ok) {
+    // Checked before reading the body's own `error`: RateLimiterPlug's 429
+    // body is English, and this is the one status where the user's next
+    // step (wait, then retry) is known without reading it.
+    if (resp.status === 429) return { error: AUTH_REQUEST_ERRORS.rateLimited };
+    const err = json as ApiError;
+    if (err.errors) return { error: changesetErrorsMessage(err.errors) };
+    return { error: err.error ?? 'An error occurred' };
+  }
+  return { data: json as T };
 }
 
 /** Unauthenticated GET — for the handful of routes outside the

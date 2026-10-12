@@ -1,0 +1,85 @@
+import { describe, expect, it } from 'vitest';
+import {
+  AUTH_REQUEST_ERRORS,
+  changesetErrorMessage,
+  changesetErrorsMessage,
+  httpStatusErrorMessage,
+} from '../errorMessages';
+
+describe('changesetErrorMessage — registration validations (Backend.Accounts.User)', () => {
+  // The exact strings BackendWeb.UserController's format_errors/1 produces
+  // for registration_changeset/2's validations (Ecto 3.14 defaults plus the
+  // two custom messages), with %{count} already interpolated.
+  it.each([
+    ['username', "can't be blank", 'Kullanıcı adı boş bırakılamaz.'],
+    ['email', "can't be blank", 'E-posta adresi boş bırakılamaz.'],
+    ['password', "can't be blank", 'Şifre boş bırakılamaz.'],
+    ['username', 'has already been taken', 'Bu kullanıcı adı zaten kullanımda.'],
+    ['email', 'has already been taken', 'Bu e-posta adresi zaten kullanımda.'],
+    ['username', 'should be at least 3 character(s)', 'Kullanıcı adı en az 3 karakter olmalıdır.'],
+    ['username', 'should be at most 30 character(s)', 'Kullanıcı adı en fazla 30 karakter olabilir.'],
+    [
+      'username',
+      'only letters, numbers and underscores allowed',
+      'Kullanıcı adı yalnızca harf, rakam ve alt çizgi (_) içerebilir.',
+    ],
+    ['email', 'must be a valid email', 'Geçerli bir e-posta adresi girin.'],
+    ['password', 'must be at least 8 characters', 'Şifre en az 8 karakter olmalıdır.'],
+  ])('%s "%s" → %s', (field, message, expected) => {
+    expect(changesetErrorMessage(field, message)).toBe(expected);
+  });
+
+  it('keeps mapping a length rule if the backend changes its limit', () => {
+    expect(changesetErrorMessage('password', 'must be at least 12 characters')).toBe(
+      'Şifre en az 12 karakter olmalıdır.'
+    );
+    expect(changesetErrorMessage('username', 'should be at most 40 character(s)')).toBe(
+      'Kullanıcı adı en fazla 40 karakter olabilir.'
+    );
+  });
+
+  it('falls back to the raw "<field> <message>" text for an unknown message', () => {
+    expect(changesetErrorMessage('email', 'is on a blocklist')).toBe('email is on a blocklist');
+  });
+
+  it('falls back to the raw text for an unknown field, even with a known message', () => {
+    expect(changesetErrorMessage('nickname', "can't be blank")).toBe("nickname can't be blank");
+  });
+});
+
+describe('changesetErrorsMessage', () => {
+  it('separates mapped sentences with a space', () => {
+    expect(
+      changesetErrorsMessage({
+        username: ['should be at least 3 character(s)'],
+        password: ['must be at least 8 characters'],
+      })
+    ).toBe('Kullanıcı adı en az 3 karakter olmalıdır. Şifre en az 8 karakter olmalıdır.');
+  });
+
+  it('keeps the old ", " separator for raw fallbacks, so a raw-only list reads exactly as before', () => {
+    expect(changesetErrorsMessage({ email: ['is odd'], nickname: ['is weird'] })).toBe(
+      'email is odd, nickname is weird'
+    );
+  });
+
+  it('handles a mix of mapped and raw messages', () => {
+    expect(
+      changesetErrorsMessage({ email: ['has already been taken', 'is on a blocklist'] })
+    ).toBe('Bu e-posta adresi zaten kullanımda. email is on a blocklist');
+  });
+});
+
+describe('httpStatusErrorMessage', () => {
+  it('maps 429 to the rate-limit message', () => {
+    expect(httpStatusErrorMessage(429)).toBe(AUTH_REQUEST_ERRORS.rateLimited);
+  });
+
+  it.each([500, 502, 503, 504])('maps %i to the server-unavailable message', (status) => {
+    expect(httpStatusErrorMessage(status)).toBe(AUTH_REQUEST_ERRORS.serverUnavailable);
+  });
+
+  it('includes the status code for anything else', () => {
+    expect(httpStatusErrorMessage(403)).toContain('HTTP 403');
+  });
+});

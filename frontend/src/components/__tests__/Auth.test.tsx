@@ -10,6 +10,7 @@ vi.mock('../../services/api', () => ({
 }));
 
 import { registerUser, loginUser, resendVerification } from '../../services/api';
+import { AUTH_REQUEST_ERRORS } from '../../utils/errorMessages';
 
 function fillAndSubmit(fields: { username?: string; email: string; password: string }) {
   if (fields.username !== undefined) {
@@ -123,6 +124,57 @@ describe('Auth — login', () => {
       expect(screen.getByText('E-postanızı kontrol edin')).not.toBeNull();
     });
     expect(screen.getByText('unverified@example.com')).not.toBeNull();
+  });
+});
+
+// PROJECT_ARCHITECTURE.md §7 #15 — whatever the request does, the submit
+// button must come back and an error must be shown. (The "request never
+// settles" case is covered end to end, real api.ts included, in
+// Auth.requestTimeout.test.tsx.)
+describe('Auth — submit button never stays stuck', () => {
+  function submitButton(): HTMLButtonElement {
+    const button = document.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (!button) throw new Error('submit button not found');
+    return button;
+  }
+
+  it('re-enables the button and shows an error if login rejects unexpectedly', async () => {
+    vi.mocked(loginUser).mockRejectedValue(new Error('boom'));
+    const onAuth = vi.fn();
+
+    render(<Auth onAuth={onAuth} />);
+    await fillAndSubmit({ email: 'ard@example.com', password: 'password123' });
+
+    expect(submitButton().disabled).toBe(false);
+    expect(submitButton().textContent).toBe('Log In');
+    expect(screen.getByText(AUTH_REQUEST_ERRORS.unexpected)).not.toBeNull();
+    expect(onAuth).not.toHaveBeenCalled();
+  });
+
+  it('re-enables the button and shows an error if registration rejects unexpectedly', async () => {
+    vi.mocked(registerUser).mockRejectedValue(new Error('boom'));
+
+    render(<Auth onAuth={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Register' }));
+    await fillAndSubmit({
+      username: 'newperson',
+      email: 'newperson@example.com',
+      password: 'password123',
+    });
+
+    expect(submitButton().disabled).toBe(false);
+    expect(submitButton().textContent).toBe('Continue');
+    expect(screen.getByText(AUTH_REQUEST_ERRORS.unexpected)).not.toBeNull();
+  });
+
+  it('shows the API layer\'s error message and re-enables the button on a failed login', async () => {
+    vi.mocked(loginUser).mockResolvedValue({ error: AUTH_REQUEST_ERRORS.rateLimited });
+
+    render(<Auth onAuth={vi.fn()} />);
+    await fillAndSubmit({ email: 'ard@example.com', password: 'password123' });
+
+    expect(submitButton().disabled).toBe(false);
+    expect(screen.getByText(AUTH_REQUEST_ERRORS.rateLimited)).not.toBeNull();
   });
 });
 
