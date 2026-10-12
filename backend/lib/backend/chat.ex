@@ -256,22 +256,31 @@ defmodule Backend.Chat do
 
       %Message{user_id: user_id, channel_id: channel_id} = message ->
         if user_id == req_user_id or channel_owner?(channel_id, req_user_id) do
-          message
-          |> Message.delete_changeset()
-          |> Repo.update()
-          |> case do
-            {:ok, updated} ->
-              {:ok,
-               updated
-               |> Repo.preload(:user)
-               |> Map.put(:reactions, list_reactions_for_message(message_id))}
-
-            error ->
-              error
-          end
+          soft_delete_message(message, message_id)
         else
           {:error, :not_authorized}
         end
+    end
+  end
+
+  # The write half of delete_message/2, run only once that function has
+  # authorized the caller — kept separate so the authorization branches and
+  # the update's own success/error handling don't nest inside each other.
+  # `message_id` is delete_message/2's own argument, used for the reactions
+  # lookup the same way update_message/2 does.
+  defp soft_delete_message(message, message_id) do
+    message
+    |> Message.delete_changeset()
+    |> Repo.update()
+    |> case do
+      {:ok, updated} ->
+        {:ok,
+         updated
+         |> Repo.preload(:user)
+         |> Map.put(:reactions, list_reactions_for_message(message_id))}
+
+      error ->
+        error
     end
   end
 
