@@ -3,6 +3,7 @@ import {
   AUTH_REQUEST_ERRORS,
   changesetErrorMessage,
   changesetErrorsMessage,
+  chatActionErrorMessage,
   httpStatusErrorMessage,
 } from '../errorMessages';
 
@@ -81,5 +82,50 @@ describe('httpStatusErrorMessage', () => {
 
   it('includes the status code for anything else', () => {
     expect(httpStatusErrorMessage(403)).toContain('HTTP 403');
+  });
+});
+
+describe('chatActionErrorMessage', () => {
+  it.each([
+    ['rate_limited', 'Çok hızlı işlem yapıyorsunuz'],
+    ['message not found', 'Mesaj bulunamadı'],
+    ['message_not_found', 'Mesaj bulunamadı'],
+    ['not authorized', 'yetkiniz yok'],
+    ['blocked', 'engelleme'],
+  ])('maps the server reason "%s"', (reason, expected) => {
+    const message = chatActionErrorMessage('send', { kind: 'error', reason });
+    expect(message.startsWith('Mesaj gönderilemedi.')).toBe(true);
+    expect(message).toContain(expected);
+  });
+
+  it('names the action that failed', () => {
+    const failure = { kind: 'error', reason: 'rate_limited' } as const;
+    expect(chatActionErrorMessage('edit', failure)).toMatch(/^Mesaj düzenlenemedi\./);
+    expect(chatActionErrorMessage('delete', failure)).toMatch(/^Mesaj silinemedi\./);
+    expect(chatActionErrorMessage('react', failure)).toMatch(/^Tepki güncellenemedi\./);
+  });
+
+  it('never shows an unknown reason raw', () => {
+    const message = chatActionErrorMessage('send', { kind: 'error', reason: 'some_new_reason' });
+    expect(message).toBe('Mesaj gönderilemedi. Lütfen tekrar deneyin.');
+    expect(message).not.toContain('some_new_reason');
+  });
+
+  it('gives a changeset rejection (no reason) the generic retry hint', () => {
+    expect(chatActionErrorMessage('send', { kind: 'error' })).toBe(
+      'Mesaj gönderilemedi. Lütfen tekrar deneyin.'
+    );
+  });
+
+  it('does not treat inherited object keys as known reasons', () => {
+    expect(chatActionErrorMessage('send', { kind: 'error', reason: 'constructor' })).toBe(
+      'Mesaj gönderilemedi. Lütfen tekrar deneyin.'
+    );
+  });
+
+  it('words a send timeout as "unconfirmed", not "failed"', () => {
+    const message = chatActionErrorMessage('send', { kind: 'timeout' });
+    expect(message).toContain('doğrulanamadı');
+    expect(message).not.toContain('gönderilemedi');
   });
 });

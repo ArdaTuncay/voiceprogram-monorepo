@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { useDMStore } from '../useDMStore';
 import type { ChatMessage, DmRoom } from '../../types';
 
@@ -20,7 +21,15 @@ vi.mock('../../services/socket', () => ({
 }));
 
 import { fetchDmRooms, openDmRoom } from '../../services/api';
-import { sendDmMarkRead, deleteDmMessage } from '../../services/socket';
+import {
+  sendDmMarkRead,
+  deleteDmMessage,
+  sendDmMessage,
+  editDmMessage,
+  toggleDmReaction,
+} from '../../services/socket';
+import type { PushFailureHandler } from '../../services/socket';
+import { chatActionErrorMessage } from '../../utils/errorMessages';
 
 function makeRoom(overrides: Partial<DmRoom> = {}): DmRoom {
   return {
@@ -166,7 +175,7 @@ describe('useDMStore — unread counts', () => {
     it('deleteMessage pushes to the socket (fire-and-forget, no local state change)', () => {
       useDMStore.getState().deleteMessage('m-a');
 
-      expect(deleteDmMessage).toHaveBeenCalledWith('m-a');
+      expect(deleteDmMessage).toHaveBeenCalledWith('m-a', expect.any(Function));
     });
 
     it('handleMessageDeleted replaces only the matching message with the broadcasted (wiped) version', () => {
@@ -190,5 +199,82 @@ describe('useDMStore — unread counts', () => {
       expect(b.content).toBe('still here');
       expect(b.is_deleted).toBe(false);
     });
+  });
+});
+
+// PROJECT_ARCHITECTURE.md §7 #11 — same contract as useChatStore's failed
+// push feedback, scoped to the active DM room.
+describe('useDMStore — failed push feedback', () => {
+  function lastFailureHandler(push: unknown): PushFailureHandler {
+    const call = (push as Mock).mock.calls.at(-1);
+    if (!call) throw new Error('push was never called');
+    return call.at(-1) as PushFailureHandler;
+  }
+
+  beforeEach(() => {
+    useDMStore.getState().reset();
+    useDMStore.setState({ activeRoomId: 'room-1' });
+    vi.clearAllMocks();
+  });
+
+  it('a "blocked" send shows feedback and puts the text back, without touching messages', () => {
+    const messages = [makeMessage({ id: 'm-a' })];
+    useDMStore.setState({ messages, draft: 'hello' });
+
+    useDMStore.getState().sendMessage();
+    expect(useDMStore.getState().draft).toBe('');
+
+    lastFailureHandler(sendDmMessage)({ kind: 'error', reason: 'blocked' });
+
+    const state = useDMStore.getState();
+    expect(state.actionError).toBe(chatActionErrorMessage('send', { kind: 'error', reason: 'blocked' }));
+    expect(state.draft).toBe('hello');
+    expect(state.messages).toBe(messages);
+  });
+
+  it('a timed-out send shows the neutral message and does NOT restore the text', () => {
+    useDMStore.setState({ draft: 'hello' });
+    useDMStore.getState().sendMessage();
+
+    lastFailureHandler(sendDmMessage)({ kind: 'timeout' });
+
+    expect(useDMStore.getState().actionError).toBe(chatActionErrorMessage('send', { kind: 'timeout' }));
+    expect(useDMStore.getState().draft).toBe('');
+  });
+
+  it('drops feedback for a push made in a room the user has since left', () => {
+    useDMStore.setState({ draft: 'hello' });
+    useDMStore.getState().sendMessage();
+    useDMStore.setState({ activeRoomId: 'room-2' });
+
+    lastFailureHandler(sendDmMessage)({ kind: 'error', reason: 'rate_limited' });
+
+    expect(useDMStore.getState().actionError).toBe('');
+    expect(useDMStore.getState().draft).toBe('');
+  });
+
+  it('resetForRoomSwitch clears the feedback', () => {
+    useDMStore.setState({ actionError: 'old feedback' });
+
+    useDMStore.getState().resetForRoomSwitch();
+
+    expect(useDMStore.getState().actionError).toBe('');
+  });
+
+  it.each([
+    ['edit', editDmMessage, () => useDMStore.getState().editMessage('m-a', 'changed')],
+    ['delete', deleteDmMessage, () => useDMStore.getState().deleteMessage('m-a')],
+    ['react', toggleDmReaction, () => useDMStore.getState().toggleReaction('m-a', '👍')],
+  ] as const)('a rejected %s shows feedback and leaves messages untouched', (action, push, run) => {
+    const messages = [makeMessage({ id: 'm-a', content: 'original' })];
+    useDMStore.setState({ messages });
+
+    run();
+    lastFailureHandler(push)({ kind: 'error', reason: 'rate_limited' });
+
+    expect(useDMStore.getState().actionError).toBe(
+      chatActionErrorMessage(action, { kind: 'error', reason: 'rate_limited' })
+    );
+    expect(useDMStore.getState().messages).toBe(messages);
   });
 });

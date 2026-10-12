@@ -6,6 +6,7 @@
  * value always has a deliberate fallback instead of leaking through by
  * accident. See PROJECT_ARCHITECTURE.md §7 items 11, 12 and 15.
  */
+import type { PushFailure } from '../types';
 
 /** Errors for the unauthenticated auth requests — services/api.ts's post(). */
 export const AUTH_REQUEST_ERRORS = {
@@ -76,4 +77,45 @@ export function changesetErrorsMessage(errors: Record<string, string[]>): string
       if (!line) return msg;
       return /[.!?]$/.test(line) ? `${line} ${msg}` : `${line}, ${msg}`;
     }, '');
+}
+
+/** A chat/DM action whose socket push the server can reject — see
+ * useChatStore/useDMStore and services/socket.ts. */
+export type ChatAction = 'send' | 'edit' | 'delete' | 'react';
+
+const CHAT_ACTION_FAILED: Record<ChatAction, string> = {
+  send: 'Mesaj gönderilemedi.',
+  edit: 'Mesaj düzenlenemedi.',
+  delete: 'Mesaj silinemedi.',
+  react: 'Tepki güncellenemedi.',
+};
+
+// The `reason` values ChatChannel/DmChannel actually reply with. Both
+// spellings of "not found" are real: update_message/delete_message reply
+// "message not found", toggle_reaction replies "message_not_found".
+const CHAT_ACTION_REASONS = new Map<string, string>([
+  ['rate_limited', 'Çok hızlı işlem yapıyorsunuz. Lütfen birkaç saniye bekleyip tekrar deneyin.'],
+  ['message not found', 'Mesaj bulunamadı, silinmiş olabilir.'],
+  ['message_not_found', 'Mesaj bulunamadı, silinmiş olabilir.'],
+  ['not authorized', 'Bu işlem için yetkiniz yok.'],
+  ['blocked', 'Bu kişiyle aranızda engelleme olduğu için mesaj gönderilemiyor.'],
+]);
+
+/**
+ * Feedback for a failed chat/DM push. A timeout gets a deliberately neutral
+ * message rather than "failed": the push may still go through (see
+ * PushFailure), so the user is told to check rather than to resend. An
+ * unknown or absent reason (e.g. a changeset `errors` reply) gets a generic
+ * retry hint — never the raw reason string.
+ */
+export function chatActionErrorMessage(action: ChatAction, failure: PushFailure): string {
+  if (failure.kind === 'timeout') {
+    return action === 'send'
+      ? 'Sunucudan yanıt alınamadı; mesajın gönderilip gönderilmediği doğrulanamadı. Lütfen sohbeti kontrol edin.'
+      : 'Sunucudan yanıt alınamadı; işlemin tamamlanıp tamamlanmadığı doğrulanamadı.';
+  }
+  const detail =
+    (failure.reason !== undefined && CHAT_ACTION_REASONS.get(failure.reason)) ||
+    'Lütfen tekrar deneyin.';
+  return `${CHAT_ACTION_FAILED[action]} ${detail}`;
 }

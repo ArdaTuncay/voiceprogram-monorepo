@@ -19,6 +19,7 @@ import type {
   FriendRemovedNotification,
   NewDmMessageNotification,
   ReactionToggledPayload,
+  PushFailure,
 } from '../types';
 import { getStoredToken } from './tokenStorage';
 import { resolveSocketUrl } from '../config';
@@ -132,9 +133,37 @@ export function joinChatChannel(channelId: string, callbacks: ChannelCallbacks):
   };
 }
 
-/** Sends a "shout" event with the message content (and optional attachment); the server attributes it to the authenticated user. */
-export function shout(content: string, fileUrl?: string, fileType?: string): void {
-  textChannel?.push('shout', { content, file_url: fileUrl, file_type: fileType });
+export type PushFailureHandler = (failure: PushFailure) => void;
+
+/** The `{:error, ...}` reply payload of a failed push — `reason` for the
+ * rate-limit/not-found/not-authorized/blocked cases (see ChatChannel/
+ * DmChannel's handle_in clauses), changeset `errors` (no `reason`) otherwise. */
+interface PushErrorReply {
+  reason?: string;
+}
+
+function pushErrorHandler(onFailure: PushFailureHandler | undefined) {
+  return (resp: PushErrorReply) => onFailure?.({ kind: 'error', reason: resp?.reason });
+}
+
+// The pushes below that the server replies to (shout, toggle_reaction,
+// update_message, delete_message) take an optional `onFailure`. It's
+// feedback only — PROJECT_ARCHITECTURE.md §7 item 11: what a successful push
+// changes still only ever arrives as the channel's broadcast, never from
+// the reply. Pushes the server answers with :noreply (typing, and every
+// voice-channel push) never get a reply to hook into, so they don't take one.
+
+/** Sends a "shout" event with the message content (and optional attachment); the server attributes it to the authenticated user. `onFailure` also hears about a push that got no reply in time. */
+export function shout(
+  content: string,
+  fileUrl?: string,
+  fileType?: string,
+  onFailure?: PushFailureHandler
+): void {
+  textChannel
+    ?.push('shout', { content, file_url: fileUrl, file_type: fileType })
+    .receive('error', pushErrorHandler(onFailure))
+    .receive('timeout', () => onFailure?.({ kind: 'timeout' }));
 }
 
 /** Tells the rest of the channel whether the current user is typing. */
@@ -143,18 +172,24 @@ export function sendTyping(isTyping: boolean): void {
 }
 
 /** Adds/removes the current user's `emoji` reaction on a message; the server toggles and broadcasts the result. */
-export function toggleReaction(messageId: string, emoji: string): void {
-  textChannel?.push('toggle_reaction', { message_id: messageId, emoji });
+export function toggleReaction(messageId: string, emoji: string, onFailure?: PushFailureHandler): void {
+  textChannel
+    ?.push('toggle_reaction', { message_id: messageId, emoji })
+    .receive('error', pushErrorHandler(onFailure));
 }
 
 /** Edits an existing message's content; the server validates authorship and broadcasts "message_updated". */
-export function editMessage(messageId: string, content: string): void {
-  textChannel?.push('update_message', { message_id: messageId, content });
+export function editMessage(messageId: string, content: string, onFailure?: PushFailureHandler): void {
+  textChannel
+    ?.push('update_message', { message_id: messageId, content })
+    .receive('error', pushErrorHandler(onFailure));
 }
 
 /** Soft-deletes a message; the server validates authorship/server-ownership and broadcasts "message_deleted". */
-export function deleteMessage(messageId: string): void {
-  textChannel?.push('delete_message', { message_id: messageId });
+export function deleteMessage(messageId: string, onFailure?: PushFailureHandler): void {
+  textChannel
+    ?.push('delete_message', { message_id: messageId })
+    .receive('error', pushErrorHandler(onFailure));
 }
 
 /**
@@ -199,9 +234,17 @@ export function joinDmChannel(roomId: string, callbacks: ChannelCallbacks): () =
   };
 }
 
-/** Sends a "shout" event with the message content (and optional attachment) to the active DM room. */
-export function sendDmMessage(content: string, fileUrl?: string, fileType?: string): void {
-  dmChannel?.push('shout', { content, file_url: fileUrl, file_type: fileType });
+/** Sends a "shout" event with the message content (and optional attachment) to the active DM room. Same `onFailure` contract as `shout`, plus a "blocked" rejection. */
+export function sendDmMessage(
+  content: string,
+  fileUrl?: string,
+  fileType?: string,
+  onFailure?: PushFailureHandler
+): void {
+  dmChannel
+    ?.push('shout', { content, file_url: fileUrl, file_type: fileType })
+    .receive('error', pushErrorHandler(onFailure))
+    .receive('timeout', () => onFailure?.({ kind: 'timeout' }));
 }
 
 /** Tells the other DM participant whether the current user is typing. */
@@ -210,18 +253,24 @@ export function sendDmTyping(isTyping: boolean): void {
 }
 
 /** Adds/removes the current user's `emoji` reaction on a DM message; the server toggles and broadcasts the result. */
-export function toggleDmReaction(messageId: string, emoji: string): void {
-  dmChannel?.push('toggle_reaction', { message_id: messageId, emoji });
+export function toggleDmReaction(messageId: string, emoji: string, onFailure?: PushFailureHandler): void {
+  dmChannel
+    ?.push('toggle_reaction', { message_id: messageId, emoji })
+    .receive('error', pushErrorHandler(onFailure));
 }
 
 /** Edits an existing DM message's content; the server validates authorship and broadcasts "dm_message_updated". */
-export function editDmMessage(messageId: string, content: string): void {
-  dmChannel?.push('update_message', { message_id: messageId, content });
+export function editDmMessage(messageId: string, content: string, onFailure?: PushFailureHandler): void {
+  dmChannel
+    ?.push('update_message', { message_id: messageId, content })
+    .receive('error', pushErrorHandler(onFailure));
 }
 
 /** Soft-deletes a DM message; the server validates authorship and broadcasts "dm_message_deleted". */
-export function deleteDmMessage(messageId: string): void {
-  dmChannel?.push('delete_message', { message_id: messageId });
+export function deleteDmMessage(messageId: string, onFailure?: PushFailureHandler): void {
+  dmChannel
+    ?.push('delete_message', { message_id: messageId })
+    .receive('error', pushErrorHandler(onFailure));
 }
 
 /**

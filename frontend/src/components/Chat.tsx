@@ -118,6 +118,7 @@ export default function Chat({ user, onLogout }: Props) {
   const typingUsers = useChatStore((s) => s.typingUsers);
   const isUploading = useChatStore((s) => s.isUploading);
   const uploadError = useChatStore((s) => s.uploadError);
+  const actionError = useChatStore((s) => s.actionError);
   const isDraggingFile = useChatStore((s) => s.isDraggingFile);
   const lightboxUrl = useChatStore((s) => s.lightboxUrl);
   const hasMoreMessages = useChatStore((s) => s.hasMoreMessages);
@@ -879,6 +880,7 @@ export default function Chat({ user, onLogout }: Props) {
 
               {isUploading && <div className="upload-status">Yükleniyor…</div>}
               {uploadError && <div className="upload-status upload-status-error"><AlertTriangle size={14} /> {uploadError}</div>}
+              {actionError && <div className="upload-status upload-status-error" role="alert"><AlertTriangle size={14} /> {actionError}</div>}
 
               {Object.keys(typingUsers).length > 0 && (
                 <div className="typing-indicator">
