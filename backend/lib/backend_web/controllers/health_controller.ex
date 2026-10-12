@@ -29,9 +29,7 @@ defmodule BackendWeb.HealthController do
         json(conn, %{status: "ok", database: "ok"})
 
       {:error, _reason} ->
-        conn
-        |> put_status(:service_unavailable)
-        |> json(%{status: "error", database: "error"})
+        unavailable(conn)
     end
   rescue
     # A truly severed connection (e.g. no pool member checked out at all)
@@ -40,9 +38,18 @@ defmodule BackendWeb.HealthController do
     # reach its database right now, so still 503 instead of crashing this
     # request with a 500 the orchestrator can't distinguish from "actually
     # broken app code".
-    _ ->
-      conn
-      |> put_status(:service_unavailable)
-      |> json(%{status: "error", database: "error"})
+    _ -> unavailable(conn)
+  catch
+    # ...and some failures arrive as an exit rather than an exception:
+    # DBConnection.Holder.checkout/3 exits when the pool or connection
+    # process it was handed dies mid-checkout (a pool restarting after a
+    # crash, or a sandbox owner going away in tests). Same answer.
+    :exit, _reason -> unavailable(conn)
+  end
+
+  defp unavailable(conn) do
+    conn
+    |> put_status(:service_unavailable)
+    |> json(%{status: "error", database: "error"})
   end
 end
