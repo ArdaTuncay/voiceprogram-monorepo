@@ -48,6 +48,7 @@ import {
   Search,
   Maximize2,
   X,
+  Menu,
 } from 'lucide-react';
 import './Chat.css';
 
@@ -168,6 +169,10 @@ export default function Chat({ user, onLogout }: Props) {
   // VoiceStatusBar (needs the name to show while looking at anything else).
   const [voiceRoomServerId, setVoiceRoomServerId] = useState<string | null>(null);
   const [voiceRoomName, setVoiceRoomName] = useState<string | null>(null);
+  // Phone-width layout only (see the @media block at the end of Chat.css):
+  // the server rail + channel list become a drawer opened from the header's
+  // menu button. Ignored by the desktop CSS.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [createChannelRequest, setCreateChannelRequest] = useState<{
     type: ChannelType;
     parentId: string | null;
@@ -536,8 +541,33 @@ export default function Chat({ user, onLogout }: Props) {
     </div>
   );
 
+  // Picking somewhere to read (a channel, a DM, the friends screen) is what
+  // the drawer was opened for, so close it and show that.
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [activeChannelId, activeDmRoomId, friendsViewOpen]);
+
+  const layoutClass =
+    'chat-layout' +
+    (mobileNavOpen ? ' mobile-nav-open' : '') +
+    (voice.activeRoomId ? ' chat-layout--voice' : '');
+
   return (
-    <div className="chat-layout">
+    <div className={layoutClass}>
+      <button
+        type="button"
+        className="mobile-nav-toggle"
+        onClick={() => setMobileNavOpen(true)}
+        aria-label="Sunucuları ve kanalları göster"
+        aria-expanded={mobileNavOpen}
+      >
+        <Menu size={20} />
+      </button>
+      <div
+        className="mobile-nav-backdrop"
+        onClick={() => setMobileNavOpen(false)}
+        aria-hidden="true"
+      />
       <NotificationPermissionBanner />
 
       {/* Only after we've actually been connected before — never during the
@@ -574,7 +604,14 @@ export default function Chat({ user, onLogout }: Props) {
       )}
 
       {/* ── Left sidebar ── */}
-      <aside className="channel-sidebar">
+      {/* Tapping any channel or DM closes the phone drawer — including the
+          one already open, which the selection effect alone can't see. */}
+      <aside
+        className="channel-sidebar"
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest('.channel-item')) setMobileNavOpen(false);
+        }}
+      >
         {activeServerId ? (
           <>
             <div className="server-header">
