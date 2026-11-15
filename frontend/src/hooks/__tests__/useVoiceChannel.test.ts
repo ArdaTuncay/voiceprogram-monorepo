@@ -17,6 +17,12 @@ import {
   makeFakeStream,
 } from './webrtcTestUtils';
 import { setMediaPreferences } from '../../services/mediaPreferences';
+import {
+  microphoneErrorMessage,
+  screenShareErrorMessage,
+  VOICE_JOIN_TIMEOUT_REASON,
+  voiceJoinErrorMessage,
+} from '../../utils/errorMessages';
 
 vi.mock('../../services/socket', () => ({
   joinVoiceChannel: vi.fn(),
@@ -1045,5 +1051,90 @@ describe.sequential('useVoiceChannel — screenShares update behavior', () => {
     });
 
     expect(result.current.screenShares['aaa-peer']).toBeUndefined();
+  });
+});
+
+// PROJECT_ARCHITECTURE.md §7 #12 — what reaches `error` (and so the UI) is
+// Turkish copy keyed off the failure, never a raw server reason or a
+// browser's own English DOMException message.
+describe.sequential('useVoiceChannel — user-facing error messages', () => {
+  let getUserMedia: ReturnType<typeof vi.fn>;
+  let getDisplayMedia: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ({ getUserMedia, getDisplayMedia } = installWebrtcMocks());
+  });
+
+  afterEach(() => {
+    cleanupActiveHooks();
+    vi.unstubAllGlobals();
+  });
+
+  it.each(['already_connected_elsewhere', 'channel not found', 'not authorized', VOICE_JOIN_TIMEOUT_REASON])(
+    'a join rejected with "%s" shows its Turkish message, not the raw reason',
+    async (reason) => {
+      getUserMedia.mockResolvedValue(makeFakeStream());
+      vi.mocked(joinVoiceChannel).mockRejectedValue(new Error(reason));
+      const { result } = renderVoiceChannel(testUser);
+
+      await act(async () => {
+        await result.current.join('roomA');
+      });
+
+      expect(result.current.error).toBe(voiceJoinErrorMessage(new Error(reason)));
+      expect(result.current.error).not.toContain(reason);
+      expect(result.current.activeRoomId).toBeNull();
+    }
+  );
+
+  it('a denied microphone permission shows its Turkish message, not the browser\'s', async () => {
+    const denied = new DOMException('Permission denied', 'NotAllowedError');
+    getUserMedia.mockRejectedValue(denied);
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    expect(result.current.error).toBe(microphoneErrorMessage(denied));
+    expect(result.current.error).not.toContain('Permission denied');
+    // A microphone failure never got as far as the server.
+    expect(joinVoiceChannel).not.toHaveBeenCalled();
+  });
+
+  async function joinedHook() {
+    getUserMedia.mockResolvedValue(makeFakeStream());
+    vi.mocked(joinVoiceChannel).mockReturnValue(resolvedChannel());
+    const hook = renderVoiceChannel(testUser);
+    await act(async () => {
+      await hook.result.current.join('roomA');
+    });
+    return hook;
+  }
+
+  it('cancelling the screen picker shows no error at all', async () => {
+    const { result } = await joinedHook();
+    getDisplayMedia.mockRejectedValue(new DOMException('Permission denied', 'NotAllowedError'));
+
+    await act(async () => {
+      await result.current.startScreenShare();
+    });
+
+    expect(result.current.error).toBe('');
+    expect(result.current.isScreenSharing).toBe(false);
+  });
+
+  it('a screen share that fails for another reason shows its Turkish message', async () => {
+    const { result } = await joinedHook();
+    const unreadable = new DOMException('Could not start video source', 'NotReadableError');
+    getDisplayMedia.mockRejectedValue(unreadable);
+
+    await act(async () => {
+      await result.current.startScreenShare();
+    });
+
+    expect(result.current.error).toBe(screenShareErrorMessage(unreadable));
+    expect(result.current.error).not.toContain('Could not start video source');
   });
 });
