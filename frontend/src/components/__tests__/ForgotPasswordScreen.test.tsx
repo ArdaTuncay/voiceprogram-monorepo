@@ -21,7 +21,7 @@ describe('Şifremi unuttum', () => {
     vi.mocked(requestPasswordReset).mockResolvedValue({ data: { message: 'generic' } });
     render(<Auth onAuth={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'ali@example.com' } });
+    fireEvent.change(screen.getByLabelText(/^(email|e-posta)$/i), { target: { value: 'ali@example.com' } });
     fireEvent.click(screen.getByRole('button', { name: 'Şifremi unuttum' }));
 
     const input = screen.getByLabelText('E-posta') as HTMLInputElement;
