@@ -46,7 +46,10 @@ defmodule BackendWeb.VoiceChannel do
 
   @impl true
   def join("voice:" <> room_id, _params, socket) do
+    # Subscribed before the membership check, not after — see
+    # Servers.subscribe_to_membership/2.
     with channel when not is_nil(channel) <- Chat.get_channel(room_id),
+         :ok <- Servers.subscribe_to_membership(channel.server_id, socket.assigns.user_id),
          true <- Servers.member?(channel.server_id, socket.assigns.user_id) do
       # Peers already tracked in this room before we track ourselves below —
       # the joining client uses this list to initiate WebRTC offers, so each
@@ -100,6 +103,16 @@ defmodule BackendWeb.VoiceChannel do
   def handle_info(:after_join, socket) do
     push(socket, "presence_state", Presence.list(socket))
     {:noreply, socket}
+  end
+
+  # See Servers.revoke_channel_access/2. Stopping this process is what
+  # takes a kicked member out of the room for everyone else: terminate/2
+  # below untracks their presence, every remaining peer's client sees them
+  # leave and closes its RTCPeerConnection to them. Without this the
+  # server kept them in presence — and so in the call — indefinitely.
+  def handle_info({:server_membership_revoked, server_id}, socket) do
+    push(socket, "access_revoked", %{server_id: server_id})
+    {:stop, {:shutdown, :membership_revoked}, socket}
   end
 
   # Fires on every kind of departure — an explicit `leave()`, the socket

@@ -40,6 +40,10 @@ defmodule BackendWeb.ChatChannel do
         {:error, %{reason: "channel not found"}}
 
       channel ->
+        # Subscribed before the membership check, not after — see
+        # Servers.subscribe_to_membership/2.
+        :ok = Servers.subscribe_to_membership(channel.server_id, socket.assigns.user_id)
+
         if Servers.member?(channel.server_id, socket.assigns.user_id) do
           messages = Chat.list_messages(channel.id) |> Enum.map(&serialize_message/1)
 
@@ -69,6 +73,14 @@ defmodule BackendWeb.ChatChannel do
     push(socket, "presence_state", Presence.list(socket))
 
     {:noreply, socket}
+  end
+
+  # See Servers.revoke_channel_access/2 — membership is only checked at
+  # join, so this is what actually stops a kicked/departed member's
+  # already-open process from relaying any more of their messages.
+  def handle_info({:server_membership_revoked, server_id}, socket) do
+    push(socket, "access_revoked", %{server_id: server_id})
+    {:stop, {:shutdown, :membership_revoked}, socket}
   end
 
   @impl true

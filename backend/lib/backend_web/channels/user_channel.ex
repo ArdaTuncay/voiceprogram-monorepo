@@ -7,7 +7,7 @@ defmodule BackendWeb.UserChannel do
 
   use Phoenix.Channel
 
-  alias Backend.{Accounts, Presence, Servers}
+  alias Backend.{Presence, Servers}
 
   # A user's personal notification topic — used to relay "new_message" events
   # (see ChatChannel) for channels the user isn't currently viewing, plus
@@ -60,19 +60,14 @@ defmodule BackendWeb.UserChannel do
     :ok
   end
 
+  # Tells everyone who shares a server with `user_id` that they came
+  # online/went offline. Nothing is stored — readers derive status from
+  # Presence (see Backend.Accounts.online?/1).
   defp set_status(user_id, status) do
-    case Accounts.update_status(user_id, status) do
-      {:ok, _user} ->
-        payload = %{user_id: user_id, status: status}
+    payload = %{user_id: user_id, status: status}
 
-        user_id
-        |> Servers.list_co_member_user_ids()
-        |> Enum.each(
-          &BackendWeb.Endpoint.broadcast("user:#{&1}", "member_status_changed", payload)
-        )
-
-      {:error, _} ->
-        :ok
-    end
+    user_id
+    |> Servers.list_co_member_user_ids()
+    |> Enum.each(&BackendWeb.Endpoint.broadcast("user:#{&1}", "member_status_changed", payload))
   end
 end

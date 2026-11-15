@@ -65,6 +65,46 @@ defmodule Backend.Servers do
     )
   end
 
+  @doc """
+  The PubSub topic a server-scoped channel process (`BackendWeb.ChatChannel`,
+  `BackendWeb.VoiceChannel`, `BackendWeb.ServerChannel`) listens on for
+  "`user_id` is no longer a member of `server_id`" — see
+  `revoke_channel_access/2`.
+  """
+  def membership_topic(server_id, user_id), do: "server_membership:#{server_id}:#{user_id}"
+
+  @doc """
+  Subscribes the calling channel process to `membership_topic/2`.
+
+  Channels call this from `join/3` *before* checking `member?/2`, not
+  after: subscribing first means a kick that lands between the membership
+  check and the subscription still reaches this process (it was already
+  listening), instead of slipping through the gap and leaving a joined
+  process that never hears about it.
+  """
+  def subscribe_to_membership(server_id, user_id) do
+    Phoenix.PubSub.subscribe(Backend.PubSub, membership_topic(server_id, user_id))
+  end
+
+  @doc """
+  Tells every channel process `user_id` still has open for `server_id` that
+  their membership just ended (kicked, left, account deleted, or the server
+  itself deleted). Each one pushes `"access_revoked"` and stops with
+  `{:shutdown, :membership_revoked}` — a graceful close, so the client gets
+  `phx_close` and doesn't auto-rejoin.
+
+  `member?/2` is only checked at join time; without this, an already-joined
+  process kept relaying that user's messages and voice signaling after
+  they'd been removed, trusting their own client to leave on its own.
+  """
+  def revoke_channel_access(server_id, user_id) do
+    Phoenix.PubSub.broadcast(
+      Backend.PubSub,
+      membership_topic(server_id, user_id),
+      {:server_membership_revoked, server_id}
+    )
+  end
+
   @doc "Returns true if the given user is the owner of the given server."
   def owner?(server_id, user_id) do
     case get_server(server_id) do
@@ -87,8 +127,9 @@ defmodule Backend.Servers do
     |> where([m], m.server_id == ^server_id)
     |> join(:inner, [m], u in Backend.Accounts.User, on: u.id == m.user_id)
     |> order_by([_m, u], asc: u.username)
-    |> select([m, u], %{user_id: m.user_id, username: u.username, role: m.role, status: u.status})
+    |> select([m, u], %{user_id: m.user_id, username: u.username, role: m.role})
     |> Repo.all()
+    |> Enum.map(&Map.put(&1, :status, Backend.Accounts.status(&1.user_id)))
   end
 
   @doc """
@@ -149,6 +190,8 @@ defmodule Backend.Servers do
           BackendWeb.Endpoint.broadcast("user:#{user_id}", "server_deleted", %{
             server_id: deleted.id
           })
+
+          revoke_channel_access(deleted.id, user_id)
         end)
 
         {:ok, deleted}
@@ -285,6 +328,7 @@ defmodule Backend.Servers do
             payload = %{server_id: server_id, user_id: user_id}
             BackendWeb.Endpoint.broadcast("user:#{user_id}", "member_kicked", payload)
             broadcast_to_server(server_id, "member_left", payload)
+            revoke_channel_access(server_id, user_id)
             {:ok, deleted}
 
           error ->
@@ -331,6 +375,7 @@ defmodule Backend.Servers do
               user_id: user_id
             })
 
+            revoke_channel_access(server_id, user_id)
             {:ok, deleted}
 
           error ->
