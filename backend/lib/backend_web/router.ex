@@ -25,6 +25,8 @@ defmodule BackendWeb.Router do
     post "/users/login", UserController, :login
     get "/verify-email/:token", VerificationController, :verify
     post "/resend-verification", VerificationController, :resend
+    post "/password-reset", PasswordResetController, :create
+    post "/password-reset/confirm", PasswordResetController, :confirm
   end
 
   scope "/api", BackendWeb do
