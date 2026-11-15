@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { useChatStore } from '../useChatStore';
 import { useServerStore } from '../useServerStore';
 import type { ChatMessage } from '../../types';
@@ -16,8 +17,10 @@ vi.mock('../../services/api', () => ({
   uploadFile: vi.fn(),
 }));
 
-import { shout, deleteMessage } from '../../services/socket';
+import { shout, deleteMessage, editMessage, toggleReaction } from '../../services/socket';
+import type { PushFailureHandler } from '../../services/socket';
 import { uploadFile } from '../../services/api';
+import { chatActionErrorMessage } from '../../utils/errorMessages';
 
 function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
   return {
@@ -50,6 +53,7 @@ describe('useChatStore', () => {
       typingUsers: { u1: 'ardatuncay' },
       isUploading: true,
       uploadError: 'something broke',
+      actionError: 'something else broke',
       isDraggingFile: true,
       lightboxUrl: 'https://example.com/image.png',
       hasMoreMessages: false,
@@ -65,6 +69,7 @@ describe('useChatStore', () => {
       typingUsers: {},
       isUploading: false,
       uploadError: '',
+      actionError: '',
       isDraggingFile: false,
       lightboxUrl: null,
       hasMoreMessages: true,
@@ -77,7 +82,7 @@ describe('useChatStore', () => {
 
     useChatStore.getState().sendMessage();
 
-    expect(shout).toHaveBeenCalledWith('hello world');
+    expect(shout).toHaveBeenCalledWith('hello world', undefined, undefined, expect.any(Function));
     expect(useChatStore.getState().draft).toBe('');
   });
 
@@ -107,7 +112,7 @@ describe('useChatStore', () => {
   it('deleteMessage pushes to the socket (fire-and-forget, no local state change)', () => {
     useChatStore.getState().deleteMessage('a');
 
-    expect(deleteMessage).toHaveBeenCalledWith('a');
+    expect(deleteMessage).toHaveBeenCalledWith('a', expect.any(Function));
   });
 
   it('handleMessageDeleted replaces only the matching message with the broadcasted (wiped) version', () => {
@@ -157,7 +162,129 @@ describe('useChatStore', () => {
 
     await useChatStore.getState().handleFileSelected(new File(['x'], 'x.png', { type: 'image/png' }));
 
-    expect(shout).toHaveBeenCalledWith('', '/uploads/x.png', 'image/png');
+    expect(shout).toHaveBeenCalledWith('', '/uploads/x.png', 'image/png', expect.any(Function));
     expect(useChatStore.getState().uploadError).toBe('');
+  });
+});
+
+// PROJECT_ARCHITECTURE.md §7 #11 — a failed push is feedback only: the
+// message list is never touched, and only a definite rejection (never a
+// timeout) puts the text back in the composer.
+describe('useChatStore — failed push feedback', () => {
+  /** The `onFailure` the store handed to the most recent call of a
+   * (mocked) socket push — always its last argument. */
+  function lastFailureHandler(push: unknown): PushFailureHandler {
+    const call = (push as Mock).mock.calls.at(-1);
+    if (!call) throw new Error('push was never called');
+    return call.at(-1) as PushFailureHandler;
+  }
+
+  beforeEach(() => {
+    useChatStore.getState().reset();
+    useServerStore.getState().reset();
+    useServerStore.setState({ activeChannelId: 'channel-1' });
+    vi.clearAllMocks();
+  });
+
+  it('a rejected send shows feedback and puts the text back, without touching messages', () => {
+    const messages = [makeMessage({ id: 'a' })];
+    useChatStore.setState({ messages });
+    useChatStore.getState().setDraft('hello');
+
+    useChatStore.getState().sendMessage();
+    expect(useChatStore.getState().draft).toBe('');
+
+    lastFailureHandler(shout)({ kind: 'error', reason: 'rate_limited' });
+
+    const state = useChatStore.getState();
+    expect(state.actionError).toBe(
+      chatActionErrorMessage('send', { kind: 'error', reason: 'rate_limited' })
+    );
+    expect(state.draft).toBe('hello');
+    expect(state.messages).toBe(messages);
+  });
+
+  it('a rejected send never overwrites text the user has already started typing', () => {
+    useChatStore.getState().setDraft('first');
+    useChatStore.getState().sendMessage();
+    useChatStore.getState().setDraft('second, still being typed');
+
+    lastFailureHandler(shout)({ kind: 'error', reason: 'rate_limited' });
+
+    expect(useChatStore.getState().draft).toBe('second, still being typed');
+    expect(useChatStore.getState().actionError).not.toBe('');
+  });
+
+  it('a timed-out send shows the neutral message and does NOT restore the text (it may still arrive)', () => {
+    useChatStore.getState().setDraft('hello');
+    useChatStore.getState().sendMessage();
+
+    lastFailureHandler(shout)({ kind: 'timeout' });
+
+    expect(useChatStore.getState().actionError).toBe(
+      chatActionErrorMessage('send', { kind: 'timeout' })
+    );
+    expect(useChatStore.getState().draft).toBe('');
+  });
+
+  it('drops feedback for a push made in a channel the user has since left', () => {
+    useChatStore.getState().setDraft('hello');
+    useChatStore.getState().sendMessage();
+    useServerStore.setState({ activeChannelId: 'channel-2' });
+
+    lastFailureHandler(shout)({ kind: 'error', reason: 'rate_limited' });
+
+    expect(useChatStore.getState().actionError).toBe('');
+    expect(useChatStore.getState().draft).toBe('');
+  });
+
+  it('sending again clears the previous feedback', () => {
+    useChatStore.setState({ actionError: 'old feedback' });
+    useChatStore.getState().setDraft('hello');
+
+    useChatStore.getState().sendMessage();
+
+    expect(useChatStore.getState().actionError).toBe('');
+  });
+
+  it('resetForChannelSwitch clears the feedback', () => {
+    useChatStore.setState({ actionError: 'old feedback' });
+
+    useChatStore.getState().resetForChannelSwitch();
+
+    expect(useChatStore.getState().actionError).toBe('');
+  });
+
+  it.each([
+    ['edit', editMessage, () => useChatStore.getState().editMessage('a', 'changed')],
+    ['delete', deleteMessage, () => useChatStore.getState().deleteMessage('a')],
+    ['react', toggleReaction, () => useChatStore.getState().toggleReaction('a', '👍')],
+  ] as const)('a rejected %s shows feedback and leaves messages untouched', (action, push, run) => {
+    const messages = [makeMessage({ id: 'a', content: 'original' })];
+    useChatStore.setState({ messages });
+
+    run();
+    lastFailureHandler(push)({ kind: 'error', reason: 'rate_limited' });
+
+    expect(useChatStore.getState().actionError).toBe(
+      chatActionErrorMessage(action, { kind: 'error', reason: 'rate_limited' })
+    );
+    expect(useChatStore.getState().messages).toBe(messages);
+    expect(useChatStore.getState().draft).toBe('');
+  });
+
+  it('a rejected file send restores only its text', async () => {
+    vi.mocked(uploadFile).mockResolvedValue({
+      data: { file_url: '/uploads/x.png', file_type: 'image/png' },
+    });
+    useChatStore.getState().setDraft('caption');
+
+    await useChatStore.getState().handleFileSelected(new File(['x'], 'x.png', { type: 'image/png' }));
+    expect(useChatStore.getState().draft).toBe('');
+
+    lastFailureHandler(shout)({ kind: 'error', reason: 'rate_limited' });
+
+    expect(useChatStore.getState().draft).toBe('caption');
+    expect(useChatStore.getState().actionError).not.toBe('');
   });
 });

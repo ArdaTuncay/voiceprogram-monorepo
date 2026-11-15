@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act } from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import Chat from '../Chat';
 import { useServerStore } from '../../stores/useServerStore';
@@ -418,5 +419,23 @@ describe('Chat — ses kanalı doluluk önizlemesi (voice_occupants)', () => {
 
     expect(screen.queryByText('diğer-kullanıcı')).toBeNull();
     expect(screen.queryByText('başka-kullanıcı')).toBeNull();
+  });
+});
+
+// PROJECT_ARCHITECTURE.md §7 #11 — a rejected push's feedback appears in
+// the existing slot under the composer.
+describe('Chat — başarısız işlem geri bildirimi', () => {
+  it('actionError composer altında bir uyarı olarak gösterilir', () => {
+    setupActiveChannel();
+    render(<Chat user={testUser} onLogout={vi.fn()} />);
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    // Set after mounting: joining the channel on mount runs
+    // resetForChannelSwitch, which (correctly) clears any earlier feedback.
+    act(() => {
+      useChatStore.setState({ actionError: 'Mesaj gönderilemedi. Lütfen tekrar deneyin.' });
+    });
+
+    expect(screen.getByRole('alert').textContent).toContain('Mesaj gönderilemedi. Lütfen tekrar deneyin.');
   });
 });

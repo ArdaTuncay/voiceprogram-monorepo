@@ -29,7 +29,8 @@ defmodule Backend.DirectMessagesTest do
       b = user_fixture()
       room = dm_room_fixture(a, b)
 
-      {:ok, _} = DirectMessages.create_message(%{content: "hi", user_id: b.id, dm_room_id: room.id})
+      {:ok, _} =
+        DirectMessages.create_message(%{content: "hi", user_id: b.id, dm_room_id: room.id})
 
       [view] = DirectMessages.list_rooms_for_user(a.id)
       assert view.id == room.id
@@ -179,8 +180,11 @@ defmodule Backend.DirectMessagesTest do
       b = user_fixture()
       room = dm_room_fixture(a, b)
 
-      {:ok, _} = DirectMessages.create_message(%{content: "one", user_id: a.id, dm_room_id: room.id})
-      {:ok, _} = DirectMessages.create_message(%{content: "two", user_id: a.id, dm_room_id: room.id})
+      {:ok, _} =
+        DirectMessages.create_message(%{content: "one", user_id: a.id, dm_room_id: room.id})
+
+      {:ok, _} =
+        DirectMessages.create_message(%{content: "two", user_id: a.id, dm_room_id: room.id})
 
       assert DirectMessages.unread_count(b.id, room.id) == 2
     end
@@ -190,8 +194,15 @@ defmodule Backend.DirectMessagesTest do
       b = user_fixture()
       room = dm_room_fixture(a, b)
 
-      {:ok, _} = DirectMessages.create_message(%{content: "from a", user_id: a.id, dm_room_id: room.id})
-      {:ok, _} = DirectMessages.create_message(%{content: "from a again", user_id: a.id, dm_room_id: room.id})
+      {:ok, _} =
+        DirectMessages.create_message(%{content: "from a", user_id: a.id, dm_room_id: room.id})
+
+      {:ok, _} =
+        DirectMessages.create_message(%{
+          content: "from a again",
+          user_id: a.id,
+          dm_room_id: room.id
+        })
 
       assert DirectMessages.unread_count(a.id, room.id) == 0
     end
@@ -201,8 +212,11 @@ defmodule Backend.DirectMessagesTest do
       b = user_fixture()
       room = dm_room_fixture(a, b)
 
-      {:ok, m1} = DirectMessages.create_message(%{content: "one", user_id: a.id, dm_room_id: room.id})
-      {:ok, _m2} = DirectMessages.create_message(%{content: "two", user_id: a.id, dm_room_id: room.id})
+      {:ok, m1} =
+        DirectMessages.create_message(%{content: "one", user_id: a.id, dm_room_id: room.id})
+
+      {:ok, _m2} =
+        DirectMessages.create_message(%{content: "two", user_id: a.id, dm_room_id: room.id})
 
       {:ok, _} = DirectMessages.mark_room_read(b.id, room.id, m1.seq)
 
@@ -214,8 +228,11 @@ defmodule Backend.DirectMessagesTest do
       b = user_fixture()
       room = dm_room_fixture(a, b)
 
-      {:ok, _m1} = DirectMessages.create_message(%{content: "one", user_id: a.id, dm_room_id: room.id})
-      {:ok, m2} = DirectMessages.create_message(%{content: "two", user_id: a.id, dm_room_id: room.id})
+      {:ok, _m1} =
+        DirectMessages.create_message(%{content: "one", user_id: a.id, dm_room_id: room.id})
+
+      {:ok, m2} =
+        DirectMessages.create_message(%{content: "two", user_id: a.id, dm_room_id: room.id})
 
       {:ok, _} = DirectMessages.mark_room_read(b.id, room.id, m2.seq)
 
@@ -229,10 +246,13 @@ defmodule Backend.DirectMessagesTest do
       room = dm_room_fixture(a, b)
       other_room = dm_room_fixture(a, c)
 
-      {:ok, m1} = DirectMessages.create_message(%{content: "hi", user_id: a.id, dm_room_id: other_room.id})
+      {:ok, m1} =
+        DirectMessages.create_message(%{content: "hi", user_id: a.id, dm_room_id: other_room.id})
+
       {:ok, _} = DirectMessages.mark_room_read(a.id, other_room.id, m1.seq)
 
-      {:ok, _} = DirectMessages.create_message(%{content: "hi", user_id: b.id, dm_room_id: room.id})
+      {:ok, _} =
+        DirectMessages.create_message(%{content: "hi", user_id: b.id, dm_room_id: room.id})
 
       assert DirectMessages.unread_count(a.id, room.id) == 1
     end
