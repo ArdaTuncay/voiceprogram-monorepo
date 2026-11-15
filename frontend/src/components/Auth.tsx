@@ -92,21 +92,21 @@ export default function Auth({ onAuth }: Props) {
     <div className="auth-page">
       <div className="auth-card">
         <img src={mascot} alt="Zircle maskotu" className="auth-mascot" />
-        <h1>{mode === 'login' ? 'Welcome back!' : 'Create an account'}</h1>
+        <h1>{mode === 'login' ? 'Tekrar hoş geldin!' : 'Hesap oluştur'}</h1>
         <p className="subtitle">
           {mode === 'login'
-            ? "We're so excited to see you again!"
-            : 'Join the community today.'}
+            ? 'Seni yeniden görmek güzel!'
+            : 'Topluluğa bugün katıl.'}
         </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {mode === 'register' && (
             <div className="form-group">
-              <label htmlFor="username">Username</label>
+              <label htmlFor="username">Kullanıcı adı</label>
               <input
                 id="username"
                 type="text"
-                placeholder="cooluser42"
+                placeholder="havalikullanici42"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -118,11 +118,11 @@ export default function Auth({ onAuth }: Props) {
           )}
 
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">E-posta</label>
             <input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="sen@ornek.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -131,7 +131,7 @@ export default function Auth({ onAuth }: Props) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">Şifre</label>
             <input
               id="password"
               type="password"
@@ -147,7 +147,7 @@ export default function Auth({ onAuth }: Props) {
           {error && <div className="auth-error">{error}</div>}
 
           <button type="submit" className="auth-submit" disabled={loading}>
-            {loading ? 'Please wait…' : mode === 'login' ? 'Log In' : 'Continue'}
+            {loading ? 'Lütfen bekle…' : mode === 'login' ? 'Giriş yap' : 'Devam et'}
           </button>
         </form>
 
@@ -162,9 +162,9 @@ export default function Auth({ onAuth }: Props) {
         <hr className="auth-divider" />
 
         <p className="auth-toggle">
-          {mode === 'login' ? 'Need an account?' : 'Already have an account?'}
+          {mode === 'login' ? 'Hesabın yok mu?' : 'Zaten hesabın var mı?'}
           <button type="button" onClick={switchMode}>
-            {mode === 'login' ? 'Register' : 'Log In'}
+            {mode === 'login' ? 'Kayıt ol' : 'Giriş yap'}
           </button>
         </p>
       </div>

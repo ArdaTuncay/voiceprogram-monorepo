@@ -14,13 +14,13 @@ import { AUTH_REQUEST_ERRORS } from '../../utils/errorMessages';
 
 function fillAndSubmit(fields: { username?: string; email: string; password: string }) {
   if (fields.username !== undefined) {
-    fireEvent.change(screen.getByLabelText('Username'), { target: { value: fields.username } });
+    fireEvent.change(screen.getByLabelText('Kullanıcı adı'), { target: { value: fields.username } });
   }
-  fireEvent.change(screen.getByLabelText('Email'), { target: { value: fields.email } });
-  fireEvent.change(screen.getByLabelText('Password'), { target: { value: fields.password } });
+  fireEvent.change(screen.getByLabelText('E-posta'), { target: { value: fields.email } });
+  fireEvent.change(screen.getByLabelText('Şifre'), { target: { value: fields.password } });
   // Not screen.getByRole('button', { name: ... }) — the submit button's own
-  // label ("Continue"/"Log In") collides with the mode-toggle button's label
-  // ("Log In"/"Register") depending on which mode is active, so this
+  // label ("Devam et"/"Giriş yap") collides with the mode-toggle button's label
+  // ("Giriş yap"/"Kayıt ol") depending on which mode is active, so this
   // targets the form's submit button by type instead of by text.
   return act(async () => {
     const submitButton = document.querySelector('button[type="submit"]');
@@ -50,7 +50,7 @@ describe('Auth — register', () => {
     const onAuth = vi.fn();
 
     render(<Auth onAuth={onAuth} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Register' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kayıt ol' }));
 
     await fillAndSubmit({
       username: 'newperson',
@@ -70,7 +70,7 @@ describe('Auth — register', () => {
     const onAuth = vi.fn();
 
     render(<Auth onAuth={onAuth} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Register' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kayıt ol' }));
 
     await fillAndSubmit({
       username: 'newperson',
@@ -146,7 +146,7 @@ describe('Auth — submit button never stays stuck', () => {
     await fillAndSubmit({ email: 'ard@example.com', password: 'password123' });
 
     expect(submitButton().disabled).toBe(false);
-    expect(submitButton().textContent).toBe('Log In');
+    expect(submitButton().textContent).toBe('Giriş yap');
     expect(screen.getByText(AUTH_REQUEST_ERRORS.unexpected)).not.toBeNull();
     expect(onAuth).not.toHaveBeenCalled();
   });
@@ -155,7 +155,7 @@ describe('Auth — submit button never stays stuck', () => {
     vi.mocked(registerUser).mockRejectedValue(new Error('boom'));
 
     render(<Auth onAuth={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Register' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kayıt ol' }));
     await fillAndSubmit({
       username: 'newperson',
       email: 'newperson@example.com',
@@ -163,7 +163,7 @@ describe('Auth — submit button never stays stuck', () => {
     });
 
     expect(submitButton().disabled).toBe(false);
-    expect(submitButton().textContent).toBe('Continue');
+    expect(submitButton().textContent).toBe('Devam et');
     expect(screen.getByText(AUTH_REQUEST_ERRORS.unexpected)).not.toBeNull();
   });
 
@@ -218,7 +218,7 @@ describe('Auth — verification pending screen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Giriş ekranına dön' }));
 
-    expect(screen.getByRole('button', { name: 'Log In' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Giriş yap' })).not.toBeNull();
     expect(screen.queryByText('E-postanızı kontrol edin')).toBeNull();
   });
 });

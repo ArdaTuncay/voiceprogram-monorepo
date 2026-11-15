@@ -104,7 +104,7 @@ async function sendPost<T>(
     if (resp.status === 429) return { error: AUTH_REQUEST_ERRORS.rateLimited };
     const err = json as ApiError;
     if (err.errors) return { error: changesetErrorsMessage(err.errors) };
-    return { error: err.error ?? 'An error occurred' };
+    return { error: err.error ?? 'Bir hata oluştu' };
   }
   return { data: json as T };
 }
@@ -118,7 +118,7 @@ async function get<T>(path: string): Promise<ApiResult<T>> {
     const json = await resp.json();
     if (!resp.ok) {
       const err = json as ApiError;
-      return { error: err.error ?? 'An error occurred' };
+      return { error: err.error ?? 'Bir hata oluştu' };
     }
     return { data: json as T };
   } catch {
@@ -160,7 +160,7 @@ async function authedFetch<T>(path: string, init?: RequestInit): Promise<ApiResu
         );
         return { error: messages.join(', ') };
       }
-      return { error: err.error ?? 'An error occurred' };
+      return { error: err.error ?? 'Bir hata oluştu' };
     }
     return { data: json as T };
   } catch {
