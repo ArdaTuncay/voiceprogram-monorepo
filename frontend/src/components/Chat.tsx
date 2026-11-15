@@ -304,6 +304,23 @@ export default function Chat({ user, onLogout }: Props) {
     }
   }, [channels, channelsServerId, voice.activeRoomId, activeServerId, voiceRoomServerId]);
 
+  // The effect above only fires while *viewing* the room's server, but
+  // losing the server itself — kicked, left, or deleted, all of which go
+  // through useServerStore's removeServerAndDeselect — nulls activeServerId
+  // (or happens while viewing another server), so it never matched and the
+  // microphone and peer connections stayed open. The backend now closes the
+  // voice channel on its side too (see Backend.Servers.revoke_channel_access/2);
+  // this makes the local side hang up as well.
+  useEffect(() => {
+    if (
+      voice.activeRoomId &&
+      voiceRoomServerId &&
+      !servers.some((s) => s.id === voiceRoomServerId)
+    ) {
+      voiceLeaveRef.current();
+    }
+  }, [servers, voice.activeRoomId, voiceRoomServerId]);
+
   // If the Phoenix socket dropped and came back (a brief network blip, the
   // laptop sleeping, etc.) while we were in a voice room, rejoin it from
   // scratch. A plain channel rejoin (which happens automatically — see

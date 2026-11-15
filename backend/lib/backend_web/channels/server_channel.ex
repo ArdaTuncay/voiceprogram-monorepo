@@ -22,11 +22,24 @@ defmodule BackendWeb.ServerChannel do
         {:error, %{reason: "server not found"}}
 
       %Server{} = server ->
+        # Subscribed before the membership check, not after — see
+        # Servers.subscribe_to_membership/2.
+        :ok = Servers.subscribe_to_membership(server.id, socket.assigns.user_id)
+
         if Servers.member?(server.id, socket.assigns.user_id) do
           {:ok, socket}
         else
           {:error, %{reason: "not authorized"}}
         end
     end
+  end
+
+  # See Servers.revoke_channel_access/2 — stops a removed member from
+  # receiving this server's live updates (channel list, member list,
+  # voice occupancy) on an already-open process.
+  @impl true
+  def handle_info({:server_membership_revoked, server_id}, socket) do
+    push(socket, "access_revoked", %{server_id: server_id})
+    {:stop, {:shutdown, :membership_revoked}, socket}
   end
 end
