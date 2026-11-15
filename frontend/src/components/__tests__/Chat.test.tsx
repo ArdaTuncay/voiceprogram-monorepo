@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { act } from 'react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import Chat from '../Chat';
 import { useServerStore } from '../../stores/useServerStore';
 import { useDMStore } from '../../stores/useDMStore';
