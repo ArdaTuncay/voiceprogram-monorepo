@@ -58,3 +58,20 @@ describe('DMChatView — arama çubuğu aç/kapa', () => {
     expect(screen.queryByPlaceholderText('Mesajlarda ara...')).toBeNull();
   });
 });
+
+// PROJECT_ARCHITECTURE.md §7 #11 — same slot as Chat's.
+describe('DMChatView — başarısız işlem geri bildirimi', () => {
+  it('actionError composer altında bir uyarı olarak gösterilir', () => {
+    useDMStore.setState({ actionError: 'Mesaj gönderilemedi. Bu kişiyle aranızda engelleme olduğu için mesaj gönderilemiyor.' });
+
+    render(<DMChatView currentUserId="u1" />);
+
+    expect(screen.getByRole('alert').textContent).toContain('engelleme olduğu için');
+  });
+
+  it('actionError boşken uyarı gösterilmez', () => {
+    render(<DMChatView currentUserId="u1" />);
+
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
