@@ -98,7 +98,9 @@ defmodule BackendWeb.VoiceChannelTest do
     {:ok, _reply, _server_socket} = subscribe_and_join(server_socket, "server:#{server.id}", %{})
 
     {:ok, voice_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
-    assert {:ok, _reply, _voice_socket} = subscribe_and_join(voice_socket, "voice:#{channel.id}", %{})
+
+    assert {:ok, _reply, _voice_socket} =
+             subscribe_and_join(voice_socket, "voice:#{channel.id}", %{})
 
     assert_broadcast "voice_presence_updated", %{
       channel_id: ^channel_id,
@@ -116,6 +118,7 @@ defmodule BackendWeb.VoiceChannelTest do
     {:ok, _reply, _server_socket} = subscribe_and_join(server_socket, "server:#{server.id}", %{})
 
     {:ok, owner_voice_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+
     {:ok, _reply, _owner_voice_socket} =
       subscribe_and_join(owner_voice_socket, "voice:#{channel.id}", %{})
 
@@ -124,6 +127,7 @@ defmodule BackendWeb.VoiceChannelTest do
     assert_broadcast "voice_presence_updated", %{channel_id: ^channel_id}
 
     {:ok, member_voice_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(member)})
+
     {:ok, _reply, _member_voice_socket} =
       subscribe_and_join(member_voice_socket, "voice:#{channel.id}", %{})
 
@@ -140,12 +144,14 @@ defmodule BackendWeb.VoiceChannelTest do
     {:ok, _reply, _server_socket} = subscribe_and_join(server_socket, "server:#{server.id}", %{})
 
     {:ok, owner_voice_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(owner)})
+
     {:ok, _reply, _owner_voice_socket} =
       subscribe_and_join(owner_voice_socket, "voice:#{channel.id}", %{})
 
     assert_broadcast "voice_presence_updated", %{channel_id: ^channel_id}
 
     {:ok, member_voice_socket} = connect(BackendWeb.UserSocket, %{"token" => token_for(member)})
+
     {:ok, _reply, member_voice_socket} =
       subscribe_and_join(member_voice_socket, "voice:#{channel.id}", %{})
 
