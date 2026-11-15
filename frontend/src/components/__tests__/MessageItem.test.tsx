@@ -104,7 +104,7 @@ describe('MessageItem', () => {
       renderItem({
         message: makeMessage({ user_id: 'someone-else' }),
         currentUserId: 'viewer',
-        isServerOwner: false,
+        canModerate: false,
       });
 
       openContextMenu();
@@ -118,7 +118,7 @@ describe('MessageItem', () => {
       renderItem({
         message: makeMessage({ user_id: 'someone-else' }),
         currentUserId: 'owner',
-        isServerOwner: true,
+        canModerate: true,
       });
 
       openContextMenu();
@@ -127,7 +127,7 @@ describe('MessageItem', () => {
       expect(screen.getByText('Sil')).not.toBeNull();
     });
 
-    it('is author-only in a DM — isServerOwner is never passed there', () => {
+    it('is author-only in a DM — canModerate is never passed there', () => {
       renderItem({ message: makeMessage({ user_id: 'someone-else' }), currentUserId: 'viewer' });
 
       openContextMenu();

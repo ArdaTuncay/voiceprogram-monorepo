@@ -17,12 +17,17 @@ defmodule Backend.Servers do
   @invite_code_length 7
   @invite_code_max_attempts 5
 
-  @doc "Returns all servers the given user is a member of, ordered by name."
+  @doc """
+  Returns all servers the given user is a member of, ordered by name, each
+  with the user's own role in it as the virtual `:my_role` field.
+  """
   def list_servers_for_user(user_id) do
     Server
     |> join(:inner, [s], m in ServerMember, on: m.server_id == s.id and m.user_id == ^user_id)
     |> order_by([s], asc: s.name)
+    |> select([s, m], {s, m.role})
     |> Repo.all()
+    |> Enum.map(fn {server, role} -> Map.put(server, :my_role, role) end)
   end
 
   @doc """
@@ -112,6 +117,65 @@ defmodule Backend.Servers do
       _ -> false
     end
   end
+
+  @doc ~s|The user's role in the server ("owner", "moderator" or "member"), or nil if not a member.|
+  def role_of(server_id, user_id) do
+    ServerMember
+    |> where([m], m.server_id == ^server_id and m.user_id == ^user_id)
+    |> select([m], m.role)
+    |> Repo.one()
+  end
+
+  @doc "True if the user is the server's owner or one of its moderators."
+  def moderator?(server_id, user_id), do: role_of(server_id, user_id) in ["owner", "moderator"]
+
+  @doc """
+  True if `actor_id` may kick, ban or delete the messages of `target_id` in
+  the server. The owner can act on anyone but themselves; a moderator only
+  on regular members (or non-members, for a pre-emptive ban) — never on the
+  owner or another moderator. Everyone else can't act on anyone.
+  """
+  def can_moderate?(_server_id, actor_id, actor_id), do: false
+
+  def can_moderate?(server_id, actor_id, target_id) do
+    case role_of(server_id, actor_id) do
+      "owner" -> true
+      "moderator" -> role_of(server_id, target_id) in ["member", nil]
+      _ -> false
+    end
+  end
+
+  @assignable_roles ~w(member moderator)
+
+  @doc """
+  Sets a member's role to `"member"` or `"moderator"`. The owner's role
+  can't change this way (ownership isn't transferable). The caller checks
+  that the actor is the owner. Announces `"member_role_updated"` to the
+  server and to the member's own topic, so their client unlocks or hides
+  the moderation controls live.
+
+  Returns `{:ok, member}`, `{:error, :not_found}`, `{:error, :owner}`, or
+  `{:error, :invalid_role}`.
+  """
+  def set_member_role(server_id, user_id, role) when role in @assignable_roles do
+    case Repo.get_by(ServerMember, server_id: server_id, user_id: user_id) do
+      nil ->
+        {:error, :not_found}
+
+      %ServerMember{role: "owner"} ->
+        {:error, :owner}
+
+      member ->
+        with {:ok, updated} <- member |> ServerMember.changeset(%{role: role}) |> Repo.update() do
+          payload = %{server_id: server_id, user_id: user_id, role: role}
+          BackendWeb.Endpoint.broadcast("user:#{user_id}", "member_role_updated", payload)
+          broadcast_to_server(server_id, "member_role_updated", payload)
+          {:ok, updated}
+        end
+    end
+  end
+
+  def set_member_role(_server_id, _user_id, _role), do: {:error, :invalid_role}
 
   @doc "Returns the user ids of every member of the given server."
   def list_member_user_ids(server_id) do

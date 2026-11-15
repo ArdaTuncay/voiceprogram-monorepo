@@ -255,7 +255,7 @@ defmodule Backend.Chat do
         {:error, :not_authorized}
 
       %Message{user_id: user_id, channel_id: channel_id} = message ->
-        if user_id == req_user_id or channel_owner?(channel_id, req_user_id) do
+        if user_id == req_user_id or can_moderate_in_channel?(channel_id, req_user_id, user_id) do
           soft_delete_message(message, message_id)
         else
           {:error, :not_authorized}
@@ -284,10 +284,15 @@ defmodule Backend.Chat do
     end
   end
 
-  defp channel_owner?(channel_id, user_id) do
+  # The server's owner, or a moderator acting on a regular member's message
+  # (see Servers.can_moderate?/3).
+  defp can_moderate_in_channel?(channel_id, actor_id, author_id) do
     case get_channel(channel_id) do
-      %Channel{server_id: server_id} -> Servers.owner?(server_id, user_id)
-      nil -> false
+      %Channel{server_id: server_id} when not is_nil(server_id) ->
+        Servers.can_moderate?(server_id, actor_id, author_id)
+
+      _ ->
+        false
     end
   end
 

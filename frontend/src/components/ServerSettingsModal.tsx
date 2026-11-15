@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Volume2, Hash, Trash2, UserX, Ban } from 'lucide-react';
+import { AlertTriangle, Volume2, Hash, Trash2, UserX, Ban, Shield, ShieldOff } from 'lucide-react';
 import StatusIndicator from './StatusIndicator';
-import type { Channel, Server, ServerMember, Invite } from '../types';
+import type { Channel, MemberRole, Server, ServerMember, Invite } from '../types';
 import type { ServerBan } from '../services/api';
 import {
   updateServer,
@@ -14,7 +14,9 @@ import {
   fetchServerMembers,
   fetchServerInvites,
   revokeInvite,
+  setMemberRole,
 } from '../services/api';
+import { canModerate } from '../utils/permissions';
 import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
 import './ServerSettingsModal.css';
@@ -30,25 +32,33 @@ export default function ServerSettingsModal({ onClose }: Props) {
   const servers = useServerStore((s) => s.servers);
   const channels = useServerStore((s) => s.channels);
   const server = servers.find((s) => s.id === activeServerId);
-  const [tab, setTab] = useState<Tab>('general');
+  // Only owners and moderators ever open this (see Chat.tsx); a moderator
+  // gets just the members and bans tabs — the rest stays the owner's.
+  const myRole: MemberRole = server?.my_role ?? 'owner';
+  const isOwner = myRole === 'owner';
+  const [tab, setTab] = useState<Tab>(isOwner ? 'general' : 'members');
 
   if (!server) return null;
 
   return (
     <Modal title={`Sunucu Ayarları — ${server.name}`} onClose={onClose}>
       <div className="settings-tabs">
-        <button
-          className={`settings-tab${tab === 'general' ? ' active' : ''}`}
-          onClick={() => setTab('general')}
-        >
-          Genel Ayarlar
-        </button>
-        <button
-          className={`settings-tab${tab === 'channels' ? ' active' : ''}`}
-          onClick={() => setTab('channels')}
-        >
-          Kanalları Yönet
-        </button>
+        {isOwner && (
+          <>
+            <button
+              className={`settings-tab${tab === 'general' ? ' active' : ''}`}
+              onClick={() => setTab('general')}
+            >
+              Genel Ayarlar
+            </button>
+            <button
+              className={`settings-tab${tab === 'channels' ? ' active' : ''}`}
+              onClick={() => setTab('channels')}
+            >
+              Kanalları Yönet
+            </button>
+          </>
+        )}
         <button
           className={`settings-tab${tab === 'members' ? ' active' : ''}`}
           onClick={() => setTab('members')}
@@ -61,19 +71,21 @@ export default function ServerSettingsModal({ onClose }: Props) {
         >
           Yasaklılar
         </button>
-        <button
-          className={`settings-tab${tab === 'invites' ? ' active' : ''}`}
-          onClick={() => setTab('invites')}
-        >
-          Davet Linkleri
-        </button>
+        {isOwner && (
+          <button
+            className={`settings-tab${tab === 'invites' ? ' active' : ''}`}
+            onClick={() => setTab('invites')}
+          >
+            Davet Linkleri
+          </button>
+        )}
       </div>
 
-      {tab === 'general' && <GeneralTab server={server} onClose={onClose} />}
-      {tab === 'channels' && <ChannelsTab channels={channels} />}
-      {tab === 'members' && <MembersTab serverId={server.id} ownerId={server.owner_id} />}
+      {isOwner && tab === 'general' && <GeneralTab server={server} onClose={onClose} />}
+      {isOwner && tab === 'channels' && <ChannelsTab channels={channels} />}
+      {tab === 'members' && <MembersTab serverId={server.id} myRole={myRole} />}
       {tab === 'bans' && <BansTab serverId={server.id} />}
-      {tab === 'invites' && <InvitesTab serverId={server.id} />}
+      {isOwner && tab === 'invites' && <InvitesTab serverId={server.id} />}
     </Modal>
   );
 }
@@ -219,7 +231,7 @@ function ChannelsTab({ channels }: { channels: Channel[] }) {
   );
 }
 
-function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }) {
+function MembersTab({ serverId, myRole }: { serverId: string; myRole: MemberRole }) {
   const [members, setMembers] = useState<ServerMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -229,6 +241,7 @@ function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }
   const [banTargetId, setBanTargetId] = useState<string | null>(null);
   const [banReason, setBanReason] = useState('');
   const [banning, setBanning] = useState(false);
+  const [roleChangingId, setRoleChangingId] = useState<string | null>(null);
   // Live updates (see BackendWeb.UserChannel's "member_status_changed") take
   // priority over whatever was last fetched — fetchServerMembers's `status`
   // is just the seed value until the first live update for that user arrives.
@@ -262,6 +275,19 @@ function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }
       return;
     }
     setMembers((prev) => prev.filter((m) => m.user_id !== userId));
+  }
+
+  async function handleRoleChange(userId: string, role: 'moderator' | 'member') {
+    setRoleChangingId(userId);
+    setError('');
+    const { error } = await setMemberRole(serverId, userId, role);
+    setRoleChangingId(null);
+
+    if (error) {
+      setError(error);
+      return;
+    }
+    setMembers((prev) => prev.map((m) => (m.user_id === userId ? { ...m, role } : m)));
   }
 
   async function handleBan(userId: string) {
@@ -298,10 +324,28 @@ function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }
                   className="member-status-dot"
                 />
                 {member.username ?? 'Bilinmeyen'}
-                {member.user_id === ownerId && <span className="settings-owner-badge">Sahip</span>}
+                {member.role === 'owner' && <span className="settings-owner-badge">Sahip</span>}
+                {member.role === 'moderator' && <span className="settings-owner-badge">Moderatör</span>}
               </span>
-              {member.user_id !== ownerId && (
+              {canModerate(myRole, member.role) && (
                 <span className="settings-member-actions">
+                  {myRole === 'owner' && (
+                    <button
+                      className="settings-icon-btn"
+                      onClick={() =>
+                        handleRoleChange(member.user_id, member.role === 'moderator' ? 'member' : 'moderator')
+                      }
+                      disabled={roleChangingId === member.user_id}
+                      title={member.role === 'moderator' ? 'Moderatörlüğünü Al' : 'Moderatör Yap'}
+                      aria-label={
+                        member.role === 'moderator'
+                          ? `${member.username ?? 'kullanıcının'} moderatörlüğünü al`
+                          : `${member.username ?? 'kullanıcıyı'} moderatör yap`
+                      }
+                    >
+                      {member.role === 'moderator' ? <ShieldOff size={14} /> : <Shield size={14} />}
+                    </button>
+                  )}
                   <button
                     className="settings-icon-btn"
                     onClick={() => handleKick(member.user_id)}

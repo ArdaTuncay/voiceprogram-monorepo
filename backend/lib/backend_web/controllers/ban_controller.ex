@@ -1,7 +1,9 @@
 defmodule BackendWeb.BanController do
   @moduledoc """
-  Server bans, owner-only: `GET/POST /api/servers/:server_id/bans`,
-  `DELETE /api/servers/:server_id/bans/:user_id`. See `Backend.Servers.ban_user/4`.
+  Server bans, for the owner and moderators: `GET/POST /api/servers/:server_id/bans`,
+  `DELETE /api/servers/:server_id/bans/:user_id`. A moderator can only ban
+  regular members (or non-members) — see `Backend.Servers.can_moderate?/3`
+  and `Backend.Servers.ban_user/4`.
   """
   use BackendWeb, :controller
 
@@ -14,14 +16,14 @@ defmodule BackendWeb.BanController do
        when action in [:create, :delete]
 
   def index(conn, %{"server_id" => server_id}) do
-    with_owned_server(conn, server_id, fn server ->
+    with_moderated_server(conn, server_id, fn server ->
       json(conn, Servers.list_bans(server.id))
     end)
   end
 
   def create(conn, %{"server_id" => server_id, "user_id" => user_id} = params)
       when is_binary(user_id) do
-    with_owned_server(conn, server_id, fn server ->
+    with_moderated_server(conn, server_id, fn server ->
       with {:ok, _} <- Ecto.UUID.cast(user_id),
            %{} <- Accounts.get_user(user_id) do
         ban(conn, server, user_id, params["reason"])
@@ -36,7 +38,7 @@ defmodule BackendWeb.BanController do
   end
 
   def delete(conn, %{"server_id" => server_id, "user_id" => user_id}) do
-    with_owned_server(conn, server_id, fn server ->
+    with_moderated_server(conn, server_id, fn server ->
       case Servers.unban_user(server.id, user_id) do
         {:ok, _} -> send_resp(conn, :no_content, "")
         {:error, _} -> conn |> put_status(:not_found) |> json(%{error: "Yasak bulunamadı"})
@@ -45,6 +47,16 @@ defmodule BackendWeb.BanController do
   end
 
   defp ban(conn, server, user_id, reason) do
+    actor_id = conn.assigns.current_user.id
+
+    if user_id == server.owner_id or Servers.can_moderate?(server.id, actor_id, user_id) do
+      do_ban(conn, server, user_id, reason)
+    else
+      conn |> put_status(:forbidden) |> json(%{error: "Bu kullanıcıyı yasaklayamazsın"})
+    end
+  end
+
+  defp do_ban(conn, server, user_id, reason) do
     case Servers.ban_user(server, user_id, conn.assigns.current_user.id, reason) do
       {:ok, ban} ->
         conn
@@ -59,16 +71,17 @@ defmodule BackendWeb.BanController do
     end
   end
 
-  defp with_owned_server(conn, server_id, fun) do
+  defp with_moderated_server(conn, server_id, fun) do
     case Servers.get_server(server_id) do
-      %Server{owner_id: owner_id} = server when owner_id == conn.assigns.current_user.id ->
-        fun.(server)
-
-      %Server{} ->
-        conn |> put_status(:forbidden) |> json(%{error: "Forbidden"})
-
       nil ->
         conn |> put_status(:not_found) |> json(%{error: "Server not found"})
+
+      %Server{} = server ->
+        if Servers.moderator?(server.id, conn.assigns.current_user.id) do
+          fun.(server)
+        else
+          conn |> put_status(:forbidden) |> json(%{error: "Forbidden"})
+        end
     end
   end
 

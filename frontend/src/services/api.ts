@@ -2,6 +2,7 @@ import type {
   AuthResponse,
   Channel,
   ChannelType,
+  MemberRole,
   Server,
   ServerMember,
   Invite,
@@ -345,6 +346,15 @@ export function kickMember(serverId: string, userId: string): Promise<ApiResult<
   return authedDelete<void>(`/servers/${serverId}/members/${userId}`);
 }
 
+/** Owner only. Promotes a member to moderator or demotes them back. */
+export function setMemberRole(
+  serverId: string,
+  userId: string,
+  role: 'moderator' | 'member'
+): Promise<ApiResult<{ user_id: string; role: MemberRole }>> {
+  return authedPatch(`/servers/${serverId}/members/${userId}`, { role });
+}
+
 export interface ServerBan {
   user_id: string;
   username: string | null;
@@ -352,7 +362,7 @@ export interface ServerBan {
   banned_at: string;
 }
 
-/** Owner-only. Removes the user from the server if they're a member and
+/** Owner or moderator (a moderator only for regular members). Removes the user from the server if they're a member and
  * keeps them from rejoining through any invite until unbanned. */
 export function banMember(serverId: string, userId: string, reason: string): Promise<ApiResult<unknown>> {
   return authedFetch<unknown>(`/servers/${serverId}/bans`, {
