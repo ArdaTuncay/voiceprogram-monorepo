@@ -74,6 +74,7 @@ defmodule BackendWeb.ChannelController do
       user_id: message.user_id,
       username: Backend.Accounts.display_username(message.user),
       avatar_url: message.user && message.user.avatar_url,
+      reply_to: BackendWeb.MessageJSON.reply_preview(message),
       inserted_at: message.inserted_at,
       reactions: message.reactions,
       # See BackendWeb.ChatChannel's serialize_message/1 for why this

@@ -161,10 +161,16 @@ export function shout(
   content: string,
   fileUrl?: string,
   fileType?: string,
-  onFailure?: PushFailureHandler
+  onFailure?: PushFailureHandler,
+  replyToId?: string
 ): void {
   textChannel
-    ?.push('shout', { content, file_url: fileUrl, file_type: fileType })
+    ?.push('shout', {
+      content,
+      file_url: fileUrl,
+      file_type: fileType,
+      ...(replyToId ? { reply_to_id: replyToId } : {}),
+    })
     .receive('error', pushErrorHandler(onFailure))
     .receive('timeout', () => onFailure?.({ kind: 'timeout' }));
 }
@@ -242,10 +248,16 @@ export function sendDmMessage(
   content: string,
   fileUrl?: string,
   fileType?: string,
-  onFailure?: PushFailureHandler
+  onFailure?: PushFailureHandler,
+  replyToId?: string
 ): void {
   dmChannel
-    ?.push('shout', { content, file_url: fileUrl, file_type: fileType })
+    ?.push('shout', {
+      content,
+      file_url: fileUrl,
+      file_type: fileType,
+      ...(replyToId ? { reply_to_id: replyToId } : {}),
+    })
     .receive('error', pushErrorHandler(onFailure))
     .receive('timeout', () => onFailure?.({ kind: 'timeout' }));
 }

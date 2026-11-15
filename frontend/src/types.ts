@@ -34,6 +34,17 @@ export interface Reaction {
   user_ids: string[];
 }
 
+/** A short preview of the message a reply answers (see BackendWeb.MessageJSON.reply_preview/1). */
+export interface ReplyPreview {
+  id: string;
+  user_id: string | null;
+  username: string | null;
+  /** First 200 characters; null if the original was deleted or had no text. */
+  content: string | null;
+  has_file: boolean;
+  is_deleted: boolean;
+}
+
 export interface ChatMessage {
   id: string;
   content: string;
@@ -46,6 +57,8 @@ export interface ChatMessage {
   inserted_at: string;
   is_edited: boolean;
   reactions: Reaction[];
+  /** The message this one replies to, if any. */
+  reply_to?: ReplyPreview | null;
   /** DB-assigned monotonic send order — currently only populated on DM
    * messages (see BackendWeb.DmChannel/DmController), used to tell the
    * server the newest message a user has actually read (see

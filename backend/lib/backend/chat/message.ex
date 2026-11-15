@@ -27,18 +27,23 @@ defmodule Backend.Chat.Message do
     belongs_to :user, User
     belongs_to :channel, Channel
 
+    # The message this one answers — always in the same channel/room
+    # (checked by the context's create_message/1).
+    belongs_to :reply_to, __MODULE__
+
     timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 
   def changeset(message, attrs) do
     message
-    |> cast(attrs, [:content, :file_url, :file_type, :user_id, :channel_id])
+    |> cast(attrs, [:content, :file_url, :file_type, :user_id, :channel_id, :reply_to_id])
     |> validate_required([:user_id, :channel_id])
     |> validate_length(:content, max: 4000)
     |> validate_content_or_file()
     |> validate_attachment()
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:channel_id)
+    |> foreign_key_constraint(:reply_to_id)
   end
 
   @doc "Changeset for editing an existing message's content — always marks it as edited."

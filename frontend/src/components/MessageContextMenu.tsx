@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Pencil, Trash2, Smile, Flag } from 'lucide-react';
+import { Pencil, Trash2, Smile, Flag, CornerUpLeft } from 'lucide-react';
 import './MessageContextMenu.css';
 
 interface Props {
@@ -13,6 +13,8 @@ interface Props {
   canDelete: boolean;
   /** Shown only when given — MessageItem passes it for other people's messages. */
   onReport?: () => void;
+  /** Shown only when given. */
+  onReply?: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onReact: () => void;
@@ -31,6 +33,7 @@ export default function MessageContextMenu({
   canEdit,
   canDelete,
   onReport,
+  onReply,
   onEdit,
   onDelete,
   onReact,
@@ -57,6 +60,12 @@ export default function MessageContextMenu({
         onClick={(e) => e.stopPropagation()}
         role="menu"
       >
+        {onReply && (
+          <button type="button" role="menuitem" className="message-context-menu-item" onClick={() => pick(onReply)}>
+            <CornerUpLeft size={14} />
+            Yanıtla
+          </button>
+        )}
         {canEdit && (
           <button type="button" role="menuitem" className="message-context-menu-item" onClick={() => pick(onEdit)}>
             <Pencil size={14} />

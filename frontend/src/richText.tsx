@@ -9,7 +9,7 @@ const URL_REGEX = /https?:\/\/[^\s<]+/;
 // **bold** won't become clickable, for instance — a deliberate simplicity
 // tradeoff for a "basic" formatter rather than a full recursive parser.
 const TOKEN_REGEX =
-  /```(?:([a-zA-Z0-9_+-]+)\n)?([\s\S]*?)```|`([^`\n]+)`|\*\*([^*\n]+?)\*\*|\*([^*\n]+?)\*|(https?:\/\/[^\s<]+)/g;
+  /```(?:([a-zA-Z0-9_+-]+)\n)?([\s\S]*?)```|`([^`\n]+)`|\*\*([^*\n]+?)\*\*|\*([^*\n]+?)\*|(https?:\/\/[^\s<]+)|(?<![\w@])@([A-Za-z0-9_]+)/g;
 
 /** Strips trailing punctuation a URL likely picked up from surrounding prose (e.g. "see https://x.com." → "https://x.com"). */
 function trimTrailingPunctuation(url: string): string {
@@ -31,7 +31,7 @@ export function renderRichText(content: string): ReactNode[] {
     const index = match.index ?? 0;
     if (index > lastIndex) nodes.push(content.slice(lastIndex, index));
 
-    const [full, codeLang, codeBlock, inlineCode, bold, italic, url] = match;
+    const [full, codeLang, codeBlock, inlineCode, bold, italic, url, mention] = match;
     const key = `token-${index}`;
 
     if (codeBlock !== undefined) {
@@ -61,6 +61,12 @@ export function renderRichText(content: string): ReactNode[] {
         </a>
       );
       if (trailing) nodes.push(trailing);
+    } else if (mention !== undefined) {
+      nodes.push(
+        <span key={key} className="message-mention">
+          @{mention}
+        </span>
+      );
     }
 
     lastIndex = index + full.length;

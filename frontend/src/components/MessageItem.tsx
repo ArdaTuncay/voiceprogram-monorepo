@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { CornerUpLeft } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import type { ChatMessage } from '../types';
 import { resolveFileUrl } from '../config';
 import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
 import { userColor, initials } from '../utils';
 import { formatMessageTime } from '../utils/formatMessageTime';
+import { isMentioned } from '../services/notificationPreferences';
 import AvatarFace from './AvatarFace';
 import MessageContent from './MessageContent';
 import MessageReactions from './MessageReactions';
@@ -25,6 +27,12 @@ interface Props {
   canModerate?: boolean;
   /** Opens the report dialog for this message; offered only on other people's messages. */
   onReport?: () => void;
+  /** Starts a reply to this message. */
+  onReply?: () => void;
+  /** Scrolls to the message a reply quotes. */
+  onJumpToMessage?: (messageId: string) => void;
+  /** The viewer's username — a message mentioning it is highlighted. */
+  currentUsername?: string;
   /** True while this message is the target of a just-completed search
    * "jump to message" — flashes a highlight background (see Chat.css
    * `.message-highlighted`). */
@@ -51,6 +59,9 @@ export default function MessageItem({
   onImageClick,
   canModerate,
   onReport,
+  onReply,
+  onJumpToMessage,
+  currentUsername,
   isHighlighted,
   isGrouped,
 }: Props) {
@@ -72,6 +83,9 @@ export default function MessageItem({
   const color = userColor(message.user_id);
   const name = message.username ?? 'Unknown';
   const isOwnMessage = message.user_id === currentUserId;
+  const grouped = !!isGrouped && !message.reply_to;
+  const mentionsMe =
+    !!currentUsername && !message.is_deleted && !!message.content && isMentioned(message.content, currentUsername);
   const canDelete = isOwnMessage || !!canModerate;
 
   // KORUMA: editDraft'ın null/undefined olma ihtimaline karşı güvenli trim kontrolü
@@ -118,16 +132,31 @@ export default function MessageItem({
   return (
     <div
       id={`message-${message.id}`}
-      className={`message${isHighlighted ? ' message-highlighted' : ''}${reactionPickerForced ? ' reaction-picker-open' : ''}`}
+      className={`message${isHighlighted ? ' message-highlighted' : ''}${mentionsMe ? ' message-mentioned' : ''}${reactionPickerForced ? ' reaction-picker-open' : ''}`}
       onContextMenu={handleContextMenu}
     >
-      {!isGrouped && (
+      {!grouped && (
         <div className="message-avatar" style={{ background: color }} title={name}>
           <AvatarFace url={message.avatar_url} fallback={initials(name)} />
         </div>
       )}
-      <div className={`message-body${isGrouped ? ' message-content-grouped' : ''}`}>
-        {!isGrouped && (
+      <div className={`message-body${grouped ? ' message-content-grouped' : ''}`}>
+        {message.reply_to && (
+          <button
+            type="button"
+            className="message-reply-quote"
+            onClick={() => onJumpToMessage?.(message.reply_to!.id)}
+          >
+            <CornerUpLeft size={12} />
+            <span className="message-reply-author">@{message.reply_to.username ?? 'Bilinmeyen'}</span>
+            <span className="message-reply-text">
+              {message.reply_to.is_deleted
+                ? 'Orijinal mesaj silindi'
+                : message.reply_to.content || (message.reply_to.has_file ? 'Ek' : '')}
+            </span>
+          </button>
+        )}
+        {!grouped && (
           <div className="message-header">
             <span className="message-author" style={{ color }}>
               {name}
@@ -191,6 +220,7 @@ export default function MessageItem({
           canEdit={isOwnMessage}
           canDelete={canDelete}
           onReport={isOwnMessage ? undefined : onReport}
+          onReply={onReply}
           onEdit={startEditing}
           onDelete={handleDeleteClick}
           onReact={() => setReactionPickerForced(true)}
