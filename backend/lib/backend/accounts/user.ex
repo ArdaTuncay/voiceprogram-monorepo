@@ -34,6 +34,7 @@ defmodule Backend.Accounts.User do
     |> validate_format(:username, ~r/^[a-zA-Z0-9_]+$/,
       message: "only letters, numbers and underscores allowed"
     )
+    |> update_change(:email, &normalize_email/1)
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must be a valid email")
     |> validate_length(:password, min: 8, message: "must be at least 8 characters")
     |> unique_constraint(:email)
@@ -63,9 +64,21 @@ defmodule Backend.Accounts.User do
     user
     |> cast(attrs, [:email])
     |> validate_required([:email])
+    |> update_change(:email, &normalize_email/1)
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must be a valid email")
     |> unique_constraint(:email)
   end
+
+  @doc """
+  The one canonical form an email is stored and looked up in: trimmed and
+  lowercased. Mail providers treat addresses case-insensitively in
+  practice, so `Ali@x.com` and `ali@x.com` must be the same account — the
+  unique index is on `lower(email)` (see the
+  `make_user_email_case_insensitive` migration) and
+  `Backend.Accounts.get_user_by_email/1` compares lowercased too.
+  """
+  def normalize_email(email) when is_binary(email),
+    do: email |> String.trim() |> String.downcase()
 
   @doc """
   Used by Backend.Accounts.update_password/3, after that function has

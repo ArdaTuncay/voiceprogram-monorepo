@@ -657,6 +657,7 @@ create index(:dm_rooms, [:user_two_id])
 | `20260714120000_add_is_edited_to_messages` | messages, dm_messages | `+is_edited :boolean` (Faz 10 — bkz. [6.1](#61-mesaj-düzenleme-message-editing)) |
 | `20260714130000_add_parent_id_and_position_to_channels` | channels | `+parent_id` (self-ref, `on_delete: :nilify_all`), `+position`, `index([:parent_id])` (Faz 10 — bkz. [6.2](#62-kanal-kategorileri-channel-categories)) |
 | `20260715000000_replace_token_valid_from_with_token_version` | users | `-token_valid_from`, `+token_version :integer default 0` — token iptali artık wall-clock karşılaştırması değil, tamsayı sürüm eşitliği (bkz. aşağıdaki not) |
+| `20261115174548_make_user_email_case_insensitive` | users | E-postalar `lower(trim(email))`'e normalize edilir; `users_email_index` artık `lower(email)` üzerinde (aynı isim, böylece `unique_constraint(:email)` değişmeden çalışır). `User.normalize_email/1` kayıt ve e-posta değişikliğinde, `Accounts.get_user_by_email/1` aramada aynı biçimi kullanır. Harf/boşluk farkıyla çakışan hesap varsa migration **hiçbir şeyi değiştirmeden** durur ve çakışan ID'leri listeler (önceden kontrol: `SELECT lower(trim(email)), count(*), array_agg(id) FROM users GROUP BY 1 HAVING count(*) > 1`). (Temmuz–Ağustos 2026 migration'ları bu tabloda henüz yok.) |
 
 **Ölü indeks kaldırma örneği — `20260713215219_drop_unused_cursor_indexes.exs`:**
 

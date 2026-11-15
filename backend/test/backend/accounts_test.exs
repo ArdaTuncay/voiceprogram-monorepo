@@ -56,6 +56,79 @@ defmodule Backend.AccountsTest do
     end
   end
 
+  # Email addresses are case-insensitive in practice (every major provider
+  # treats Ali@x.com and ali@x.com as the same mailbox). Before, the unique
+  # index was on the raw column: the same person could register twice by
+  # changing case, and couldn't log in if they typed a different case than
+  # at registration.
+  describe "email case-insensitivity" do
+    test "registration stores the email trimmed and lowercased" do
+      user = user_fixture(%{"email" => "  Ali.Veli@Example.COM "})
+
+      assert user.email == "ali.veli@example.com"
+    end
+
+    test "registering the same address in a different case is rejected" do
+      _existing = user_fixture(%{"email" => "ayni@example.com"})
+
+      assert {:error, changeset} =
+               Accounts.create_user(%{
+                 "username" => "baska_biri",
+                 "email" => "AYNI@Example.com",
+                 "password" => "password123"
+               })
+
+      assert "has already been taken" in errors_on(changeset).email
+    end
+
+    test "get_user_by_email/1 finds the user whatever case is typed" do
+      user = user_fixture(%{"email" => "harf@example.com"})
+
+      assert Accounts.get_user_by_email("HARF@Example.com").id == user.id
+      assert Accounts.get_user_by_email(" harf@example.com ").id == user.id
+    end
+
+    test "get_user_by_email/1 also finds a legacy row stored with uppercase letters" do
+      user = user_fixture()
+
+      {:ok, _} =
+        user |> Ecto.Changeset.change(email: "Eski.Kayit@Example.com") |> Repo.update()
+
+      assert Accounts.get_user_by_email("eski.kayit@example.com").id == user.id
+    end
+
+    test "the database refuses a case-only duplicate even if a write skips the changeset" do
+      _existing = user_fixture(%{"email" => "db@example.com"})
+      other = user_fixture()
+
+      assert {:error, changeset} =
+               other
+               |> Ecto.Changeset.change(email: "DB@example.com")
+               |> Ecto.Changeset.unique_constraint(:email)
+               |> Repo.update()
+
+      assert "has already been taken" in errors_on(changeset).email
+    end
+
+    test "authenticate_user/2 accepts the email in a different case" do
+      user = user_fixture(%{"email" => "giris@example.com", "password" => "password123"})
+
+      assert {:ok, %User{id: id}} = Accounts.authenticate_user("Giris@EXAMPLE.com", "password123")
+      assert id == user.id
+    end
+
+    test "update_email/2 lowercases, and rejects another user's address in a different case" do
+      _existing = user_fixture(%{"email" => "dolu@example.com"})
+      user = user_fixture()
+
+      assert {:error, changeset} = Accounts.update_email(user, "Dolu@Example.com")
+      assert "has already been taken" in errors_on(changeset).email
+
+      assert {:ok, updated} = Accounts.update_email(user, "Yeni@Example.com")
+      assert updated.email == "yeni@example.com"
+    end
+  end
+
   describe "update_email/2" do
     test "updates the email on success" do
       user = user_fixture()
