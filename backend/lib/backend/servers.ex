@@ -11,7 +11,7 @@ defmodule Backend.Servers do
   alias Backend.Chat
   alias Backend.Chat.Channel
   alias Backend.Repo
-  alias Backend.Servers.{Invite, Server, ServerMember}
+  alias Backend.Servers.{Invite, Server, ServerBan, ServerMember}
 
   @invite_code_alphabet ~c"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
   @invite_code_length 7
@@ -325,16 +325,106 @@ defmodule Backend.Servers do
       member ->
         case Repo.delete(member) do
           {:ok, deleted} ->
-            payload = %{server_id: server_id, user_id: user_id}
-            BackendWeb.Endpoint.broadcast("user:#{user_id}", "member_kicked", payload)
-            broadcast_to_server(server_id, "member_left", payload)
-            revoke_channel_access(server_id, user_id)
+            announce_removal(server_id, user_id, %{})
             {:ok, deleted}
 
           error ->
             error
         end
     end
+  end
+
+  @doc "True if `user_id` is banned from `server_id`."
+  def banned?(server_id, user_id) do
+    Repo.exists?(from b in ServerBan, where: b.server_id == ^server_id and b.user_id == ^user_id)
+  end
+
+  @doc """
+  Bans `user_id` from `server_id`: records the ban (or updates its reason
+  if they're already banned) and, if they're a member, removes them the
+  same way `kick_member/2` does — "member_kicked" (with `banned: true`) to
+  them, "member_left" to the server, and their open channels closed. A
+  banned user can't rejoin through any invite (`accept_invite/2`) until
+  `unban_user/2`. Users who aren't members can be banned pre-emptively.
+
+  The owner can't be banned; the caller checks that the actor is the owner.
+  Returns `{:ok, ban}`, `{:error, :owner}`, or `{:error, changeset}`.
+  """
+  def ban_user(%Server{owner_id: owner_id}, owner_id, _banned_by_id, _reason),
+    do: {:error, :owner}
+
+  def ban_user(%Server{} = server, user_id, banned_by_id, reason) do
+    Repo.transaction(fn ->
+      attrs = %{
+        server_id: server.id,
+        user_id: user_id,
+        banned_by_id: banned_by_id,
+        reason: reason
+      }
+
+      insert =
+        %ServerBan{}
+        |> ServerBan.changeset(attrs)
+        |> Repo.insert(
+          on_conflict: {:replace, [:reason, :banned_by_id, :updated_at]},
+          conflict_target: [:server_id, :user_id],
+          returning: true
+        )
+
+      case insert do
+        {:ok, ban} ->
+          {removed, _} =
+            ServerMember
+            |> where([m], m.server_id == ^server.id and m.user_id == ^user_id)
+            |> Repo.delete_all()
+
+          {ban, removed > 0}
+
+        {:error, changeset} ->
+          Repo.rollback(changeset)
+      end
+    end)
+    |> case do
+      {:ok, {ban, was_member?}} ->
+        if was_member?, do: announce_removal(server.id, user_id, %{banned: true})
+        {:ok, ban}
+
+      error ->
+        error
+    end
+  end
+
+  @doc "Lifts a ban. Returns `{:ok, ban}` or `{:error, :not_found}`."
+  def unban_user(server_id, user_id) do
+    case Repo.get_by(ServerBan, server_id: server_id, user_id: user_id) do
+      nil -> {:error, :not_found}
+      ban -> Repo.delete(ban)
+    end
+  end
+
+  @doc "The server's bans, newest first, with the banned user's display name."
+  def list_bans(server_id) do
+    ServerBan
+    |> where([b], b.server_id == ^server_id)
+    |> order_by([b], desc: b.inserted_at)
+    |> preload(:user)
+    |> Repo.all()
+    |> Enum.map(fn ban ->
+      %{
+        user_id: ban.user_id,
+        username: Backend.Accounts.display_username(ban.user),
+        reason: ban.reason,
+        banned_at: ban.inserted_at
+      }
+    end)
+  end
+
+  # What every forced removal (kick or ban) tells everyone involved.
+  defp announce_removal(server_id, user_id, extra) do
+    payload = %{server_id: server_id, user_id: user_id}
+    BackendWeb.Endpoint.broadcast("user:#{user_id}", "member_kicked", Map.merge(payload, extra))
+    broadcast_to_server(server_id, "member_left", payload)
+    revoke_channel_access(server_id, user_id)
   end
 
   @doc """
@@ -464,6 +554,7 @@ defmodule Backend.Servers do
         cond do
           invite_expired?(invite) -> {:error, :expired}
           invite_maxed_out?(invite) -> {:error, :max_uses_reached}
+          banned?(invite.server_id, user_id) -> {:error, :banned}
           member?(invite.server_id, user_id) -> {:ok, get_server(invite.server_id)}
           true -> do_accept_invite(invite, user_id)
         end

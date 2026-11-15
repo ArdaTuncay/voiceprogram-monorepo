@@ -102,6 +102,9 @@ defmodule BackendWeb.InviteController do
       {:error, :expired} ->
         conn |> put_status(:unprocessable_entity) |> json(%{error: "Invite has expired"})
 
+      {:error, :banned} ->
+        conn |> put_status(:forbidden) |> json(%{error: "Bu sunucudan yasaklandınız"})
+
       {:error, :max_uses_reached} ->
         conn
         |> put_status(:unprocessable_entity)
