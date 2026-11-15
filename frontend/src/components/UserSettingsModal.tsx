@@ -222,7 +222,10 @@ function EmailForm({ currentEmail }: { currentEmail: string }) {
       return;
     }
     setStatus('success');
-    setMessage('E-posta adresin güncellendi.');
+    setMessage(
+      `${result.data?.pending_email ?? trimmed} adresine bir onay bağlantısı gönderdik. ` +
+        'Bağlantıya tıklayana kadar e-posta adresin değişmez.'
+    );
     setCurrentPassword('');
   }
 

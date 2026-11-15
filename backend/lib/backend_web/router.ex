@@ -27,6 +27,7 @@ defmodule BackendWeb.Router do
     post "/resend-verification", VerificationController, :resend
     post "/password-reset", PasswordResetController, :create
     post "/password-reset/confirm", PasswordResetController, :confirm
+    post "/account/email/confirm", EmailChangeController, :confirm
   end
 
   scope "/api", BackendWeb do

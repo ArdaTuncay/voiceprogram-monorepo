@@ -53,16 +53,22 @@ defmodule BackendWeb.AccountController do
 
   @doc """
   PATCH /api/account/email — same current-password re-auth as
-  update_username/2. Takes effect immediately, no confirmation link — see
-  Backend.Accounts.User.email_changeset/2's moduledoc.
+  update_username/2. Doesn't change the email yet: starts a change that
+  the new address has to confirm (see Backend.Accounts.request_email_change/2
+  and BackendWeb.EmailChangeController). Responds 202 with `pending_email`.
   """
   def update_email(conn, %{"email" => email, "current_password" => current_password}) do
     user = conn.assigns.current_user
 
     if Accounts.verify_password?(user, current_password) do
-      case Accounts.update_email(user, email) do
+      case Accounts.request_email_change(user, email) do
         {:ok, updated} ->
-          json(conn, %{id: updated.id, username: updated.username, email: updated.email})
+          conn
+          |> put_status(:accepted)
+          |> json(%{
+            message: "Onay bağlantısı yeni adrese gönderildi",
+            pending_email: updated.pending_email
+          })
 
         {:error, changeset} ->
           conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})

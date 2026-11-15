@@ -77,4 +77,62 @@ defmodule Backend.Accounts.UserNotifier do
     """)
     |> Backend.Mailer.deliver()
   end
+
+  @doc """
+  Sends the confirmation link for a pending email change to the NEW
+  address (`user.pending_email`). Points at the frontend's
+  `/confirm-email/:token` page, which calls
+  `POST /api/account/email/confirm`.
+  """
+  def deliver_email_change_confirmation(%User{pending_email: new_email} = user, token)
+      when is_binary(new_email) and is_binary(token) do
+    confirm_url = Application.fetch_env!(:backend, :frontend_url) <> "/confirm-email/" <> token
+
+    new()
+    |> from(Application.fetch_env!(:backend, :mailer_from))
+    |> to(new_email)
+    |> subject("Zircle - Yeni E-posta Adresini Onayla")
+    |> html_body("""
+    <p>Merhaba #{user.username},</p>
+    <p>Zircle hesabınızın e-posta adresini bu adresle değiştirmek istediniz.</p>
+    <p><a href="#{confirm_url}">Bu adresi onayla</a></p>
+    <p>Bağlantı 24 saat geçerlidir. Onaylayana kadar eski adresiniz geçerli kalır.</p>
+    <p>Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>
+    """)
+    |> text_body("""
+    Merhaba #{user.username},
+
+    Zircle hesabınızın e-posta adresini bu adresle değiştirmek istediniz. Onaylamak için:
+    #{confirm_url}
+
+    Bağlantı 24 saat geçerlidir. Onaylayana kadar eski adresiniz geçerli kalır.
+    Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz.
+    """)
+    |> Backend.Mailer.deliver()
+  end
+
+  @doc """
+  Tells the CURRENT address that a change to `user.pending_email` was
+  requested — the real owner's heads-up if it wasn't them.
+  """
+  def deliver_email_change_notice(%User{pending_email: new_email} = user)
+      when is_binary(new_email) do
+    new()
+    |> from(Application.fetch_env!(:backend, :mailer_from))
+    |> to(user.email)
+    |> subject("Zircle - E-posta Değişikliği Talebi")
+    |> html_body("""
+    <p>Merhaba #{user.username},</p>
+    <p>Zircle hesabınızın e-posta adresini <strong>#{new_email}</strong> olarak değiştirmek için bir talep aldık. Değişiklik, yeni adrese gönderilen bağlantı onaylanınca uygulanacak.</p>
+    <p>Bu talebi siz yapmadıysanız hesabınız tehlikede olabilir: hemen şifrenizi değiştirin ve tüm cihazlardan çıkış yapın.</p>
+    """)
+    |> text_body("""
+    Merhaba #{user.username},
+
+    Zircle hesabınızın e-posta adresini #{new_email} olarak değiştirmek için bir talep aldık. Değişiklik, yeni adrese gönderilen bağlantı onaylanınca uygulanacak.
+
+    Bu talebi siz yapmadıysanız hesabınız tehlikede olabilir: hemen şifrenizi değiştirin ve tüm cihazlardan çıkış yapın.
+    """)
+    |> Backend.Mailer.deliver()
+  end
 end

@@ -67,7 +67,10 @@ defmodule BackendWeb.AccountControllerTest do
   end
 
   describe "PATCH /api/account/email" do
-    test "updates the email with the correct current password", %{conn: conn} do
+    # The change no longer applies immediately — see email_change_test.exs
+    # for the confirmation-link flow itself.
+    test "with the correct current password, starts a confirmed change instead of applying it",
+         %{conn: conn} do
       user = user_fixture(%{"password" => "correct-password"})
 
       conn =
@@ -78,7 +81,8 @@ defmodule BackendWeb.AccountControllerTest do
           "current_password" => "correct-password"
         })
 
-      assert json_response(conn, 200)["email"] == "new-address@example.com"
+      assert json_response(conn, 202)["pending_email"] == "new-address@example.com"
+      assert Backend.Accounts.get_user(user.id).email == user.email
     end
 
     test "rejects a wrong current password and leaves the email unchanged", %{conn: conn} do

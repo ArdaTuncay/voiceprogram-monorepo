@@ -339,7 +339,7 @@ defmodule Backend.Accounts do
     {:ok, user} =
       user
       |> Ecto.Changeset.change(
-        password_reset_token_hash: hash_reset_token(token),
+        password_reset_token_hash: hash_token(token),
         password_reset_sent_at: DateTime.truncate(DateTime.utc_now(), :second)
       )
       |> Repo.update()
@@ -381,7 +381,7 @@ defmodule Backend.Accounts do
   the link then stays usable).
   """
   def reset_password(token, new_password) when is_binary(token) and is_binary(new_password) do
-    token_hash = hash_reset_token(token)
+    token_hash = hash_token(token)
 
     Repo.transaction(fn ->
       query =
@@ -418,7 +418,124 @@ defmodule Backend.Accounts do
       else: :ok
   end
 
-  defp hash_reset_token(token), do: :crypto.hash(:sha256, token) |> Base.encode16(case: :lower)
+  @email_change_ttl_seconds 24 * 60 * 60
+
+  @doc """
+  Starts changing `user`'s email to `new_email` — without changing it yet.
+  The address is validated (format, not the current one, not another
+  account's), then a single-use confirmation link goes to the NEW address
+  and a notice to the CURRENT one. `confirm_email_change/1` applies it.
+
+  Why not apply it directly: a mistyped address would lock the owner out
+  of password reset, and the stored email should always be one someone has
+  proven they read. The notice gives the real owner a heads-up if the
+  request wasn't theirs. (It can't stop an attacker who already holds both
+  the session and the password and controls the new mailbox — that needs
+  a second factor.)
+
+  The caller checks the current password first, like `update_email/2`.
+  Returns `{:ok, user}` (with `pending_email` set) or `{:error, changeset}`.
+  """
+  def request_email_change(%User{} = user, new_email) when is_binary(new_email) do
+    changeset = User.email_changeset(user, %{"email" => new_email})
+    requested = Ecto.Changeset.get_change(changeset, :email)
+
+    cond do
+      not changeset.valid? ->
+        {:error, changeset}
+
+      is_nil(requested) ->
+        {:error, Ecto.Changeset.add_error(changeset, :email, "is already your email")}
+
+      get_user_by_email(requested) ->
+        {:error, Ecto.Changeset.add_error(changeset, :email, "has already been taken")}
+
+      true ->
+        issue_email_change(user, requested)
+    end
+  end
+
+  defp issue_email_change(user, requested) do
+    token = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+
+    {:ok, user} =
+      user
+      |> Ecto.Changeset.change(
+        pending_email: requested,
+        pending_email_token_hash: hash_token(token),
+        pending_email_sent_at: DateTime.truncate(DateTime.utc_now(), :second)
+      )
+      |> Repo.update()
+
+    deliver_logged(fn -> UserNotifier.deliver_email_change_confirmation(user, token) end, user)
+    deliver_logged(fn -> UserNotifier.deliver_email_change_notice(user) end, user)
+    {:ok, user}
+  end
+
+  # Mail failures are logged, never raised — the pending change is saved
+  # either way and the user can simply request it again.
+  defp deliver_logged(deliver, user) do
+    case deliver.() do
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("e-posta gönderilemedi user_id=#{user.id} reason=#{inspect(reason)}")
+    end
+  rescue
+    exception ->
+      Logger.warning(
+        "e-posta gönderimi sırasında beklenmeyen hata user_id=#{user.id}: " <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
+  end
+
+  @doc """
+  Applies a pending email change from its confirmation link: the token must
+  be the account's current one and under 24 hours old. The new address
+  counts as verified (the link was mailed to it). Single-use; runs under a
+  row lock.
+
+  Returns `{:ok, user}`, `{:error, :invalid_token}`, `{:error,
+  :token_expired}`, or `{:error, changeset}` — e.g. another account took
+  the address after the request.
+  """
+  def confirm_email_change(token) when is_binary(token) do
+    token_hash = hash_token(token)
+
+    Repo.transaction(fn ->
+      query =
+        from(u in User,
+          where: u.pending_email_token_hash == ^token_hash and is_nil(u.deleted_at),
+          lock: "FOR UPDATE"
+        )
+
+      with %User{} = user <- Repo.one(query) || {:error, :invalid_token},
+           :ok <- check_email_change_age(user),
+           {:ok, updated} <-
+             user
+             |> User.email_changeset(%{"email" => user.pending_email})
+             |> Ecto.Changeset.change(
+               pending_email: nil,
+               pending_email_token_hash: nil,
+               pending_email_sent_at: nil,
+               email_verified: true
+             )
+             |> Repo.update() do
+        updated
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  defp check_email_change_age(%User{pending_email_sent_at: sent_at}) do
+    if DateTime.diff(DateTime.utc_now(), sent_at, :second) > @email_change_ttl_seconds,
+      do: {:error, :token_expired},
+      else: :ok
+  end
+
+  defp hash_token(token), do: :crypto.hash(:sha256, token) |> Base.encode16(case: :lower)
 
   @doc """
   The name to show for a message/DM author, or a DM room's other
