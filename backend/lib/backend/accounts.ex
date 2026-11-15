@@ -11,6 +11,7 @@ defmodule Backend.Accounts do
   alias Backend.Accounts.{User, UserNotifier}
   alias Backend.Friends.Friendship
   alias Backend.Repo
+  alias Backend.Servers
   alias Backend.Servers.{Server, ServerMember}
   alias Ecto.Multi
 
@@ -461,6 +462,23 @@ defmodule Backend.Accounts do
     Enum.each(result.server_outcomes, &broadcast_server_outcome/1)
     Enum.each(result.remove_memberships, &broadcast_member_left(&1, result))
     Enum.each(result.friendship_rows, &broadcast_friend_removed(&1, result))
+
+    result
+    |> departed_server_ids()
+    |> Enum.each(&Servers.revoke_channel_access(&1, result.anonymized_user.id))
+  end
+
+  # Every server the deleted user is no longer in: the ones they merely
+  # left (remove_memberships, which already includes any just-transferred
+  # server) plus the ones deleted outright because they were its only
+  # member — those never show up in remove_memberships (see
+  # broadcast_member_left/2's comment), but the user's own open channel
+  # processes there still need closing.
+  defp departed_server_ids(result) do
+    deleted_ids =
+      for {:deleted, server} <- result.server_outcomes, do: server.id
+
+    Enum.uniq(deleted_ids ++ result.remove_memberships)
   end
 
   defp broadcast_server_outcome({:deleted, server}) do

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import Chat from '../Chat';
 import { useServerStore } from '../../stores/useServerStore';
 import { useDMStore } from '../../stores/useDMStore';
@@ -372,6 +372,82 @@ describe('Chat — ses bağlantısı sunucu değişince kesilmiyor, kanal gerçe
     // catch up together, as loadChannelsForActiveServer's single `set`
     // call does), the room is correctly found again and nothing changes.
     useServerStore.setState({ channels: [voiceChannelA], channelsServerId: serverA.id });
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    expect(joinedVoiceMock.leave).not.toHaveBeenCalled();
+  });
+
+  // removeServerAndDeselect is what "member_kicked", "server_deleted" and
+  // leaving a server all boil down to. It nulls activeServerId when the
+  // removed server was the one being viewed, which the channel-list effect
+  // above can never match against voiceRoomServerId — so before this, a
+  // kicked member's client kept its microphone and peer connections open.
+  it('the voice room\'s server being removed (kicked/left/deleted) while viewing it hangs up the call', () => {
+    useServerStore.setState({
+      servers: [serverA, serverB],
+      activeServerId: serverA.id,
+      channels: [voiceChannelA],
+      channelsServerId: serverA.id,
+    });
+    const { rerender } = render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    fireEvent.click(screen.getByText('ses-a'));
+
+    const joinedVoiceMock = makeVoiceMock({ activeRoomId: voiceChannelA.id });
+    vi.mocked(useVoiceChannel).mockReturnValue(joinedVoiceMock);
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    act(() => useServerStore.getState().removeServerAndDeselect(serverA.id));
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    expect(joinedVoiceMock.leave).toHaveBeenCalled();
+  });
+
+  it('the voice room\'s server being removed while viewing a DIFFERENT server still hangs up the call', () => {
+    useServerStore.setState({
+      servers: [serverA, serverB],
+      activeServerId: serverA.id,
+      channels: [voiceChannelA],
+      channelsServerId: serverA.id,
+    });
+    const { rerender } = render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    fireEvent.click(screen.getByText('ses-a'));
+
+    const joinedVoiceMock = makeVoiceMock({ activeRoomId: voiceChannelA.id });
+    vi.mocked(useVoiceChannel).mockReturnValue(joinedVoiceMock);
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    useServerStore.setState({
+      activeServerId: serverB.id,
+      channels: [textChannelB],
+      channelsServerId: serverB.id,
+    });
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+    expect(joinedVoiceMock.leave).not.toHaveBeenCalled();
+
+    act(() => useServerStore.getState().removeServerAndDeselect(serverA.id));
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    expect(joinedVoiceMock.leave).toHaveBeenCalled();
+  });
+
+  it('removing an unrelated server does not hang up the call', () => {
+    useServerStore.setState({
+      servers: [serverA, serverB],
+      activeServerId: serverA.id,
+      channels: [voiceChannelA],
+      channelsServerId: serverA.id,
+    });
+    const { rerender } = render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    fireEvent.click(screen.getByText('ses-a'));
+
+    const joinedVoiceMock = makeVoiceMock({ activeRoomId: voiceChannelA.id });
+    vi.mocked(useVoiceChannel).mockReturnValue(joinedVoiceMock);
+    rerender(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    act(() => useServerStore.getState().removeServerAndDeselect(serverB.id));
     rerender(<Chat user={testUser} onLogout={vi.fn()} />);
 
     expect(joinedVoiceMock.leave).not.toHaveBeenCalled();
