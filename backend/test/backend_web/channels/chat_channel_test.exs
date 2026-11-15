@@ -207,10 +207,11 @@ defmodule BackendWeb.ChatChannelTest do
     assert_reply ref, :error, %{reason: "rate_limited"}
   end
 
-  test "delete_message broadcasts message_deleted with content wiped when the author deletes it", %{
-    member: member,
-    channel: channel
-  } do
+  test "delete_message broadcasts message_deleted with content wiped when the author deletes it",
+       %{
+         member: member,
+         channel: channel
+       } do
     {:ok, message} =
       Chat.create_message(%{content: "oops", user_id: member.id, channel_id: channel.id})
 
