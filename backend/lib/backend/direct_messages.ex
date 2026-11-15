@@ -60,7 +60,7 @@ defmodule Backend.DirectMessages do
       id: room.id,
       user_id: other.id,
       username: Accounts.display_username(other),
-      user_status: other.status,
+      user_status: Accounts.status(other.id),
       unread_count: unread_count(viewer_id, room.id)
     }
   end
