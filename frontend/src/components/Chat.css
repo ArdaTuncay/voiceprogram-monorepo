@@ -1624,3 +1624,100 @@
   font-size: 13px;
   font-weight: 600;
 }
+
+
+/* ── Phone-width layout ──────────────────────────────────────────────────
+   Below 768px there is no room for the server rail (72px), the channel
+   list (240px) and the online list (240px) next to the conversation. The
+   conversation gets the full width; the rail + channel list become a
+   drawer opened by .mobile-nav-toggle (top-left, over the header); the
+   online list is hidden. Desktop is untouched — the toggle and backdrop
+   only exist inside this media query. */
+.mobile-nav-toggle,
+.mobile-nav-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .chat-layout {
+    height: 100dvh;
+  }
+
+  .online-sidebar {
+    display: none;
+  }
+
+  .server-sidebar,
+  .channel-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    z-index: 60;
+    transition: transform 0.2s ease;
+  }
+
+  .server-sidebar {
+    left: 0;
+  }
+
+  .channel-sidebar {
+    left: 72px;
+    width: min(240px, calc(100vw - 72px - 48px));
+  }
+
+  .chat-layout:not(.mobile-nav-open) .server-sidebar {
+    transform: translateX(-100%);
+  }
+
+  .chat-layout:not(.mobile-nav-open) .channel-sidebar {
+    transform: translateX(calc(-100% - 72px));
+  }
+
+  .mobile-nav-open .mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .mobile-nav-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 40;
+    width: 48px;
+    height: 48px;
+    border: none;
+    background: transparent;
+    color: var(--text-normal);
+    cursor: pointer;
+  }
+
+  /* Room for the menu button in every header that sits under it. */
+  .chat-main {
+    padding-top: 0;
+  }
+
+  .chat-header {
+    padding-left: 48px;
+  }
+
+  .chat-main > .empty-state,
+  .chat-main > :first-child:not(.chat-header) {
+    margin-top: 48px;
+  }
+
+  /* The active-call bar spans the bottom instead of sitting under the
+     (now hidden) sidebars, and the conversation leaves room for it. */
+  .voice-status-bar-fixed {
+    width: 100%;
+  }
+
+  .chat-layout--voice .chat-main {
+    padding-bottom: 64px;
+  }
+}
