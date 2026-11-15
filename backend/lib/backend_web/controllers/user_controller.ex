@@ -8,6 +8,9 @@ defmodule BackendWeb.UserController do
   plug BackendWeb.RateLimiterPlug,
        [scale: :timer.minutes(1), limit: 5] when action in [:login, :register]
 
+  plug BackendWeb.RateLimiterPlug,
+       [scale: :timer.minutes(1), limit: 10, key: :current_user] when action in [:renew_token]
+
   @doc """
   Registers a new user. No longer logs the caller in — see
   `Backend.Accounts.User`'s `email_verified` column: an account starts
@@ -70,6 +73,15 @@ defmodule BackendWeb.UserController do
     {:ok, _user} = Accounts.revoke_all_tokens(user)
     BackendWeb.Endpoint.broadcast("user_socket:#{user.id}", "disconnect", %{})
     send_resp(conn, :no_content, "")
+  end
+
+  @doc """
+  POST /api/users/renew-token — swaps the caller's still-valid token for a
+  fresh 7-day one (see `Accounts.renew_user_token/1`). The frontend calls it
+  on app start and every 12 hours while open.
+  """
+  def renew_token(conn, _params) do
+    json(conn, %{token: Accounts.renew_user_token(conn.assigns.current_user)})
   end
 
   defp format_errors(changeset) do

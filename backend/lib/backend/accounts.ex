@@ -29,7 +29,10 @@ defmodule Backend.Accounts do
   @dialyzer {:no_opaque, build_deletion_multi: 1}
 
   @token_salt "user socket"
-  @token_max_age 60 * 60 * 24
+  # 7 days, renewed by an open app (see renew_user_token/1 and
+  # POST /api/users/renew-token): an active user never gets signed out,
+  # while a device left unused for a week does.
+  @token_max_age 60 * 60 * 24 * 7
 
   @doc "Registers a new user with hashed password."
   def create_user(attrs) do
@@ -78,7 +81,7 @@ defmodule Backend.Accounts do
   end
 
   @doc """
-  Signs a token identifying the given user, valid for 24 hours (subject to
+  Signs a token identifying the given user, valid for 7 days (subject to
   early invalidation — see `authenticate_token/1`). The signed payload
   carries `token_version` alongside the user id so verification can check
   it against the user's *current* `token_version` column.
@@ -108,7 +111,7 @@ defmodule Backend.Accounts do
   token's `token_version` no longer matches the user's current one (bumped
   on password change and by `POST /api/users/logout_all`), so tokens issued
   before a security-relevant event stop working immediately instead of
-  lingering until their natural 24h expiry.
+  lingering until their natural 7-day expiry.
   """
   def authenticate_token(token) do
     with {:ok, %{user_id: user_id, token_version: token_version}} <-
@@ -120,6 +123,15 @@ defmodule Backend.Accounts do
       _ -> {:error, :invalid}
     end
   end
+
+  @doc """
+  Issues a fresh 7-day token for an already-authenticated `user` — how an
+  open app keeps its session alive (POST /api/users/renew-token). Carries
+  the user's current `token_version`, so revocation still applies: a token
+  revoked by `revoke_all_tokens/1` or a password change can't get this far
+  (it fails authentication first).
+  """
+  def renew_user_token(%User{} = user), do: generate_user_token(user)
 
   @doc """
   Bumps `token_version`, invalidating every token issued before this call —

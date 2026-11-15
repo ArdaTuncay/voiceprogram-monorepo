@@ -3,6 +3,7 @@ import type { User } from './types';
 import { getStoredToken, loadStoredUser, storeUser } from './services/tokenStorage';
 import { forceLogout } from './services/session';
 import { useSessionStore } from './stores/useSessionStore';
+import { renewSessionToken } from './services/api';
 import Auth from './components/Auth';
 import Chat from './components/Chat';
 import VerifyEmailPage from './components/VerifyEmailPage';
@@ -18,6 +19,11 @@ const CONFIRM_EMAIL_PATH_PREFIX = '/confirm-email/';
 function loadSession(): User | null {
   return getStoredToken() ? loadStoredUser() : null;
 }
+
+// Session tokens last 7 days (Backend.Accounts); an open app renews its own
+// so an active user is never signed out mid-use, and only a device left
+// unused for a week has to log in again.
+export const SESSION_RENEW_INTERVAL_MS = 12 * 60 * 60 * 1000;
 
 export default function App() {
   const [user, setUser] = useState<User | null>(loadSession);
@@ -52,6 +58,16 @@ export default function App() {
     if (!forcedLogoutAt) return;
     setUser(null);
   }, [forcedLogoutAt]);
+
+  // Renew right away (the stored token may be days old) and then every
+  // SESSION_RENEW_INTERVAL_MS while signed in. The socket reads the stored
+  // token on every (re)connect, so it picks the new one up by itself.
+  useEffect(() => {
+    if (!user) return;
+    void renewSessionToken();
+    const timer = window.setInterval(() => void renewSessionToken(), SESSION_RENEW_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [user]);
 
   // No client router in this app (see the rest of this component) — a mail
   // client opens this path directly, so it's matched off the raw URL,

@@ -34,6 +34,7 @@ defmodule BackendWeb.Router do
     pipe_through [:api, :authenticated]
 
     post "/users/logout_all", UserController, :logout_all
+    post "/users/renew-token", UserController, :renew_token
 
     patch "/account/username", AccountController, :update_username
     patch "/account/email", AccountController, :update_email
