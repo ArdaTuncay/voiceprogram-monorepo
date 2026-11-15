@@ -45,4 +45,36 @@ defmodule Backend.Accounts.UserNotifier do
     """)
     |> Backend.Mailer.deliver()
   end
+
+  @doc """
+  Sends `user` a password reset link carrying `token` (see
+  `Backend.Accounts.request_password_reset/1`). Like the verification link,
+  it points at the frontend (`ResetPasswordPage`), which asks for the new
+  password and calls `POST /api/password-reset/confirm`.
+  """
+  def deliver_password_reset_email(%User{} = user, token) when is_binary(token) do
+    reset_url = Application.fetch_env!(:backend, :frontend_url) <> "/reset-password/" <> token
+
+    new()
+    |> from(Application.fetch_env!(:backend, :mailer_from))
+    |> to(user.email)
+    |> subject("Zircle - Şifre Sıfırlama")
+    |> html_body("""
+    <p>Merhaba #{user.username},</p>
+    <p>Zircle hesabınız için şifre sıfırlama talebi aldık.</p>
+    <p><a href="#{reset_url}">Yeni şifre belirle</a></p>
+    <p>Bu bağlantı 1 saat geçerlidir ve yalnızca bir kez kullanılabilir.</p>
+    <p>Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.</p>
+    """)
+    |> text_body("""
+    Merhaba #{user.username},
+
+    Zircle hesabınız için şifre sıfırlama talebi aldık. Yeni şifre belirlemek için:
+    #{reset_url}
+
+    Bu bağlantı 1 saat geçerlidir ve yalnızca bir kez kullanılabilir.
+    Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.
+    """)
+    |> Backend.Mailer.deliver()
+  end
 end

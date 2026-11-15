@@ -17,6 +17,8 @@ defmodule Backend.Accounts.User do
     field :email_verified, :boolean, default: false
     field :email_verification_token, :string
     field :email_verification_sent_at, :utc_datetime
+    field :password_reset_token_hash, :string, redact: true
+    field :password_reset_sent_at, :utc_datetime
 
     timestamps(type: :utc_datetime)
   end
@@ -76,6 +78,10 @@ defmodule Backend.Accounts.User do
     |> validate_required([:password])
     |> validate_length(:password, min: 8, message: "must be at least 8 characters")
     |> hash_password()
+    # Any password change — by reset link or from settings — retires an
+    # outstanding reset link, so an old email can't undo the new password.
+    |> put_change(:password_reset_token_hash, nil)
+    |> put_change(:password_reset_sent_at, nil)
   end
 
   @doc """

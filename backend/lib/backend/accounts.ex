@@ -313,6 +313,113 @@ defmodule Backend.Accounts do
       :ok
   end
 
+  @password_reset_ttl_seconds 60 * 60
+
+  @doc """
+  Starts a password reset for whoever owns `email`: issues a fresh,
+  single-use token (replacing any earlier one) and emails a link carrying
+  it. Only a SHA-256 hash of the token is stored, so the database alone
+  can't produce a working link.
+
+  Always returns `:ok` — whether or not the address belongs to an account,
+  and even if mail delivery fails — so the endpoint can't be used to find
+  out which addresses are registered (same policy as
+  `send_verification_email/1`). Deleted accounts get nothing.
+  """
+  def request_password_reset(email) when is_binary(email) do
+    case get_user_by_email(email) do
+      %User{} = user -> if User.deleted?(user), do: :ok, else: issue_password_reset(user)
+      nil -> :ok
+    end
+  end
+
+  defp issue_password_reset(user) do
+    token = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+
+    {:ok, user} =
+      user
+      |> Ecto.Changeset.change(
+        password_reset_token_hash: hash_reset_token(token),
+        password_reset_sent_at: DateTime.truncate(DateTime.utc_now(), :second)
+      )
+      |> Repo.update()
+
+    case UserNotifier.deliver_password_reset_email(user, token) do
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "şifre sıfırlama e-postası gönderilemedi user_id=#{user.id} reason=#{inspect(reason)}"
+        )
+    end
+
+    :ok
+  rescue
+    exception ->
+      Logger.warning(
+        "şifre sıfırlama sırasında beklenmeyen hata user_id=#{user.id}: " <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      :ok
+  end
+
+  @doc """
+  Completes a password reset: sets `new_password` for the account the
+  token was issued to, if the token is the account's current one and less
+  than an hour old.
+
+  On success the token is used up (`User.password_changeset/2` clears it),
+  every existing session is signed out (`token_version` bumps, and live
+  sockets are disconnected) and the email counts as verified — following a
+  link sent to it proves the address. Runs under a row lock, so the same
+  link used twice at once still only works once.
+
+  Returns `{:ok, user}`, `{:error, :invalid_token}`, `{:error,
+  :token_expired}`, or `{:error, changeset}` (e.g. a too-short password —
+  the link then stays usable).
+  """
+  def reset_password(token, new_password) when is_binary(token) and is_binary(new_password) do
+    token_hash = hash_reset_token(token)
+
+    Repo.transaction(fn ->
+      query =
+        from(u in User,
+          where: u.password_reset_token_hash == ^token_hash and is_nil(u.deleted_at),
+          lock: "FOR UPDATE"
+        )
+
+      with %User{} = user <- Repo.one(query) || {:error, :invalid_token},
+           :ok <- check_reset_age(user),
+           {:ok, updated} <-
+             user
+             |> User.password_changeset(%{"password" => new_password})
+             |> Ecto.Changeset.put_change(:email_verified, true)
+             |> Repo.update() do
+        updated
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+    |> case do
+      {:ok, user} ->
+        BackendWeb.Endpoint.broadcast("user_socket:#{user.id}", "disconnect", %{})
+        {:ok, user}
+
+      error ->
+        error
+    end
+  end
+
+  defp check_reset_age(%User{password_reset_sent_at: sent_at}) do
+    if DateTime.diff(DateTime.utc_now(), sent_at, :second) > @password_reset_ttl_seconds,
+      do: {:error, :token_expired},
+      else: :ok
+  end
+
+  defp hash_reset_token(token), do: :crypto.hash(:sha256, token) |> Base.encode16(case: :lower)
+
   @doc """
   The name to show for a message/DM author, or a DM room's other
   participant — `"[silinmiş kullanıcı]"` once `User.deleted?/1` is true,

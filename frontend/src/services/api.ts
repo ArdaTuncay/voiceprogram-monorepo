@@ -246,6 +246,20 @@ export function resendVerification(email: string): Promise<ApiResult<MessageResp
   return post<MessageResponse>('/resend-verification', { email });
 }
 
+/** POST /api/password-reset — always resolves to the same generic message
+ * whether or not the address is registered (anti-enumeration, same as
+ * resendVerification). */
+export function requestPasswordReset(email: string): Promise<ApiResult<MessageResponse>> {
+  return post<MessageResponse>('/password-reset', { email });
+}
+
+/** POST /api/password-reset/confirm — `result.error` is the literal
+ * `"invalid_token"` or `"token_expired"` for a bad link (see
+ * BackendWeb.PasswordResetController), meant to be matched on, not shown. */
+export function confirmPasswordReset(token: string, password: string): Promise<ApiResult<MessageResponse>> {
+  return post<MessageResponse>('/password-reset/confirm', { token, password });
+}
+
 export function fetchServers(): Promise<ApiResult<Server[]>> {
   return authedGet<Server[]>('/servers');
 }

@@ -1670,6 +1670,19 @@ npm run lint (oxlint)              → 0 uyarı
 
 **Favicon kararı:** Proje zaten bir `.ico` değil, `frontend/public/favicon.svg` kullanıyor (index.html'de `<link rel="icon" type="image/svg+xml">`) — bu yüzden SVG→ICO dönüşümü hiç gerekmedi, `favicon.svg`'nin içeriği doğrudan `zircle-mascot.svg` ile aynı path'lere (aynı viewBox `0 0 680 460`, sadece `width`/`height` favicon boyutuna küçültülmüş: 48×32) güncellendi.
 
+
+### 6.6 Şifre Sıfırlama
+
+**Dosyalar:** `backend/lib/backend/accounts.ex` (`request_password_reset/1`, `reset_password/2`), `backend/lib/backend/accounts/user_notifier.ex` (`deliver_password_reset_email/2`), `backend/lib/backend_web/controllers/password_reset_controller.ex`, migration `20261115184149_add_password_reset_to_users`; frontend `ForgotPasswordScreen.tsx` (giriş ekranındaki "Şifremi unuttum"), `ResetPasswordPage.tsx` (`/reset-password/:token`).
+
+| Adım | Davranış |
+|---|---|
+| `POST /api/password-reset` `{email}` | Hesap varsa (silinmiş değilse) 32 baytlık rastgele token üretilir, e-postaya `<FRONTEND_URL>/reset-password/<token>` bağlantısı gider. Veritabanında yalnızca token'ın **SHA-256 özeti** saklanır. Yanıt her durumda aynıdır (adres sorgulamaya karşı). Dakikada 5, IP + e-posta bazlı rate limit |
+| `POST /api/password-reset/confirm` `{token, password}` | Satır kilidiyle tek transaction: token geçerli ve 1 saatten yeniyse şifre değişir, `token_version` artar (tüm oturumlar düşer, açık socket'lere `disconnect`), e-posta doğrulanmış sayılır. 404 `invalid_token`, 410 `token_expired`, 422 kısa şifre (bağlantı kullanılabilir kalır). Dakikada 10, IP bazlı |
+| Tek kullanımlık | `User.password_changeset/2` her şifre değişikliğinde (ayarlardan yapılan dahil) bekleyen sıfırlama bağlantısını geçersiz kılar; yeni istek eskisinin yerini alır |
+
+Testler: `password_reset_controller_test.exs` (12), `ResetPasswordPage.test.tsx`, `ForgotPasswordScreen.test.tsx`.
+
 ---
 
 ## 7. Bilinen Boşluklar / Devam Notları
