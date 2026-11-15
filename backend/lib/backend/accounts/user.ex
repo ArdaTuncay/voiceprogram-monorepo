@@ -19,6 +19,9 @@ defmodule Backend.Accounts.User do
     field :email_verification_sent_at, :utc_datetime
     field :password_reset_token_hash, :string, redact: true
     field :password_reset_sent_at, :utc_datetime
+    field :pending_email, :string
+    field :pending_email_token_hash, :string, redact: true
+    field :pending_email_sent_at, :utc_datetime
 
     timestamps(type: :utc_datetime)
   end

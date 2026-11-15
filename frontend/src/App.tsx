@@ -7,10 +7,12 @@ import Auth from './components/Auth';
 import Chat from './components/Chat';
 import VerifyEmailPage from './components/VerifyEmailPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
+import ConfirmEmailChangePage from './components/ConfirmEmailChangePage';
 import './App.css';
 
 const VERIFY_EMAIL_PATH_PREFIX = '/verify-email/';
 const RESET_PASSWORD_PATH_PREFIX = '/reset-password/';
+const CONFIRM_EMAIL_PATH_PREFIX = '/confirm-email/';
 
 // A stored user with no token (or vice versa) isn't a valid session.
 function loadSession(): User | null {
@@ -64,6 +66,12 @@ export default function App() {
   if (window.location.pathname.startsWith(RESET_PASSWORD_PATH_PREFIX)) {
     const token = window.location.pathname.slice(RESET_PASSWORD_PATH_PREFIX.length);
     return <ResetPasswordPage token={token} />;
+  }
+
+  // Same mail-client-opened pattern as /verify-email/ above.
+  if (window.location.pathname.startsWith(CONFIRM_EMAIL_PATH_PREFIX)) {
+    const token = window.location.pathname.slice(CONFIRM_EMAIL_PATH_PREFIX.length);
+    return <ConfirmEmailChangePage token={token} />;
   }
 
   if (!user) {

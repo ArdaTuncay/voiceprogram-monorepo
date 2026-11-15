@@ -403,11 +403,27 @@ export function updateUsername(username: string, currentPassword: string): Promi
   return authedPatch<User>('/account/username', { username, current_password: currentPassword });
 }
 
-/** Changes the current user's email — same current-password requirement as
- * updateUsername. Takes effect immediately, no confirmation link (see
- * PROJECT_ARCHITECTURE.md's note on why). */
-export function updateEmail(email: string, currentPassword: string): Promise<ApiResult<User>> {
-  return authedPatch<User>('/account/email', { email, current_password: currentPassword });
+export interface EmailChangeResponse {
+  message: string;
+  pending_email: string;
+}
+
+/** Starts changing the current user's email — same current-password
+ * requirement as updateUsername. Doesn't change it yet: the backend mails a
+ * confirmation link to the new address (and a notice to the current one);
+ * the change applies once that link is followed (ConfirmEmailChangePage). */
+export function updateEmail(
+  email: string,
+  currentPassword: string
+): Promise<ApiResult<EmailChangeResponse>> {
+  return authedPatch<EmailChangeResponse>('/account/email', { email, current_password: currentPassword });
+}
+
+/** POST /api/account/email/confirm — applies a pending email change.
+ * `result.error` is the literal `"invalid_token"` or `"token_expired"` for a
+ * bad link (see BackendWeb.EmailChangeController), meant to be matched on. */
+export function confirmEmailChange(token: string): Promise<ApiResult<{ message: string; email: string }>> {
+  return post<{ message: string; email: string }>('/account/email/confirm', { token });
 }
 
 /** Changes the current user's password. On success, every previously

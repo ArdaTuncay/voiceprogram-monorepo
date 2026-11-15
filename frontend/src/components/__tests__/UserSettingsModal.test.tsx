@@ -190,7 +190,9 @@ describe('UserSettingsModal', () => {
     });
 
     it('submits the email form to updateEmail with the trimmed value and current password', async () => {
-      vi.mocked(updateEmail).mockResolvedValue({ data: { ...testUser, email: 'new@example.com' } });
+      vi.mocked(updateEmail).mockResolvedValue({
+        data: { message: 'Onay bağlantısı yeni adrese gönderildi', pending_email: 'new@example.com' },
+      });
       openAccountTab();
 
       fireEvent.change(screen.getByLabelText('Yeni e-posta'), {
@@ -204,7 +206,10 @@ describe('UserSettingsModal', () => {
       });
 
       expect(updateEmail).toHaveBeenCalledWith('new@example.com', 'my-password');
-      expect(screen.getByText('E-posta adresin güncellendi.')).not.toBeNull();
+      // The change only applies once the link mailed to the new address is
+      // followed — the form must say so, not claim it's already done.
+      expect(screen.getByText(/new@example\.com adresine bir onay bağlantısı gönderdik/)).not.toBeNull();
+      expect(screen.queryByText('E-posta adresin güncellendi.')).toBeNull();
     });
 
     it('rejects a password change locally when the confirmation does not match, without calling the API', async () => {
