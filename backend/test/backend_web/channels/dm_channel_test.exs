@@ -287,7 +287,11 @@ defmodule BackendWeb.DmChannelTest do
     messages =
       for n <- 1..11 do
         {:ok, message} =
-          DirectMessages.create_message(%{content: "msg #{n}", user_id: a.id, dm_room_id: room.id})
+          DirectMessages.create_message(%{
+            content: "msg #{n}",
+            user_id: a.id,
+            dm_room_id: room.id
+          })
 
         message
       end
