@@ -3,6 +3,7 @@ import type {
   ChatMessage,
   DmRoom,
   NewDmMessageNotification,
+  PushFailure,
   ReactionToggledPayload,
   SearchFilters,
 } from '../types';
@@ -15,6 +16,8 @@ import {
   deleteDmMessage,
   sendDmMarkRead,
 } from '../services/socket';
+import { chatActionErrorMessage } from '../utils/errorMessages';
+import type { ChatAction } from '../utils/errorMessages';
 
 // Safety cap on how many older pages jumpToMessage will fetch while hunting
 // for a search result that isn't in the currently loaded window, so a
@@ -40,6 +43,24 @@ function clearTypingTimer() {
   }
 }
 
+/** Mirror of useChatStore's chatPushFailureHandler, scoped to the active DM
+ * room instead of the active channel — same reasoning for both the
+ * still-in-the-same-room check and running `onRejected` only on a definite
+ * rejection. */
+function dmPushFailureHandler(action: ChatAction, onRejected?: () => void) {
+  const roomId = useDMStore.getState().activeRoomId;
+  return (failure: PushFailure) => {
+    if (useDMStore.getState().activeRoomId !== roomId) return;
+    useDMStore.setState({ actionError: chatActionErrorMessage(action, failure) });
+    if (failure.kind === 'error') onRejected?.();
+  };
+}
+
+/** Mirror of useChatStore's restoreDraftIfEmpty. */
+function restoreDraftIfEmpty(content: string) {
+  if (content && !useDMStore.getState().draft) useDMStore.setState({ draft: content });
+}
+
 interface DMStoreState {
   rooms: DmRoom[];
   activeRoomId: string | null;
@@ -60,6 +81,9 @@ interface DMStoreState {
   typingUsername: string | null;
   isUploading: boolean;
   uploadError: string;
+  /** Same role as useChatStore's actionError — feedback for a rejected (or,
+   * for a send, unconfirmed) push, never a change to `messages`. */
+  actionError: string;
   isDraggingFile: boolean;
   lightboxUrl: string | null;
   /** Whether an older page of history is known to exist for the active
@@ -153,6 +177,7 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
   typingUsername: null,
   isUploading: false,
   uploadError: '',
+  actionError: '',
   isDraggingFile: false,
   lightboxUrl: null,
   hasMoreMessages: true,
@@ -219,6 +244,9 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
     set({
       messages: [],
       typingUsername: null,
+      // About an action in the room being left, so it doesn't follow the
+      // user into the next one.
+      actionError: '',
       hasMoreMessages: true,
       isLoadingOlderMessages: false,
       searchQuery: '',
@@ -321,8 +349,14 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
     const content = get().draft.trim();
     if (!content) return;
     get().stopTypingNow();
-    sendDmMessage(content);
-    set({ draft: '' });
+    // Cleared before the push — see useChatStore.sendMessage.
+    set({ draft: '', actionError: '' });
+    sendDmMessage(
+      content,
+      undefined,
+      undefined,
+      dmPushFailureHandler('send', () => restoreDraftIfEmpty(content))
+    );
   },
 
   handleFileSelected: async (file) => {
@@ -347,8 +381,14 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
     }
 
     get().stopTypingNow();
-    sendDmMessage(get().draft.trim(), data.file_url, data.file_type);
-    set({ draft: '' });
+    const content = get().draft.trim();
+    set({ draft: '', actionError: '' });
+    sendDmMessage(
+      content,
+      data.file_url,
+      data.file_type,
+      dmPushFailureHandler('send', () => restoreDraftIfEmpty(content))
+    );
   },
 
   setDraggingFile: (value) => set({ isDraggingFile: value }),
@@ -356,7 +396,8 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
 
   // No optimistic local update — the server echoes "reaction_toggled" back
   // to the sender too, same convention as useChatStore.toggleReaction.
-  toggleReaction: (messageId, emoji) => toggleDmReaction(messageId, emoji),
+  toggleReaction: (messageId, emoji) =>
+    toggleDmReaction(messageId, emoji, dmPushFailureHandler('react')),
 
   handleReactionToggled: (payload) =>
     set((state) => ({
@@ -365,14 +406,15 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
       ),
     })),
 
-  editMessage: (messageId, content) => editDmMessage(messageId, content),
+  editMessage: (messageId, content) =>
+    editDmMessage(messageId, content, dmPushFailureHandler('edit')),
 
   handleMessageUpdated: (msg) =>
     set((state) => ({
       messages: state.messages.map((m) => (m.id === msg.id ? msg : m)),
     })),
 
-  deleteMessage: (messageId) => deleteDmMessage(messageId),
+  deleteMessage: (messageId) => deleteDmMessage(messageId, dmPushFailureHandler('delete')),
 
   handleMessageDeleted: (msg) =>
     set((state) => ({
@@ -423,6 +465,7 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
       typingUsername: null,
       isUploading: false,
       uploadError: '',
+      actionError: '',
       isDraggingFile: false,
       lightboxUrl: null,
       hasMoreMessages: true,
