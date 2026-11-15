@@ -88,4 +88,34 @@ defmodule BackendWeb.VoiceControllerTest do
              ]
            }
   end
+
+  test "GET /api/voice/turn-credentials hands each signed-in user their own Metered credential",
+       %{conn: conn} do
+    Backend.MeteredStub.configure()
+    Backend.MeteredStub.stub_ok()
+
+    alice = user_fixture()
+    bob = user_fixture()
+
+    fetch = fn user, octet ->
+      conn
+      |> put_req_header("authorization", "Bearer #{token_for(user)}")
+      |> with_unique_ip(octet)
+      |> get(~p"/api/voice/turn-credentials")
+      |> json_response(200)
+      |> Map.fetch!("ice_servers")
+    end
+
+    [stun | alice_servers] = fetch.(alice, 4)
+    assert_received {:metered_create, _, _, %{"label" => label}}
+    assert label == alice.id
+
+    [_stun | bob_servers] = fetch.(bob, 5)
+
+    assert stun == %{"urls" => "stun:stun.relay.metered.ca:80"}
+    assert [%{"username" => alice_user} | _] = alice_servers
+    assert [%{"username" => bob_user} | _] = bob_servers
+    assert alice_user != bob_user
+    refute Enum.any?(alice_servers ++ bob_servers, &(&1["username"] == "static-u"))
+  end
 end

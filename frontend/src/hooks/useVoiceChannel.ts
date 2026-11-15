@@ -116,12 +116,19 @@ async function fetchBackendTurnServers(): Promise<RTCIceServer[]> {
   }
 }
 
-// Resolved once and cached — every peer connection in this tab shares the
-// same TURN credentials rather than each triggering its own API round trip.
+// Cached so every peer connection joining around the same time shares one
+// set of TURN credentials instead of each making its own round trip — but
+// only for ICE_SERVERS_CACHE_TTL_MS. The backend's per-user Metered
+// credentials expire (Backend.Turn: 48 h, rotated at 24 h, so whatever it
+// hands out is good for at least ~23 h), and a tab left open for days must
+// not keep offering a dead credential to every new call.
+export const ICE_SERVERS_CACHE_TTL_MS = 30 * 60 * 1000;
 let iceServersPromise: Promise<RTCIceServer[]> | null = null;
+let iceServersFetchedAt = 0;
 
 function getIceServers(): Promise<RTCIceServer[]> {
-  if (!iceServersPromise) {
+  if (!iceServersPromise || Date.now() - iceServersFetchedAt > ICE_SERVERS_CACHE_TTL_MS) {
+    iceServersFetchedAt = Date.now();
     iceServersPromise = Promise.all([resolveIceServers(), fetchBackendTurnServers()]).then(
       ([configured, backendTurn]) => [...configured, ...backendTurn]
     );
@@ -137,6 +144,7 @@ function getIceServers(): Promise<RTCIceServer[]> {
  * are — a small, deliberate test seam, not something app code calls. */
 export function resetIceServersCacheForTests(): void {
   iceServersPromise = null;
+  iceServersFetchedAt = 0;
 }
 
 // Volume (0-255) above which a stream counts as "speaking", and how long
