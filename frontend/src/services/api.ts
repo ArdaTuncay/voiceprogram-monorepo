@@ -442,3 +442,13 @@ export function deleteAccount(currentPassword: string): Promise<ApiResult<void>>
 export function unblockUser(userId: string): Promise<ApiResult<void>> {
   return authedDelete<void>(`/users/${userId}/block`);
 }
+
+/** POST /api/users/renew-token — swaps the current, still-valid session
+ * token for a fresh 7-day one and stores it (see App.tsx's renewal effect).
+ * A revoked or expired token gets a 401 here, which signs the user out the
+ * same way any other 401 does. */
+export async function renewSessionToken(): Promise<ApiResult<{ token: string }>> {
+  const result = await authedFetch<{ token: string }>('/users/renew-token', { method: 'POST' });
+  if (result.data?.token) storeToken(result.data.token);
+  return result;
+}

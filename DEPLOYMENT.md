@@ -234,5 +234,5 @@ Bir araç/panel JSON değil ham XML istiyorsa aynı iki kural:
 ## Bilinen Sınırlamalar / Sıradaki Adımlar
 
 - **TURN sunucusu opsiyonel, set edilmezse yok.** Backend Metered.ca'nın statik TURN kimlik bilgisi çiftini destekliyor (bkz. yukarıdaki `METERED_TURN_USERNAME`/`METERED_TURN_CREDENTIAL`, `Backend.Turn`, PROJECT_ARCHITECTURE.md 2.9) — bu ikisi deploy'da set edilirse gerçek bir TURN relay'i devreye girer. Set edilmezse sadece herkese açık bir STUN sunucusu (`stun.l.google.com:19302`) kullanılır: aynı yerel ağdaki veya "kolay" NAT'lar arkasındaki kullanıcılar arasında WebRTC (ses/ekran paylaşımı) sorunsuz çalışır, ama simetrik NAT veya kısıtlayıcı kurumsal/mobil ağlar arkasındaki kullanıcılar arasında bağlantı kurulamayabilir.
-- **Token yenileme yok** — oturum token'ı 24 saat sonra geçersiz olur, kullanıcı tekrar giriş yapmalı.
+- **Oturum süresi** — oturum token'ı 7 gün geçerlidir; açık uygulama onu açılışta ve 12 saatte bir yeniler (`POST /api/users/renew-token`), yani yalnızca bir haftadır kullanılmayan cihazda tekrar giriş gerekir. "Tüm cihazlardan çıkış" ve şifre değişikliği token'ları anında geçersiz kılmaya devam eder.
 - İlk deploy'da veritabanı boş olacağı için (seed script'i opsiyonel), her kullanıcı kendi sunucusunu "+" ile oluşturarak başlar.
