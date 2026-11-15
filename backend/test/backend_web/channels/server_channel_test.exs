@@ -52,14 +52,9 @@ defmodule BackendWeb.ServerChannelTest do
     assert server_id == server.id
   end
 
-  # A kicked/left member isn't forcibly evicted from an already-joined
-  # "server:<id>" channel process at the backend level today — that
-  # topic has no handle_in and never re-checks membership after join. The
-  # actually-enforced guarantee (and what production relies on) is that
-  # their NEXT join attempt is rejected once Servers.member?/2 says no. The
-  # frontend's own removal from the server list (driven by the personal
-  # "member_kicked"/"member_left" notification, see UserSocket/UserChannel)
-  # is what makes them actually leave the topic in practice.
+  # The other half of the kick guarantee: an already-joined process is
+  # closed server-side (see membership_revocation_test.exs and
+  # Servers.revoke_channel_access/2); this covers their NEXT join attempt.
   test "a kicked member's subsequent join is rejected", %{
     owner: owner,
     server: server,
