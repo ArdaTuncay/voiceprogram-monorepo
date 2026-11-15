@@ -4,6 +4,7 @@ import type { User } from '../types';
 import { registerUser, loginUser, resendVerification } from '../services/api';
 import { AUTH_REQUEST_ERRORS } from '../utils/errorMessages';
 import mascot from '../assets/zircle-mascot.svg';
+import ForgotPasswordScreen from './ForgotPasswordScreen';
 import './Auth.css';
 
 interface Props {
@@ -26,6 +27,7 @@ export default function Auth({ onAuth }: Props) {
   // the user's point of view both cases are the same instruction ("go check
   // your email"), just reached by different doors.
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
+  const [forgotPassword, setForgotPassword] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -80,6 +82,10 @@ export default function Auth({ onAuth }: Props) {
         }}
       />
     );
+  }
+
+  if (forgotPassword) {
+    return <ForgotPasswordScreen initialEmail={email} onBackToLogin={() => setForgotPassword(false)} />;
   }
 
   return (
@@ -144,6 +150,14 @@ export default function Auth({ onAuth }: Props) {
             {loading ? 'Lütfen bekle…' : mode === 'login' ? 'Giriş yap' : 'Devam et'}
           </button>
         </form>
+
+        {mode === 'login' && (
+          <p className="auth-toggle">
+            <button type="button" onClick={() => setForgotPassword(true)}>
+              Şifremi unuttum
+            </button>
+          </p>
+        )}
 
         <hr className="auth-divider" />
 

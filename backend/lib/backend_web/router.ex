@@ -25,6 +25,8 @@ defmodule BackendWeb.Router do
     post "/users/login", UserController, :login
     get "/verify-email/:token", VerificationController, :verify
     post "/resend-verification", VerificationController, :resend
+    post "/password-reset", PasswordResetController, :create
+    post "/password-reset/confirm", PasswordResetController, :confirm
   end
 
   scope "/api", BackendWeb do
@@ -53,6 +55,9 @@ defmodule BackendWeb.Router do
     patch "/servers/:server_id/channels/positions", ServerController, :update_channel_positions
     get "/servers/:id/members", ServerController, :members
     delete "/servers/:server_id/members/:user_id", ServerController, :delete_member
+    get "/servers/:server_id/bans", BanController, :index
+    post "/servers/:server_id/bans", BanController, :create
+    delete "/servers/:server_id/bans/:user_id", BanController, :delete
 
     get "/servers/:server_id/channels/:channel_id/messages", ChannelController, :messages
     get "/channels/:channel_id/search", ChannelController, :search

@@ -223,3 +223,32 @@
   font-size: 12px;
   margin-top: 2px;
 }
+
+/* Kick + ban buttons side by side, and the ban confirmation row that wraps
+   below the member it belongs to. */
+.settings-list-item {
+  flex-wrap: wrap;
+}
+
+.settings-member-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.settings-ban-confirm {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.settings-ban-confirm .settings-input {
+  flex: 1 1 160px;
+  margin: 0;
+}
+
+.settings-ban-reason {
+  color: var(--text-muted);
+  font-size: 12px;
+}

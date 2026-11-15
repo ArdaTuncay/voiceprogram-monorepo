@@ -246,6 +246,20 @@ export function resendVerification(email: string): Promise<ApiResult<MessageResp
   return post<MessageResponse>('/resend-verification', { email });
 }
 
+/** POST /api/password-reset — always resolves to the same generic message
+ * whether or not the address is registered (anti-enumeration, same as
+ * resendVerification). */
+export function requestPasswordReset(email: string): Promise<ApiResult<MessageResponse>> {
+  return post<MessageResponse>('/password-reset', { email });
+}
+
+/** POST /api/password-reset/confirm — `result.error` is the literal
+ * `"invalid_token"` or `"token_expired"` for a bad link (see
+ * BackendWeb.PasswordResetController), meant to be matched on, not shown. */
+export function confirmPasswordReset(token: string, password: string): Promise<ApiResult<MessageResponse>> {
+  return post<MessageResponse>('/password-reset/confirm', { token, password });
+}
+
 export function fetchServers(): Promise<ApiResult<Server[]>> {
   return authedGet<Server[]>('/servers');
 }
@@ -329,6 +343,31 @@ export function deleteChannel(channelId: string): Promise<ApiResult<void>> {
 /** Kicks a member from a server. Server owner only. */
 export function kickMember(serverId: string, userId: string): Promise<ApiResult<void>> {
   return authedDelete<void>(`/servers/${serverId}/members/${userId}`);
+}
+
+export interface ServerBan {
+  user_id: string;
+  username: string | null;
+  reason: string | null;
+  banned_at: string;
+}
+
+/** Owner-only. Removes the user from the server if they're a member and
+ * keeps them from rejoining through any invite until unbanned. */
+export function banMember(serverId: string, userId: string, reason: string): Promise<ApiResult<unknown>> {
+  return authedFetch<unknown>(`/servers/${serverId}/bans`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(reason ? { user_id: userId, reason } : { user_id: userId }),
+  });
+}
+
+export function fetchServerBans(serverId: string): Promise<ApiResult<ServerBan[]>> {
+  return authedGet<ServerBan[]>(`/servers/${serverId}/bans`);
+}
+
+export function unbanMember(serverId: string, userId: string): Promise<ApiResult<void>> {
+  return authedFetch<void>(`/servers/${serverId}/bans/${userId}`, { method: 'DELETE' });
 }
 
 export function createInvite(serverId: string): Promise<ApiResult<Invite>> {
