@@ -97,7 +97,7 @@ Sıralama önemlidir — üstten alta:
 | `Backend.Presence` | — (`Phoenix.Presence` instance) | "Kim burada" takibi — voice odaları, chat kanalları, DM odaları |
 | `Backend.RateLimiter` | — (`Hammer` instance) | ETS tabanlı rate limiting |
 | `Backend.SlowQueryLogger` | — | Telemetry tabanlı yavaş sorgu izleme |
-| `Backend.LinkPreview` | — | Chat linkleri için OpenGraph/meta veri çekme |
+| `Backend.LinkPreview` | `link_preview/address_policy.ex` (şema yok) | Chat linkleri için OpenGraph/meta veri çekme — SSRF korumalı, bkz. [2.10](#210-link-önizleme--ssrf-koruması) |
 | `Backend.Mailer` | — | `Swoosh.Mailer` wrapper'ı |
 | `Backend.Repo` | — | `Ecto.Repo` + Postgres adapter |
 | `Backend.Release` | — | Compiled release içinde migration çalıştırma task'ları |
@@ -518,6 +518,30 @@ Test: `backend/test/backend_web/plugs/security_headers_plug_test.exs` — plug'�
 - `backend/test/backend_web/controllers/voice_controller_rate_limit_test.exs` — dakikada 10 limit sonrası 429 (diğer testlerle IP bucket çakışmasını önlemek için ayrı dosyada, ayrı sahte IP'lerle — bkz. `voice_controller_test.exs`'teki `with_unique_ip/2` yorumu).
 
 **Uçtan uca doğrulama (bu turda):** Backend gerçek `dev.secret.exs` config'iyle başlatıldı, geçerli bir auth token ile `GET /api/voice/turn-credentials` çağrıldı — **gerçek Metered credential'larıyla dolu 5 elemanlı liste** döndü (username/credential `***` ile sansürlenerek, `urls` açık gösterilerek doğrulandı). `e2e/voice-channel.spec.ts` (bkz. 5.4) gerçek backend'e karşı tekrar çalıştırıldı — backend log'unda `GET /api/voice/turn-credentials`'ın **hiçbir "yapılandırılmamış" uyarısı olmadan**, sub-milisaniye sürede (ağ isteği yok, saf hesaplama) 200 döndürdüğü doğrulandı; test yine **1 passed** — aynı makinede iki peer olduğu için ICE yine `host` candidate'ı seçti (TURN relay'e gerek kalmadı), ama TURN endpoint'inin başarıyla çağrıldığı ve listeye eklendiği kanıtlandı.
+
+### 2.10 Link Önizleme — SSRF Koruması
+
+**Dosyalar:** `backend/lib/backend/link_preview.ex`, `backend/lib/backend/link_preview/address_policy.ex`; testler `backend/test/backend/link_preview_test.exs`, `backend/test/backend/link_preview/address_policy_test.exs`, sahte site `backend/test/support/link_preview_fake_site.ex`.
+
+`GET /api/utils/preview?url=...`, sunucunun kullanıcının seçtiği bir URL'ye kendisinin istek attığı tek yer. Önceki sürüm yalnızca ilk host'u (sadece IPv4, `:inet.gethostbyname`) kontrol edip isteği Req'e bırakıyordu; bu üç yoldan atlatılabiliyordu: Req yönlendirmeleri varsayılan olarak takip ettiği için herkese açık bir sayfa `169.254.169.254`'e yönlendirebiliyordu, IPv6 özel aralıkları (`fc00::/7`, `fe80::/10`, `::`, NAT64 `64:ff9b::/96`) ve CGNAT `100.64.0.0/10` (ör. Alibaba Cloud metadata `100.100.100.200`) engellenmiyordu, gövde boyutu sınırsızdı. Eski kodla yazılan testte 15 dahili adresten 5'ine gerçekten bağlanılmaya çalışıldığı görüldü.
+
+Şimdiki akış:
+
+| Adım | Kural |
+|---|---|
+| URL | Yalnızca `http`/`https`, yalnızca 80/443, URL'de kullanıcı adı/parola yok |
+| DNS | Host bir kez çözülür (A + AAAA); dönen adreslerin **hepsi** `AddressPolicy.public?/1`'den geçmeli |
+| Bağlantı | Doğrulanmış IP'ye bağlanılır; hostname yalnızca `Host` başlığı, SNI ve sertifika doğrulaması için kullanılır (Mint `:hostname`) — DNS rebinding işe yaramaz |
+| Yönlendirme | Elle takip, en fazla 3; her adım URL + DNS kontrollerinden yeniden geçer |
+| Gövde | Yalnızca `text/html` / `application/xhtml+xml`, `accept-encoding: identity`, en fazla 1 MB okunur |
+| Süre | DNS, bağlantı, tüm yönlendirmeler ve gövde için toplam 8 sn |
+| Çıktı | Alanlar geçerli UTF-8'e çevrilip kısaltılır; `og:image` yalnızca http(s); `&#xD800;` gibi surrogate entity'ler artık 500 hatasına yol açmıyor |
+
+`AddressPolicy`: IPv4'te loopback, RFC 1918, link-local, CGNAT, `0.0.0.0/8`, dokümantasyon/benchmark aralıkları, multicast ve rezerve aralıklar reddedilir. IPv6 izin listesiyle çalışır: yalnızca global unicast `2000::/3` (Teredo, 6to4 ve dokümantasyon blokları hariç); IPv4 gömülü biçimler (`::ffff:a.b.c.d`, `::a.b.c.d`, `64:ff9b::/96`) içlerindeki IPv4'e göre değerlendirilir.
+
+**Neden Req değil de Mint:** Bağlantıyı doğrulanmış IP'ye sabitlemek bağlantı başına Mint'in `:hostname` seçeneğini gerektiriyor. Req bunu yalnızca `:connect_options` ile veriyor; o da her farklı seçenek seti için durdurulmayan yeni bir Finch havuzu ve yeni bir atom (`Req.FinchSupervisor.Pool_<md5>`) oluşturuyor. Burada bu, önizlenen her hostname için bir havuz demek.
+
+**Test notu:** Testler gerçek bir Bandit dinleyicisini 127.0.0.1'de çalıştırır; `fetch/2`'nin `:resolver`, `:address_allowed?`, `:allowed_ports`, `:deadline_ms` seçenekleri yalnızca bu yerel sahte siteye izin vermek için vardır (controller `fetch/1`'i çağırır). HTTPS yolu bu testlerde yok; IP sabitlemeyle sertifika doğrulamasının sürdüğü elle doğrulandı (github.com, example.com'un IP'sine sabitlendiğinde bağlantı reddediliyor). Sunucu tarafı önbellek hâlâ yok.
 
 ---
 
