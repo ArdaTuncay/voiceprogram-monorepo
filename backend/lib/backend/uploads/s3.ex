@@ -102,6 +102,20 @@ defmodule Backend.Uploads.S3 do
     end
   end
 
+  @doc """
+  The part of every public URL `upload/3` returns that comes before the
+  object key (e.g. `"https://pub-xxx.r2.dev/"`), or `nil` when S3 isn't
+  configured. Used by `Backend.Uploads.own_file_url?/1`.
+  """
+  def public_url_prefix do
+    config = Application.get_env(:backend, :uploads, [])
+
+    case Keyword.get(config, :bucket) do
+      nil -> nil
+      bucket -> public_url(config, bucket, "")
+    end
+  end
+
   defp public_url(config, bucket, key) do
     case Keyword.get(config, :public_url_base) do
       nil ->

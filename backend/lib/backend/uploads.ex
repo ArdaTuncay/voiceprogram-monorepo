@@ -46,6 +46,44 @@ defmodule Backend.Uploads do
     end
   end
 
+  # store/1's filenames: 16 random bytes, URL-safe base64 (22 characters),
+  # plus one of @allowed_extensions' extensions.
+  @stored_name ~S"[A-Za-z0-9_-]{22}\.(?:png|jpg|gif|webp)"
+  @local_url Regex.compile!("\\A/uploads/" <> @stored_name <> "\\z")
+
+  @doc """
+  True if `url` is a file `store/1` could have returned — a local
+  `/uploads/<name>` path, or the configured S3 bucket's public URL for one
+  of its names. Messages may only carry attachments like these (see
+  `Backend.Chat.Message`/`Backend.DirectMessages.DmMessage`): an arbitrary
+  URL would let a sender make every reader's browser fetch from a server of
+  their choosing — a tracking pixel.
+
+  Local paths stay accepted when S3 is configured, so files uploaded before
+  switching storage keep working.
+  """
+  def own_file_url?(url) when is_binary(url) do
+    Regex.match?(@local_url, url) or own_s3_url?(url)
+  end
+
+  def own_file_url?(_url), do: false
+
+  defp own_s3_url?(url) do
+    with :s3 <- adapter(),
+         prefix when is_binary(prefix) <- S3.public_url_prefix(),
+         true <- String.starts_with?(url, prefix) do
+      Regex.match?(
+        Regex.compile!("\\A" <> @stored_name <> "\\z"),
+        String.replace_prefix(url, prefix, "")
+      )
+    else
+      _ -> false
+    end
+  end
+
+  @doc "True for the content types `store/1` accepts (and so the only ones an attachment can have)."
+  def allowed_content_type?(content_type), do: Map.has_key?(@allowed_extensions, content_type)
+
   defp store_local(upload, filename) do
     dest = Path.join(upload_dir(), filename)
     File.mkdir_p!(upload_dir())
