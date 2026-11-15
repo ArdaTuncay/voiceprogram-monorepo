@@ -87,8 +87,9 @@ defmodule Backend.Servers do
     |> where([m], m.server_id == ^server_id)
     |> join(:inner, [m], u in Backend.Accounts.User, on: u.id == m.user_id)
     |> order_by([_m, u], asc: u.username)
-    |> select([m, u], %{user_id: m.user_id, username: u.username, role: m.role, status: u.status})
+    |> select([m, u], %{user_id: m.user_id, username: u.username, role: m.role})
     |> Repo.all()
+    |> Enum.map(&Map.put(&1, :status, Backend.Accounts.status(&1.user_id)))
   end
 
   @doc """

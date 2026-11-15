@@ -224,18 +224,22 @@ defmodule Backend.Accounts do
   end
 
   @doc """
-  Updates the online/offline status of a user by id.
+  True while `user_id` has at least one live connection — derived from
+  Presence on their personal "user:<id>" topic (tracked by
+  `BackendWeb.UserChannel`), not from a stored column.
 
-  Returns `{:error, :not_found}` if `user_id` doesn't exist (shouldn't
-  happen in practice — only called with an already-authenticated socket's
-  own user id, see `BackendWeb.UserChannel`).
+  It used to be a `users.status` column written on socket join/leave. A
+  socket that died without running `terminate/2` — every one of them on a
+  deploy or a crash — left its user "online" in the database for good.
+  Presence drops a process the moment it dies (and works across nodes).
+  The column is no longer read or written.
   """
-  def update_status(user_id, status) when status in ["online", "offline"] do
-    case get_user(user_id) do
-      nil -> {:error, :not_found}
-      user -> user |> Ecto.Changeset.change(status: status) |> Repo.update()
-    end
+  def online?(user_id) do
+    match?(%{metas: [_ | _]}, Backend.Presence.get_by_key("user:#{user_id}", user_id))
   end
+
+  @doc ~s(`"online"` or `"offline"` for `user_id` — see `online?/1`.)
+  def status(user_id), do: if(online?(user_id), do: "online", else: "offline")
 
   @doc """
   Generates a fresh, cryptographically random email verification token for
