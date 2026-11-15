@@ -37,9 +37,18 @@ defmodule Backend.Accounts do
     |> Repo.insert()
   end
 
-  @doc "Fetches a user by email. Returns nil if not found."
+  @doc """
+  Fetches a user by email, case-insensitively and ignoring surrounding
+  whitespace (see `User.normalize_email/1`). Returns nil if not found.
+
+  Compares against `lower(email)` rather than the raw column so it hits
+  the `users_email_index` expression index, and so it would still match a
+  row stored with uppercase letters (every write path lowercases now, and
+  the `make_user_email_case_insensitive` migration normalized existing rows).
+  """
   def get_user_by_email(email) when is_binary(email) do
-    Repo.get_by(User, email: email)
+    normalized = User.normalize_email(email)
+    Repo.one(from u in User, where: fragment("lower(?)", u.email) == ^normalized)
   end
 
   @doc "Fetches a user by id. Returns nil if not found."

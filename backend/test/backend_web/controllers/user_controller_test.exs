@@ -82,6 +82,24 @@ defmodule BackendWeb.UserControllerTest do
       assert {:ok, %{id: ^id}} = Accounts.authenticate_token(token)
     end
 
+    test "logs in when the email is typed in a different case than at registration", %{
+      conn: conn
+    } do
+      user =
+        verified_user_fixture(%{"email" => "kayit@example.com", "password" => "correct-password"})
+
+      conn =
+        conn
+        |> with_unique_ip(125)
+        |> post(~p"/api/users/login", %{
+          "email" => "Kayit@EXAMPLE.com",
+          "password" => "correct-password"
+        })
+
+      assert %{"id" => id} = json_response(conn, 200)
+      assert id == user.id
+    end
+
     test "rejects a wrong password with 401 even for a verified user", %{conn: conn} do
       user = verified_user_fixture(%{"password" => "correct-password"})
 
