@@ -60,6 +60,9 @@ defmodule BackendWeb.Router do
     get "/servers/:server_id/bans", BanController, :index
     post "/servers/:server_id/bans", BanController, :create
     delete "/servers/:server_id/bans/:user_id", BanController, :delete
+    get "/servers/:server_id/reports", ReportController, :index
+    patch "/servers/:server_id/reports/:id", ReportController, :update
+    post "/reports", ReportController, :create
 
     get "/servers/:server_id/channels/:channel_id/messages", ChannelController, :messages
     get "/channels/:channel_id/search", ChannelController, :search

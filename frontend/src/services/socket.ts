@@ -13,6 +13,7 @@ import type {
   MemberKickedNotification,
   MemberLeftNotification,
   MemberRoleUpdatedNotification,
+  ReportCreatedNotification,
   MemberStatusChangedNotification,
   VoicePresenceUpdatedNotification,
   ScreenShareStoppedNotification,
@@ -427,6 +428,7 @@ export interface UserChannelCallbacks {
   onServerDeleted: (payload: ServerDeletedNotification) => void;
   onMemberKicked: (payload: MemberKickedNotification) => void;
   onMyRoleUpdated: (payload: MemberRoleUpdatedNotification) => void;
+  onReportCreated: (payload: ReportCreatedNotification) => void;
   onMemberStatusChanged: (payload: MemberStatusChangedNotification) => void;
   onFriendRequestReceived: (payload: Friendship) => void;
   onFriendRequestAccepted: (payload: Friendship) => void;
@@ -460,6 +462,7 @@ export function joinUserChannel(userId: string, callbacks: UserChannelCallbacks)
   room.on('member_role_updated', (payload: MemberRoleUpdatedNotification) =>
     callbacks.onMyRoleUpdated(payload)
   );
+  room.on('report_created', (payload: ReportCreatedNotification) => callbacks.onReportCreated(payload));
   room.on('member_status_changed', (payload: MemberStatusChangedNotification) =>
     callbacks.onMemberStatusChanged(payload)
   );

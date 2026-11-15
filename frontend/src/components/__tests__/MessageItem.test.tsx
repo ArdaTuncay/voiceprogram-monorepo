@@ -290,4 +290,24 @@ describe('MessageItem', () => {
       expect(screen.getByRole('menu')).not.toBeNull();
     });
   });
+
+  describe('context menu — Raporla', () => {
+    it("offers \"Raporla\" on someone else's message and calls onReport", () => {
+      const onReport = vi.fn();
+      renderItem({ message: makeMessage({ user_id: 'someone-else' }), currentUserId: 'viewer', onReport });
+
+      openContextMenu();
+      fireEvent.click(screen.getByText('Raporla'));
+
+      expect(onReport).toHaveBeenCalledTimes(1);
+    });
+
+    it('never offers it on your own message', () => {
+      renderItem({ currentUserId: 'author', onReport: vi.fn() });
+
+      openContextMenu();
+
+      expect(screen.queryByText('Raporla')).toBeNull();
+    });
+  });
 });

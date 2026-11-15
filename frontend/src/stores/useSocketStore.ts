@@ -159,6 +159,7 @@ export function useSocketSync(currentUser: User): void {
       // Backend.Servers.kick_member/2) — always about "me", no filter needed.
       onMemberKicked: (payload) => useServerStore.getState().removeServerAndDeselect(payload.server_id),
       onMyRoleUpdated: (payload) => useServerStore.getState().handleMyRoleUpdated(payload),
+      onReportCreated: (payload) => useServerStore.getState().handleReportCreated(payload),
       onMemberStatusChanged: (payload) => useServerStore.getState().handleMemberStatusChanged(payload),
       onFriendRequestReceived: (payload) => useFriendStore.getState().handleFriendRequestReceived(payload),
       onFriendRequestAccepted: (payload) => useFriendStore.getState().handleFriendRequestAccepted(payload),

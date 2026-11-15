@@ -22,6 +22,8 @@ interface Props {
    * canModerate). Chat.tsx passes this, DMChatView never does, so delete
    * in a DM stays author-only, same as edit. */
   canModerate?: boolean;
+  /** Opens the report dialog for this message; offered only on other people's messages. */
+  onReport?: () => void;
   /** True while this message is the target of a just-completed search
    * "jump to message" — flashes a highlight background (see Chat.css
    * `.message-highlighted`). */
@@ -47,6 +49,7 @@ export default function MessageItem({
   onDeleteMessage,
   onImageClick,
   canModerate,
+  onReport,
   isHighlighted,
   isGrouped,
 }: Props) {
@@ -186,6 +189,7 @@ export default function MessageItem({
           y={contextMenuPos.y}
           canEdit={isOwnMessage}
           canDelete={canDelete}
+          onReport={isOwnMessage ? undefined : onReport}
           onEdit={startEditing}
           onDelete={handleDeleteClick}
           onReact={() => setReactionPickerForced(true)}

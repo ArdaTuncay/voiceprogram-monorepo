@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { KeyboardEvent, ChangeEvent, DragEvent, UIEvent } from 'react';
-import type { User, Channel, ChannelType, PresenceUser } from '../types';
+import type { User, Channel, ChannelType, PresenceUser, ReportTarget } from '../types';
 import { resolveFileUrl } from '../config';
 import { disconnectSocket } from '../services/socket';
 import { useVoiceChannel } from '../hooks/useVoiceChannel';
@@ -19,6 +19,7 @@ import InviteModal from './InviteModal';
 import ServerSettingsModal from './ServerSettingsModal';
 import CreateChannelModal from './CreateChannelModal';
 import LeaveServerModal from './LeaveServerModal';
+import ReportModal from './ReportModal';
 import FriendsPanel from './FriendsPanel';
 import EmptyState from './EmptyState';
 import DMChatView from './DMChatView';
@@ -114,6 +115,7 @@ export default function Chat({ user, onLogout }: Props) {
   const setActiveServerId = useServerStore((s) => s.setActiveServerId);
   const loadServers = useServerStore((s) => s.loadServers);
   const memberRoles = useServerStore((s) => s.memberRoles);
+  const reportServerIds = useServerStore((s) => s.reportServerIds);
   const loadMemberRoles = useServerStore((s) => s.loadMemberRoles);
 
   const messages = useChatStore((s) => s.messages);
@@ -161,6 +163,7 @@ export default function Chat({ user, onLogout }: Props) {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [showUserSettingsModal, setShowUserSettingsModal] = useState(false);
   const [isSearchBarOpen, setIsSearchBarOpen] = useState(false);
   const [maximizedPeerId, setMaximizedPeerId] = useState<string | null>(null);
@@ -666,6 +669,9 @@ export default function Chat({ user, onLogout }: Props) {
                   aria-label="Sunucu Ayarları"
                 >
                   <Settings size={16} />
+                  {activeServerId && reportServerIds.has(activeServerId) && (
+                    <span className="settings-report-dot" aria-label="Yeni rapor" />
+                  )}
                 </button>
               )}
               {!isServerOwner && (
@@ -896,6 +902,7 @@ export default function Chat({ user, onLogout }: Props) {
                     onDeleteMessage={() => deleteMessage(msg.id)}
                     onImageClick={setLightboxUrl}
                     canModerate={canModerate(myRole, memberRoles[msg.user_id])}
+                    onReport={() => setReportTarget({ kind: 'message', id: msg.id })}
                     isHighlighted={msg.id === highlightedMessageId}
                     isGrouped={shouldGroupMessages(messages[index - 1], msg)}
                   />
@@ -1100,6 +1107,8 @@ export default function Chat({ user, onLogout }: Props) {
           onClose={() => setCreateChannelRequest(null)}
         />
       )}
+
+      {reportTarget && <ReportModal target={reportTarget} onClose={() => setReportTarget(null)} />}
 
       {showLeaveModal && activeServerId && !isServerOwner && (
         <LeaveServerModal onClose={() => setShowLeaveModal(false)} />

@@ -252,3 +252,37 @@
   color: var(--text-muted);
   font-size: 12px;
 }
+
+.settings-report-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.settings-report-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.settings-report-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.settings-report-content {
+  background: var(--bg-input);
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-size: 13px;
+  padding: 6px 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.settings-report-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

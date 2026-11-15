@@ -9,6 +9,8 @@ import { shouldGroupMessages } from '../utils';
 import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
+import ReportModal from './ReportModal';
+import type { ReportTarget } from '../types';
 
 interface Props {
   currentUserId: string;
@@ -96,6 +98,7 @@ export default function DMChatView({ currentUserId }: Props) {
   const otherUserId = activeRoom?.user_id;
 
   const [isSearchBarOpen, setIsSearchBarOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
   // Closing the search input unmounts SearchBar entirely (see the
   // conditional render below), which resets its own internal query/filter
@@ -247,6 +250,7 @@ export default function DMChatView({ currentUserId }: Props) {
               onEditMessage={(content) => editMessage(msg.id, content)}
               onDeleteMessage={() => deleteMessage(msg.id)}
               onImageClick={setLightboxUrl}
+              onReport={() => setReportTarget({ kind: 'dm', id: msg.id })}
               isHighlighted={msg.id === highlightedMessageId}
               isGrouped={shouldGroupMessages(messages[index - 1], msg)}
             />
@@ -315,6 +319,7 @@ export default function DMChatView({ currentUserId }: Props) {
           <img src={resolveFileUrl(lightboxUrl)} alt="ek büyük önizleme" className="image-lightbox-img" />
         </div>
       )}
+      {reportTarget && <ReportModal target={reportTarget} onClose={() => setReportTarget(null)} />}
     </main>
     {isSearchPanelOpen && (
       <SearchResultsPanel

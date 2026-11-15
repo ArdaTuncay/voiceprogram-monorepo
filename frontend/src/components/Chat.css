@@ -76,6 +76,7 @@
 }
 
 .invite-people-btn {
+  position: relative;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -1720,4 +1721,15 @@
   .chat-layout--voice .chat-main {
     padding-bottom: 64px;
   }
+}
+
+/* New-report marker on the server settings button (see useServerStore's reportServerIds). */
+.settings-report-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
 }
