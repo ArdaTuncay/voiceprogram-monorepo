@@ -44,11 +44,11 @@ async function getPeerConnectionStates(page: Page): Promise<string[]> {
 
 async function registerAndLogIn(page: Page, username: string, email: string, password: string) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Register' }).click();
-  await page.getByLabel('Username').fill(username);
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Kayıt ol' }).click();
+  await page.getByLabel('Kullanıcı adı').fill(username);
+  await page.getByLabel('E-posta').fill(email);
+  await page.getByLabel('Şifre').fill(password);
+  await page.getByRole('button', { name: 'Devam et' }).click();
 
   // Register (see Auth.tsx) authenticates immediately on success — no
   // separate login step needed, this already lands on Chat.tsx.

@@ -160,7 +160,7 @@ defmodule Backend.ChatTest do
       {:ok, message} =
         Chat.create_message(%{
           content: "oops",
-          file_url: "http://example.com/f.png",
+          file_url: "/uploads/AbCdEfGhIjKlMnOpQrStUv.png",
           file_type: "image/png",
           user_id: member.id,
           channel_id: channel.id

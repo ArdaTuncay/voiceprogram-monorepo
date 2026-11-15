@@ -36,16 +36,16 @@ test('register, log out, log back in, create a server, send a message', async ({
 
   await test.step('register', async () => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Welcome back!' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tekrar hoş geldin!' })).toBeVisible();
 
     // Auth.tsx defaults to login mode — switch to register.
-    await page.getByRole('button', { name: 'Register' }).click();
-    await expect(page.getByRole('heading', { name: 'Create an account' })).toBeVisible();
+    await page.getByRole('button', { name: 'Kayıt ol' }).click();
+    await expect(page.getByRole('heading', { name: 'Hesap oluştur' })).toBeVisible();
 
-    await page.getByLabel('Username').fill(username);
-    await page.getByLabel('Email').fill(email);
-    await page.getByLabel('Password').fill(password);
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByLabel('Kullanıcı adı').fill(username);
+    await page.getByLabel('E-posta').fill(email);
+    await page.getByLabel('Şifre').fill(password);
+    await page.getByRole('button', { name: 'Devam et' }).click();
 
     // Successful register/login swaps Auth.tsx out for Chat.tsx — the
     // logout button and the user's own name in the user panel only exist
@@ -57,11 +57,11 @@ test('register, log out, log back in, create a server, send a message', async ({
 
   await test.step('log out, then log back in with the same account', async () => {
     await page.getByRole('button', { name: 'Log out' }).click();
-    await expect(page.getByRole('heading', { name: 'Welcome back!' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tekrar hoş geldin!' })).toBeVisible();
 
-    await page.getByLabel('Email').fill(email);
-    await page.getByLabel('Password').fill(password);
-    await page.getByRole('button', { name: 'Log In' }).click();
+    await page.getByLabel('E-posta').fill(email);
+    await page.getByLabel('Şifre').fill(password);
+    await page.getByRole('button', { name: 'Giriş yap' }).click();
 
     await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
     await expect(page.getByText(username, { exact: true })).toBeVisible();
