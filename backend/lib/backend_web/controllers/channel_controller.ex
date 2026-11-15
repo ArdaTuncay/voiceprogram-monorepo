@@ -73,6 +73,7 @@ defmodule BackendWeb.ChannelController do
       file_type: message.file_type,
       user_id: message.user_id,
       username: Backend.Accounts.display_username(message.user),
+      avatar_url: message.user && message.user.avatar_url,
       inserted_at: message.inserted_at,
       reactions: message.reactions,
       # See BackendWeb.ChatChannel's serialize_message/1 for why this

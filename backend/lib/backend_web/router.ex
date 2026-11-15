@@ -40,6 +40,7 @@ defmodule BackendWeb.Router do
     patch "/account/email", AccountController, :update_email
     patch "/account/password", AccountController, :update_password
     patch "/account/friend-request-privacy", AccountController, :update_friend_request_privacy
+    patch "/account/avatar", AccountController, :update_avatar
     get "/account/blocked-users", AccountController, :list_blocked_users
     delete "/account", AccountController, :delete
 
@@ -49,6 +50,7 @@ defmodule BackendWeb.Router do
     get "/servers", ServerController, :index
     post "/servers", ServerController, :create
     put "/servers/:id", ServerController, :update
+    put "/servers/:id/icon", ServerController, :update_icon
     delete "/servers/:id", ServerController, :delete
     delete "/servers/:server_id/leave", ServerController, :leave
     get "/servers/:id/channels", ServerController, :channels

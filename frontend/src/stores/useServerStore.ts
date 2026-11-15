@@ -397,7 +397,11 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
 
   handleServerUpdated: (payload) => {
     set((state) => ({
-      servers: state.servers.map((s) => (s.id === payload.server_id ? { ...s, name: payload.name } : s)),
+      servers: state.servers.map((s) =>
+        s.id === payload.server_id
+          ? { ...s, name: payload.name, ...('icon_url' in payload ? { icon_url: payload.icon_url } : {}) }
+          : s
+      ),
     }));
   },
 

@@ -94,5 +94,5 @@ export default function App() {
     return <Auth onAuth={handleAuth} />;
   }
 
-  return <Chat user={user} onLogout={handleLogout} />;
+  return <Chat user={user} onLogout={handleLogout} onUserUpdated={handleAuth} />;
 }

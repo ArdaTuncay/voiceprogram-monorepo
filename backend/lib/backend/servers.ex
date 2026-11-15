@@ -27,7 +27,7 @@ defmodule Backend.Servers do
     |> order_by([s], asc: s.name)
     |> select([s, m], {s, m.role})
     |> Repo.all()
-    |> Enum.map(fn {server, role} -> Map.put(server, :my_role, role) end)
+    |> Enum.map(fn {server, role} -> %{server | my_role: role} end)
   end
 
   @doc """
@@ -199,7 +199,12 @@ defmodule Backend.Servers do
     |> where([m], m.server_id == ^server_id)
     |> join(:inner, [m], u in Backend.Accounts.User, on: u.id == m.user_id)
     |> order_by([_m, u], asc: u.username)
-    |> select([m, u], %{user_id: m.user_id, username: u.username, role: m.role})
+    |> select([m, u], %{
+      user_id: m.user_id,
+      username: u.username,
+      avatar_url: u.avatar_url,
+      role: m.role
+    })
     |> Repo.all()
     |> Enum.map(&Map.put(&1, :status, Backend.Accounts.status(&1.user_id)))
   end
@@ -231,14 +236,24 @@ defmodule Backend.Servers do
   new name next time they open it (see `list_servers_for_user/1`).
   """
   def update_server(%Server{} = server, attrs) do
-    server
-    |> Server.rename_changeset(attrs)
-    |> Repo.update()
-    |> case do
+    server |> Server.rename_changeset(attrs) |> update_and_announce()
+  end
+
+  @doc """
+  Sets or clears the server icon (see `Server.icon_changeset/2`) and
+  announces it the same way a rename is (`"server_updated"`).
+  """
+  def update_server_icon(%Server{} = server, icon_url) do
+    server |> Server.icon_changeset(%{icon_url: icon_url}) |> update_and_announce()
+  end
+
+  defp update_and_announce(changeset) do
+    case Repo.update(changeset) do
       {:ok, updated} ->
         broadcast_to_server(updated.id, "server_updated", %{
           server_id: updated.id,
-          name: updated.name
+          name: updated.name,
+          icon_url: updated.icon_url
         })
 
         {:ok, updated}

@@ -123,6 +123,28 @@ defmodule BackendWeb.ServerController do
     end
   end
 
+  @doc """
+  PUT /api/servers/:id/icon — `icon_url` is a URL from `POST /api/upload`,
+  or null/empty to remove the icon. Owner only.
+  """
+  def update_icon(conn, %{"id" => server_id} = params) do
+    with %Server{} = server <- Servers.get_server(server_id),
+         true <- Servers.owner?(server.id, conn.assigns.current_user.id) do
+      case Servers.update_server_icon(server, params["icon_url"]) do
+        {:ok, updated} ->
+          json(conn, server_json(updated))
+
+        {:error, _changeset} ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{error: "Geçersiz resim. Önce bir resim yükleyin."})
+      end
+    else
+      false -> forbidden(conn)
+      nil -> not_found(conn)
+    end
+  end
+
   @doc "DELETE /api/servers/:id — permanently deletes a server. Owner only."
   def delete(conn, %{"id" => server_id}) do
     with %Server{} = server <- Servers.get_server(server_id),
@@ -235,7 +257,8 @@ defmodule BackendWeb.ServerController do
       id: server.id,
       name: server.name,
       owner_id: server.owner_id,
-      my_role: Map.get(server, :my_role, "owner")
+      icon_url: server.icon_url,
+      my_role: server.my_role || "owner"
     }
   end
 

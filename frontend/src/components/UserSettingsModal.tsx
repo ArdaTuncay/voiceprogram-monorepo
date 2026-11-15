@@ -8,9 +8,12 @@ import {
   deleteAccount,
   updateEmail,
   updateFriendRequestPrivacy,
+  updateAvatar,
   updatePassword,
   updateUsername,
 } from '../services/api';
+import { initials, userColor } from '../utils';
+import ImagePicker from './ImagePicker';
 import { useFriendStore } from '../stores/useFriendStore';
 import { disconnectSocket } from '../services/socket';
 import { forceLogout } from '../services/session';
@@ -46,6 +49,8 @@ const CATEGORIES: { id: Category; label: string }[] = [
 
 interface Props {
   user: User;
+  /** Persists profile changes (picture, username) for the rest of the session. */
+  onUserUpdated?: (user: User) => void;
   onClose: () => void;
 }
 
@@ -55,7 +60,7 @@ interface Props {
  * turns. Deliberately its own overlay/layout rather than reusing the
  * shared Modal component, which is a narrow centered dialog and not suited
  * to this wide, two-pane shape. */
-export default function UserSettingsModal({ user, onClose }: Props) {
+export default function UserSettingsModal({ user, onUserUpdated, onClose }: Props) {
   const [category, setCategory] = useState<Category>('appearance');
 
   useEffect(() => {
@@ -93,7 +98,7 @@ export default function UserSettingsModal({ user, onClose }: Props) {
 
         <div className="user-settings-content">
           {category === 'account' ? (
-            <AccountSettings user={user} />
+            <AccountSettings user={user} onUserUpdated={onUserUpdated} />
           ) : category === 'appearance' ? (
             <AppearanceSettings />
           ) : category === 'notifications' ? (
@@ -129,10 +134,24 @@ function StatusMessage({ type, message }: { type: 'error' | 'success'; message: 
  * BackendWeb.AccountController), each as its own independent form with its
  * own success/error state so changing one doesn't reset or block the
  * others. */
-function AccountSettings({ user }: { user: User }) {
+function AccountSettings({ user, onUserUpdated }: { user: User; onUserUpdated?: (user: User) => void }) {
+  async function handleAvatarSave(url: string | null) {
+    const { data, error } = await updateAvatar(url);
+    if (error || !data) return error ?? 'Profil fotoğrafı kaydedilemedi';
+    onUserUpdated?.({ ...user, avatar_url: data.avatar_url ?? null });
+    return undefined;
+  }
+
   return (
     <div className="user-settings-section">
       <h3 className="user-settings-heading">Hesabım</h3>
+      <ImagePicker
+        label="Profil Fotoğrafı"
+        currentUrl={user.avatar_url}
+        fallback={initials(user.username)}
+        color={userColor(user.id)}
+        onSave={handleAvatarSave}
+      />
       <UsernameForm currentUsername={user.username} />
       <EmailForm currentEmail={user.email} />
       <PasswordForm />

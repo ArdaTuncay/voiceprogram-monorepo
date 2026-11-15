@@ -22,6 +22,7 @@ defmodule Backend.Accounts.User do
     field :pending_email, :string
     field :pending_email_token_hash, :string, redact: true
     field :pending_email_sent_at, :utc_datetime
+    field :avatar_url, :string
 
     timestamps(type: :utc_datetime)
   end
@@ -132,11 +133,22 @@ defmodule Backend.Accounts.User do
       email: "deleted-" <> suffix <> "@deleted.invalid",
       password_hash: Pbkdf2.hash_pwd_salt(:crypto.strong_rand_bytes(32) |> Base.encode64()),
       status: "offline",
+      avatar_url: nil,
       deleted_at: DateTime.truncate(DateTime.utc_now(), :second),
       token_version: user.token_version + 1
     )
     |> unique_constraint(:username)
     |> unique_constraint(:email)
+  end
+
+  @doc """
+  Sets or clears (nil) the profile picture. Only an image our own upload
+  storage produced is accepted (see `Backend.Uploads.own_file_url?/1`).
+  """
+  def avatar_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:avatar_url], empty_values: [nil, ""])
+    |> Backend.Uploads.validate_own_image(:avatar_url)
   end
 
   @doc "True if this user has deleted their account (see deletion_changeset/1)."

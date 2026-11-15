@@ -6,6 +6,8 @@ export interface User {
    * place a `User` gets constructed (e.g. tests). Absent means "everyone"
    * (the backend's own default for a freshly registered user). */
   friend_request_privacy?: FriendRequestPrivacy;
+  /** Profile picture URL (see Backend.Uploads), or null for the initials. */
+  avatar_url?: string | null;
 }
 
 export interface AuthResponse extends User {
@@ -39,6 +41,8 @@ export interface ChatMessage {
   file_type: string | null;
   user_id: string;
   username: string | null;
+  /** Profile picture URL (see Backend.Uploads), or null for the initials. */
+  avatar_url?: string | null;
   inserted_at: string;
   is_edited: boolean;
   reactions: Reaction[];
@@ -147,6 +151,8 @@ export interface Server {
   /** The current user's own role here (see Backend.Servers.list_servers_for_user/1).
    * Missing only on a server object built before the user's role was known. */
   my_role?: MemberRole;
+  /** Server icon URL (see Backend.Uploads), or null for the initials. */
+  icon_url?: string | null;
 }
 
 export type UserStatus = 'online' | 'offline';
@@ -154,6 +160,8 @@ export type UserStatus = 'online' | 'offline';
 export interface ServerMember {
   user_id: string;
   username: string | null;
+  /** Profile picture URL (see Backend.Uploads), or null for the initials. */
+  avatar_url?: string | null;
   role: MemberRole;
   status: UserStatus;
 }
@@ -184,6 +192,7 @@ export interface ChannelPositionsUpdatedNotification {
 export interface ServerUpdatedNotification {
   server_id: string;
   name: string;
+  icon_url?: string | null;
 }
 
 export interface ServerDeletedNotification {
@@ -310,6 +319,8 @@ export interface Friendship {
   direction: FriendshipDirection;
   user_id: string;
   username: string | null;
+  /** Profile picture URL (see Backend.Uploads), or null for the initials. */
+  avatar_url?: string | null;
   user_status: UserStatus;
 }
 
@@ -324,6 +335,8 @@ export interface DmRoom {
   id: string;
   user_id: string;
   username: string | null;
+  /** Profile picture URL (see Backend.Uploads), or null for the initials. */
+  avatar_url?: string | null;
   user_status: UserStatus;
   /** How many of this room's messages the viewer hasn't read yet — the
    * viewer's own messages never count (see Backend.DirectMessages.unread_count/2). */

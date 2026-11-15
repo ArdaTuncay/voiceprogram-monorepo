@@ -115,6 +115,32 @@ defmodule BackendWeb.AccountController do
   end
 
   @doc """
+  PATCH /api/account/avatar — `avatar_url` is a URL from `POST /api/upload`,
+  or null/empty to go back to the initials. No password needed: a picture
+  isn't a sensitive change the way username/email/password are.
+  """
+  def update_avatar(conn, params) when is_map_key(params, "avatar_url") do
+    case Accounts.update_avatar(conn.assigns.current_user, params["avatar_url"]) do
+      {:ok, updated} ->
+        json(conn, %{
+          id: updated.id,
+          username: updated.username,
+          email: updated.email,
+          avatar_url: updated.avatar_url
+        })
+
+      {:error, _changeset} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: "Geçersiz resim. Önce bir resim yükleyin."})
+    end
+  end
+
+  def update_avatar(conn, _params) do
+    conn |> put_status(:bad_request) |> json(%{error: "avatar_url gerekli"})
+  end
+
+  @doc """
   PATCH /api/account/friend-request-privacy — "everyone" or "nobody", no
   current-password re-auth (see Accounts.update_friend_request_privacy/2's
   moduledoc for why this differs from username/email/password above).
