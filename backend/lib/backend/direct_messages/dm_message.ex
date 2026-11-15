@@ -34,6 +34,7 @@ defmodule Backend.DirectMessages.DmMessage do
     |> validate_required([:user_id, :dm_room_id])
     |> validate_length(:content, max: 4000)
     |> validate_content_or_file()
+    |> validate_attachment()
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:dm_room_id)
   end
@@ -80,4 +81,18 @@ defmodule Backend.DirectMessages.DmMessage do
 
   defp blank?(nil), do: true
   defp blank?(value), do: String.trim(value) == ""
+
+  # Attachments must be files this server stored (see
+  # Backend.Uploads.own_file_url?/1) — not any URL a client sends.
+  defp validate_attachment(changeset) do
+    changeset
+    |> validate_change(:file_url, fn :file_url, url ->
+      if Backend.Uploads.own_file_url?(url), do: [], else: [file_url: "is not an uploaded file"]
+    end)
+    |> validate_change(:file_type, fn :file_type, type ->
+      if Backend.Uploads.allowed_content_type?(type),
+        do: [],
+        else: [file_type: "is not a supported attachment type"]
+    end)
+  end
 end
