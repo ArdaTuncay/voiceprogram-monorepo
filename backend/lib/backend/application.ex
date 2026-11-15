@@ -30,6 +30,9 @@ defmodule Backend.Application do
       Backend.Presence,
       {Backend.RateLimiter, Application.get_env(:backend, Backend.RateLimiter, [])},
       Backend.Telemetry.PeriodicReporter,
+      # Fire-and-forget background work, e.g. Backend.Turn's credential
+      # rotation.
+      {Task.Supervisor, name: Backend.TaskSupervisor},
       # Start a worker by calling: Backend.Worker.start_link(arg)
       # {Backend.Worker, arg},
       # Start to serve requests, typically the last entry

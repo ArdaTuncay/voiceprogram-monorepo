@@ -23,7 +23,7 @@ defmodule BackendWeb.VoiceController do
   than depending on it (see `useVoiceChannel.ts`).
   """
   def turn_credentials(conn, _params) do
-    {:ok, ice_servers} = Turn.fetch_ice_servers()
+    {:ok, ice_servers} = Turn.fetch_ice_servers(conn.assigns.current_user.id)
     json(conn, %{ice_servers: ice_servers})
   end
 end

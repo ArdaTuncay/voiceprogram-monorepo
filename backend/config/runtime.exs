@@ -178,13 +178,22 @@ if config_env() == :prod do
   # — the whole point of switching to JSON in the first place.
   config :logger, :default_handler, formatter: {LoggerJSON.Formatters.Basic, metadata: :all}
 
-  # Metered.ca TURN Server static credential pair (see Backend.Turn — a
-  # plain config-driven ICE server list builder, no API call) — kept
-  # server-side so it never reaches the frontend as a VITE_* var. Either
-  # both env vars are set or neither is; a half-set pair (one present,
-  # one blank/missing) is treated as unset by Backend.Turn's own guard,
-  # falling back to STUN-only with a warning log rather than sending a
-  # broken credential. Locally, see config/dev.secret.exs.example instead.
+  # Per-user, expiring TURN credentials (see Backend.Turn and
+  # Backend.Turn.Metered) — preferred over the static pair below, which
+  # is only a fallback for deploys where these aren't set yet. Both from
+  # the Metered dashboard (Developers): the app name is the <app> in
+  # <app>.metered.live; the secret key never leaves the backend.
+  config :backend, :metered_api, %{
+    app_name: System.get_env("METERED_APP_NAME"),
+    secret_key: System.get_env("METERED_SECRET_KEY")
+  }
+
+  # DEPRECATED fallback: one static Metered credential pair handed to every
+  # user (see Backend.Turn's moduledoc for why that's unsafe). Only used
+  # while METERED_APP_NAME/METERED_SECRET_KEY above aren't set, or if the
+  # Metered API fails. A half-set pair is treated as unset. Once the
+  # per-user mode is live, remove these env vars AND delete/disable this
+  # credential in the Metered dashboard — it otherwise keeps working.
   config :backend, :turn_config, %{
     username: System.get_env("METERED_TURN_USERNAME"),
     credential: System.get_env("METERED_TURN_CREDENTIAL")

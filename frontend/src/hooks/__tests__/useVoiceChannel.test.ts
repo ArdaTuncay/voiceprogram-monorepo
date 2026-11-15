@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   GLARE_RECOVERY_DELAY_MS,
   ICE_DISCONNECT_GRACE_MS,
+  ICE_SERVERS_CACHE_TTL_MS,
   resetIceServersCacheForTests,
   useVoiceChannel,
 } from '../useVoiceChannel';
@@ -688,6 +689,48 @@ describe.sequential('useVoiceChannel — backend-proxied Metered TURN credential
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'turn:turn.example.com:443', username: 'u', credential: 'c' },
     ]);
+  });
+
+  // The backend's per-user Metered credentials expire (Backend.Turn), so a
+  // long-open tab must pick up the rotated one rather than reusing the
+  // first credential it ever fetched.
+  it('re-fetches the backend TURN servers once the cached ones are older than the TTL', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    vi.mocked(fetchTurnCredentials)
+      .mockResolvedValueOnce({
+        data: { ice_servers: [{ urls: 'turn:turn.example.com:443', username: 'old', credential: 'c' }] },
+      })
+      .mockResolvedValueOnce({
+        data: { ice_servers: [{ urls: 'turn:turn.example.com:443', username: 'new', credential: 'c' }] },
+      });
+    vi.mocked(joinVoiceChannel).mockReturnValue(resolvedChannel(['aaa-peer']));
+
+    const { result } = renderVoiceChannel(testUser);
+
+    const turnUsernameOnNextCall = async (roomId: string) => {
+      const before = FakeRTCPeerConnection.instances.length;
+      await act(async () => {
+        await result.current.join(roomId);
+      });
+      await waitFor(() => expect(FakeRTCPeerConnection.instances.length).toBe(before + 1));
+      const servers = FakeRTCPeerConnection.instances[before].configuration.iceServers ?? [];
+      act(() => result.current.leave());
+      return servers.find((server) => server.username)?.username;
+    };
+
+    try {
+      expect(await turnUsernameOnNextCall('roomA')).toBe('old');
+
+      now.mockReturnValue(1_000_000 + ICE_SERVERS_CACHE_TTL_MS - 1);
+      expect(await turnUsernameOnNextCall('roomB')).toBe('old');
+      expect(fetchTurnCredentials).toHaveBeenCalledTimes(1);
+
+      now.mockReturnValue(1_000_000 + ICE_SERVERS_CACHE_TTL_MS + 1);
+      expect(await turnUsernameOnNextCall('roomC')).toBe('new');
+      expect(fetchTurnCredentials).toHaveBeenCalledTimes(2);
+    } finally {
+      now.mockRestore();
+    }
   });
 });
 

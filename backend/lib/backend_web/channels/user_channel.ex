@@ -42,6 +42,11 @@ defmodule BackendWeb.UserChannel do
 
     unless already_online?, do: set_status(user_id, "online")
 
+    # Every app load joins this topic, well before the user opens a voice
+    # channel — the moment to make sure their TURN credential exists and
+    # has had time to propagate (see Backend.Turn.prewarm/1).
+    Backend.Turn.prewarm(user_id)
+
     {:noreply, socket}
   end
 
