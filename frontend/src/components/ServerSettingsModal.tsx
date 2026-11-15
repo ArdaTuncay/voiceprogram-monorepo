@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Volume2, Hash, Trash2, UserX } from 'lucide-react';
+import { AlertTriangle, Volume2, Hash, Trash2, UserX, Ban } from 'lucide-react';
 import StatusIndicator from './StatusIndicator';
 import type { Channel, Server, ServerMember, Invite } from '../types';
+import type { ServerBan } from '../services/api';
 import {
   updateServer,
   deleteServer,
   deleteChannel,
   kickMember,
+  banMember,
+  fetchServerBans,
+  unbanMember,
   fetchServerMembers,
   fetchServerInvites,
   revokeInvite,
@@ -15,7 +19,7 @@ import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
 import './ServerSettingsModal.css';
 
-type Tab = 'general' | 'channels' | 'members' | 'invites';
+type Tab = 'general' | 'channels' | 'members' | 'bans' | 'invites';
 
 interface Props {
   onClose: () => void;
@@ -52,6 +56,12 @@ export default function ServerSettingsModal({ onClose }: Props) {
           Üyeler
         </button>
         <button
+          className={`settings-tab${tab === 'bans' ? ' active' : ''}`}
+          onClick={() => setTab('bans')}
+        >
+          Yasaklılar
+        </button>
+        <button
           className={`settings-tab${tab === 'invites' ? ' active' : ''}`}
           onClick={() => setTab('invites')}
         >
@@ -62,6 +72,7 @@ export default function ServerSettingsModal({ onClose }: Props) {
       {tab === 'general' && <GeneralTab server={server} onClose={onClose} />}
       {tab === 'channels' && <ChannelsTab channels={channels} />}
       {tab === 'members' && <MembersTab serverId={server.id} ownerId={server.owner_id} />}
+      {tab === 'bans' && <BansTab serverId={server.id} />}
       {tab === 'invites' && <InvitesTab serverId={server.id} />}
     </Modal>
   );
@@ -213,6 +224,11 @@ function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [kickingId, setKickingId] = useState<string | null>(null);
+  // Banning is harder to undo than a kick (it also blocks rejoining), so
+  // it takes a second, explicit confirmation with an optional reason.
+  const [banTargetId, setBanTargetId] = useState<string | null>(null);
+  const [banReason, setBanReason] = useState('');
+  const [banning, setBanning] = useState(false);
   // Live updates (see BackendWeb.UserChannel's "member_status_changed") take
   // priority over whatever was last fetched — fetchServerMembers's `status`
   // is just the seed value until the first live update for that user arrives.
@@ -248,6 +264,21 @@ function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }
     setMembers((prev) => prev.filter((m) => m.user_id !== userId));
   }
 
+  async function handleBan(userId: string) {
+    setBanning(true);
+    setError('');
+    const { error } = await banMember(serverId, userId, banReason.trim());
+    setBanning(false);
+
+    if (error) {
+      setError(error);
+      return;
+    }
+    setBanTargetId(null);
+    setBanReason('');
+    setMembers((prev) => prev.filter((m) => m.user_id !== userId));
+  }
+
   if (loading) {
     return <div className="settings-section">Yükleniyor…</div>;
   }
@@ -270,19 +301,115 @@ function MembersTab({ serverId, ownerId }: { serverId: string; ownerId: string }
                 {member.user_id === ownerId && <span className="settings-owner-badge">Sahip</span>}
               </span>
               {member.user_id !== ownerId && (
-                <button
-                  className="settings-icon-btn"
-                  onClick={() => handleKick(member.user_id)}
-                  disabled={kickingId === member.user_id}
-                  title="Sunucudan At"
-                  aria-label={`${member.username ?? 'kullanıcıyı'} sunucudan at`}
-                >
-                  <UserX size={14} />
-                </button>
+                <span className="settings-member-actions">
+                  <button
+                    className="settings-icon-btn"
+                    onClick={() => handleKick(member.user_id)}
+                    disabled={kickingId === member.user_id}
+                    title="Sunucudan At"
+                    aria-label={`${member.username ?? 'kullanıcıyı'} sunucudan at`}
+                  >
+                    <UserX size={14} />
+                  </button>
+                  <button
+                    className="settings-icon-btn"
+                    onClick={() => {
+                      setBanTargetId(member.user_id);
+                      setBanReason('');
+                    }}
+                    title="Sunucudan Yasakla"
+                    aria-label={`${member.username ?? 'kullanıcıyı'} sunucudan yasakla`}
+                  >
+                    <Ban size={14} />
+                  </button>
+                </span>
+              )}
+              {banTargetId === member.user_id && (
+                <div className="settings-ban-confirm">
+                  <input
+                    className="settings-input"
+                    placeholder="Sebep (isteğe bağlı)"
+                    aria-label="Yasaklama sebebi"
+                    value={banReason}
+                    maxLength={200}
+                    onChange={(e) => setBanReason(e.target.value)}
+                  />
+                  <button
+                    className="settings-confirm-delete-btn"
+                    onClick={() => handleBan(member.user_id)}
+                    disabled={banning}
+                  >
+                    {banning ? 'Yasaklanıyor…' : 'Yasakla'}
+                  </button>
+                  <button className="settings-cancel-btn" onClick={() => setBanTargetId(null)}>
+                    Vazgeç
+                  </button>
+                </div>
               )}
             </li>
           );
         })}
+      </ul>
+    </div>
+  );
+}
+
+function BansTab({ serverId }: { serverId: string }) {
+  const [bans, setBans] = useState<ServerBan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [liftingId, setLiftingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchServerBans(serverId).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error || !data) setError(error ?? 'Yasak listesi alınamadı');
+      else setBans(data);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId]);
+
+  async function handleUnban(userId: string) {
+    setLiftingId(userId);
+    setError('');
+    const { error } = await unbanMember(serverId, userId);
+    setLiftingId(null);
+    if (error) {
+      setError(error);
+      return;
+    }
+    setBans((prev) => prev.filter((b) => b.user_id !== userId));
+  }
+
+  if (loading) {
+    return <div className="settings-section">Yükleniyor…</div>;
+  }
+
+  return (
+    <div className="settings-section">
+      {error && <div className="settings-error"><AlertTriangle size={14} /> {error}</div>}
+      <ul className="settings-list">
+        {bans.map((ban) => (
+          <li key={ban.user_id} className="settings-list-item">
+            <span>
+              {ban.username ?? 'Bilinmeyen'}
+              {ban.reason && <span className="settings-ban-reason"> — {ban.reason}</span>}
+            </span>
+            <button
+              className="settings-cancel-btn"
+              onClick={() => handleUnban(ban.user_id)}
+              disabled={liftingId === ban.user_id}
+            >
+              Yasağı kaldır
+            </button>
+          </li>
+        ))}
+        {bans.length === 0 && <li className="list-empty-hint">Yasaklı kullanıcı yok.</li>}
       </ul>
     </div>
   );

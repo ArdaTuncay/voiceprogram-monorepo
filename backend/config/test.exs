@@ -41,3 +41,9 @@ config :phoenix, :plug_init_mode, :runtime
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# Backend.Turn: run credential refreshes inline so tests can observe them
+# inside their own DB sandbox, and route Metered API calls through Req.Test
+# stubs (Backend.TurnTest) instead of the network.
+config :backend, Backend.Turn, refresh: :inline
+config :backend, Backend.Turn.Metered, req_options: [plug: {Req.Test, Backend.Turn.Metered}]
