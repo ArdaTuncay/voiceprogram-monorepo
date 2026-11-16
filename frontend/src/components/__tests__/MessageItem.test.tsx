@@ -83,7 +83,7 @@ describe('MessageItem', () => {
       });
 
       const link = screen.getByRole('link', { name: /Sözleşme\.pdf/ });
-      expect(link.getAttribute('href')).toMatch(/\/uploads\/AbCdEfGhIjKlMnOpQrStUv\.pdf$/);
+      expect(link.getAttribute('href')).toMatch(/\/uploads\/AbCdEfGhIjKlMnOpQrStUv\.pdf\?name=S%C3%B6zle%C5%9Fme\.pdf$/);
       expect(link.getAttribute('rel')).toContain('noopener');
       expect(link.textContent).toContain('2,0 KB');
       expect(screen.queryByRole('img', { name: 'ek' })).toBeNull();

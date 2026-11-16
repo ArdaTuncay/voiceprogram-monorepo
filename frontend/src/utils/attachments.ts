@@ -36,3 +36,12 @@ export function attachmentLabel(fileUrl: string, fileName: string | null | undef
   const match = /\.([a-z0-9]+)$/i.exec(fileUrl);
   return match ? t('Dosya ({ext})', { ext: match[1].toUpperCase() }) : t('Dosya');
 }
+
+/** The link an attachment downloads from. A locally stored public file
+ * (`/uploads/<random name>`) can't carry its original name, so the link asks
+ * for it (see BackendWeb.UploadDispositionPlug); S3 files and private DM
+ * links already download under it. */
+export function downloadPath(fileUrl: string, fileName: string | null | undefined): string {
+  if (!fileName || !fileUrl.startsWith('/uploads/')) return fileUrl;
+  return `${fileUrl}?name=${encodeURIComponent(fileName)}`;
+}
