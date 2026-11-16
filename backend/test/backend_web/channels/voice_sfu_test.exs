@@ -105,6 +105,25 @@ defmodule BackendWeb.VoiceSfuTest do
     assert %{sfu_session: ^session, sfu_tracks: []} = meta(channel, owner)
   end
 
+  test "renew starts a fresh session after a dropped connection, announcing no tracks yet",
+       %{owner: owner, channel: channel} do
+    {socket, old_session} = start_publishing(owner, channel)
+    assert meta(channel, owner).sfu_tracks == ["audio"]
+
+    assert {:ok, %{session_id: new_session}} = call(socket, "sfu_session", %{"renew" => true})
+    assert new_session != old_session
+    assert %{sfu_session: ^new_session, sfu_tracks: []} = meta(channel, owner)
+
+    {:ok, _} =
+      call(socket, "sfu_publish", %{
+        "session_description" => %{"type" => "offer", "sdp" => "o"},
+        "tracks" => [%{"mid" => "0", "trackName" => "audio"}]
+      })
+
+    path = "/v1/apps/test-app/sessions/#{new_session}/tracks/new"
+    assert_received {:cloudflare, "POST", ^path, _, _}
+  end
+
   test "publishing forwards the offer to the caller's own session and announces the track",
        %{owner: owner, channel: channel} do
     {_socket, session} = start_publishing(owner, channel)

@@ -56,6 +56,7 @@ export const en = {
   'Ses kanalına bağlanılamadı, sunucu yanıt vermedi. Lütfen tekrar deneyin.':
     "Couldn't connect to the voice channel; the server didn't respond. Please try again.",
   'Ses kanalına katılınamadı. Lütfen tekrar deneyin.': "Couldn't join the voice channel. Please try again.",
+  'Ses bağlantısı koptu. Lütfen kanala yeniden katılın.': 'The voice connection was lost. Please join the channel again.',
   'Mikrofon izni verilmedi. Tarayıcı ayarlarından bu siteye mikrofon izni verip tekrar deneyin.':
     'Microphone permission was denied. Allow this site to use the microphone in your browser settings and try again.',
   'Mikrofon bulunamadı. Bir mikrofonun bağlı olduğundan emin olun.':

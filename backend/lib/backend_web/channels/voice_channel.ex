@@ -320,19 +320,18 @@ defmodule BackendWeb.VoiceChannel do
     {:noreply, socket}
   end
 
-  defp sfu("sfu_session", _payload, %{assigns: %{sfu_session: id}} = socket) when is_binary(id),
-    do: {:reply, {:ok, %{session_id: id}}, socket}
-
-  defp sfu("sfu_session", _payload, socket) do
-    case Sfu.new_session() do
-      {:ok, id} ->
-        update_meta(socket, fn meta -> Map.merge(meta, %{sfu_session: id, sfu_tracks: []}) end)
-        {:reply, {:ok, %{session_id: id}}, assign(socket, :sfu_session, id)}
-
-      {:error, reason} ->
-        sfu_failed(socket, "sfu_session", reason)
-    end
+  # Once a session exists it's reused, unless the client asks for a new one
+  # (`renew`): its connection to Cloudflare dropped for good and it's
+  # starting over (see useVoiceChannel.ts). The new session announces no
+  # tracks until they're published again, so the others drop what they
+  # pulled from the old one and pull afresh.
+  defp sfu("sfu_session", payload, %{assigns: %{sfu_session: id}} = socket) when is_binary(id) do
+    if match?(%{"renew" => true}, payload),
+      do: new_sfu_session(socket),
+      else: {:reply, {:ok, %{session_id: id}}, socket}
   end
+
+  defp sfu("sfu_session", _payload, socket), do: new_sfu_session(socket)
 
   # Publishes local tracks: the browser's offer, plus a name for each of its
   # transceivers ("audio", "screen").
@@ -395,6 +394,17 @@ defmodule BackendWeb.VoiceChannel do
   end
 
   defp sfu(_event, _payload, socket), do: {:reply, {:error, %{reason: "invalid_request"}}, socket}
+
+  defp new_sfu_session(socket) do
+    case Sfu.new_session() do
+      {:ok, id} ->
+        update_meta(socket, fn meta -> Map.merge(meta, %{sfu_session: id, sfu_tracks: []}) end)
+        {:reply, {:ok, %{session_id: id}}, assign(socket, :sfu_session, id)}
+
+      {:error, reason} ->
+        sfu_failed(socket, "sfu_session", reason)
+    end
+  end
 
   defp publish(socket, sdp, tracks, names) do
     body = %{

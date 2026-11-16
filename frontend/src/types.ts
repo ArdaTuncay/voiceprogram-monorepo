@@ -174,6 +174,9 @@ export interface PresenceUser {
   /** Voice through the SFU only (see services/sfu.ts): the tracks this
    * participant publishes ("audio", "screen"). */
   sfu_tracks?: string[] | null;
+  /** ...and the SFU session they publish them in; a new one after their
+   * connection dropped and came back (see services/sfu.ts). */
+  sfu_session?: string | null;
 }
 
 export interface TypingNotification {
