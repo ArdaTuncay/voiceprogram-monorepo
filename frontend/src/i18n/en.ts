@@ -105,6 +105,10 @@ export const en = {
   'Kopyalandı!': 'Copied!',
   'Kopyala': 'Copy',
   'Arama Sonuçları': 'Search Results',
+  'Yeni kurtarma kodları': 'New recovery codes',
+  'Kodları yenile': 'Replace codes',
+  'Yeni kodlar oluşturulunca eski kurtarma kodlarının hepsi geçersiz olur.':
+    'Once new codes are made, all your old recovery codes stop working.',
   'Kapat': 'Close',
   'Aranıyor…': 'Searching…',
   'Sonuç bulunamadı': 'No results',

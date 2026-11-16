@@ -220,4 +220,46 @@ defmodule BackendWeb.TwoFactorTest do
       assert json_response(get(as(token), ~p"/api/account/2fa"), 200)["enabled"] == false
     end
   end
+
+  describe "new recovery codes" do
+    test "take the password and a code, and replace every old code", %{user: user} do
+      {token, secret, old_codes} = enable(user)
+      path = ~p"/api/account/2fa/recovery-codes"
+
+      assert json_response(
+               post(as(token), path, %{"current_password" => "wrong", "code" => code(secret)}),
+               403
+             )
+
+      assert json_response(
+               post(as(token), path, %{"current_password" => "password123", "code" => "000000"}),
+               422
+             )
+
+      %{"recovery_codes" => new_codes} =
+        json_response(
+          post(as(token), path, %{"current_password" => "password123", "code" => code(secret)}),
+          200
+        )
+
+      assert length(new_codes) == 10
+      assert MapSet.disjoint?(MapSet.new(new_codes), MapSet.new(old_codes))
+      assert json_response(get(as(token), ~p"/api/account/2fa"), 200)["recovery_codes_left"] == 10
+
+      assert json_response(finish(login(user)["challenge"], hd(old_codes)), 401)
+      assert json_response(finish(login(user)["challenge"], hd(new_codes)), 200)
+    end
+
+    test "need two-factor to be on", %{user: user} do
+      %{"token" => token} = login(user)
+
+      assert json_response(
+               post(as(token), ~p"/api/account/2fa/recovery-codes", %{
+                 "current_password" => "password123",
+                 "code" => "123456"
+               }),
+               422
+             )
+    end
+  end
 end

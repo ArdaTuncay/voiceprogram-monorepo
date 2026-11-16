@@ -277,6 +277,18 @@ export function disableTwoFactor(currentPassword: string, code: string): Promise
   return authedPost<void>('/account/2fa/disable', { current_password: currentPassword, code });
 }
 
+/** POST /api/account/2fa/recovery-codes — ten new recovery codes (shown
+ * once); the old ones stop working. */
+export function regenerateRecoveryCodes(
+  currentPassword: string,
+  code: string
+): Promise<ApiResult<{ recovery_codes: string[] }>> {
+  return authedPost<{ recovery_codes: string[] }>('/account/2fa/recovery-codes', {
+    current_password: currentPassword,
+    code,
+  });
+}
+
 /** GET /api/verify-email/:token — flips the account's email_verified flag.
  * `result.error` is `"invalid_token"` or `"token_expired"` on failure (see
  * BackendWeb.VerificationController.verify/2), also meant to be matched on

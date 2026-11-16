@@ -47,6 +47,7 @@ defmodule BackendWeb.Router do
     post "/account/2fa/setup", TwoFactorController, :setup
     post "/account/2fa/enable", TwoFactorController, :enable
     post "/account/2fa/disable", TwoFactorController, :disable
+    post "/account/2fa/recovery-codes", TwoFactorController, :regenerate_recovery_codes
     get "/account/sessions", SessionController, :index
     delete "/account/sessions/:id", SessionController, :delete
     post "/users/renew-token", UserController, :renew_token
