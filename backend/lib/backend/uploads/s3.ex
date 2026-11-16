@@ -15,9 +15,14 @@ defmodule Backend.Uploads.S3 do
   @doc """
   Uploads `path`'s contents as `key` with the given content type.
 
+  `extra_headers` are stored with the object and sent back whenever it's
+  fetched — `Backend.Uploads` uses this for `content-disposition`, so
+  documents download under their original name. They're signed like the
+  rest.
+
   Returns `{:ok, public_url}` or `{:error, reason}`.
   """
-  def upload(path, key, content_type) do
+  def upload(path, key, content_type, extra_headers \\ []) do
     config = Application.fetch_env!(:backend, :uploads)
     body = File.read!(path)
 
@@ -33,12 +38,13 @@ defmodule Backend.Uploads.S3 do
     date_stamp = Calendar.strftime(now, "%Y%m%d")
     payload_hash = sha256_hex(body)
 
-    headers = %{
-      "host" => host,
-      "x-amz-content-sha256" => payload_hash,
-      "x-amz-date" => amz_date,
-      "content-type" => content_type
-    }
+    headers =
+      Map.merge(Map.new(extra_headers), %{
+        "host" => host,
+        "x-amz-content-sha256" => payload_hash,
+        "x-amz-date" => amz_date,
+        "content-type" => content_type
+      })
 
     {signed_headers, canonical_headers} = canonical_headers(headers)
 
@@ -66,13 +72,7 @@ defmodule Backend.Uploads.S3 do
 
     case Req.put(url,
            body: body,
-           headers: [
-             {"host", host},
-             {"x-amz-content-sha256", payload_hash},
-             {"x-amz-date", amz_date},
-             {"content-type", content_type},
-             {"authorization", authorization}
-           ]
+           headers: Map.to_list(headers) ++ [{"authorization", authorization}]
          ) do
       {:ok, %Req.Response{status: status}} when status in 200..299 ->
         {:ok, public_url(config, bucket, key)}

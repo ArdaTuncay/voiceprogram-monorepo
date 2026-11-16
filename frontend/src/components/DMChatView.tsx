@@ -6,6 +6,7 @@ import { useDMStore } from '../stores/useDMStore';
 import { useFriendStore } from '../stores/useFriendStore';
 import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
 import { shouldGroupMessages } from '../utils';
+import { ATTACHMENT_ACCEPT } from '../utils/attachments';
 import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
@@ -287,7 +288,7 @@ export default function DMChatView({ currentUserId }: Props) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp"
+            accept={ATTACHMENT_ACCEPT}
             style={{ display: 'none' }}
             onChange={handleFileInputChange}
           />

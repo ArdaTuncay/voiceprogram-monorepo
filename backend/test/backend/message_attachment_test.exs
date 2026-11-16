@@ -12,6 +12,7 @@ defmodule Backend.MessageAttachmentTest do
   alias Backend.{Chat, DirectMessages, Uploads}
 
   @own_local "/uploads/AbCdEfGhIjKlMnOpQrStUv.png"
+  @own_pdf "/uploads/AbCdEfGhIjKlMnOpQrStUv.pdf"
 
   setup do
     owner = user_fixture()
@@ -21,24 +22,34 @@ defmodule Backend.MessageAttachmentTest do
     %{owner: owner, channel: default_channel(server), room: dm_room_fixture(owner, other)}
   end
 
-  defp channel_message(ctx, file_url, file_type \\ "image/png") do
-    Chat.create_message(%{
-      content: "ek",
-      file_url: file_url,
-      file_type: file_type,
-      user_id: ctx.owner.id,
-      channel_id: ctx.channel.id
-    })
+  defp channel_message(ctx, file_url, file_type \\ "image/png", extra \\ %{}) do
+    Chat.create_message(
+      Map.merge(
+        %{
+          content: "ek",
+          file_url: file_url,
+          file_type: file_type,
+          user_id: ctx.owner.id,
+          channel_id: ctx.channel.id
+        },
+        extra
+      )
+    )
   end
 
-  defp dm_message(ctx, file_url, file_type \\ "image/png") do
-    DirectMessages.create_message(%{
-      content: "ek",
-      file_url: file_url,
-      file_type: file_type,
-      user_id: ctx.owner.id,
-      dm_room_id: ctx.room.id
-    })
+  defp dm_message(ctx, file_url, file_type \\ "image/png", extra \\ %{}) do
+    DirectMessages.create_message(
+      Map.merge(
+        %{
+          content: "ek",
+          file_url: file_url,
+          file_type: file_type,
+          user_id: ctx.owner.id,
+          dm_room_id: ctx.room.id
+        },
+        extra
+      )
+    )
   end
 
   for kind <- [:channel_message, :dm_message] do
@@ -73,7 +84,54 @@ defmodule Backend.MessageAttachmentTest do
         assert {:error, changeset} = unquote(kind)(ctx, @own_local, "text/html")
         assert %{file_type: [_ | _]} = errors_on(changeset)
       end
+
+      test "accepts a stored PDF with its original name and size", ctx do
+        assert {:ok, message} =
+                 unquote(kind)(ctx, @own_pdf, "application/pdf", %{
+                   file_name: "Sözleşme.pdf",
+                   file_size: 12_345
+                 })
+
+        assert {message.file_name, message.file_size} == {"Sözleşme.pdf", 12_345}
+      end
+
+      # Otherwise a .zip could be labelled as an image (or a .png as a
+      # document) and every reader's client would render it as the wrong thing.
+      test "rejects a type that doesn't match the stored file", ctx do
+        assert {:error, changeset} = unquote(kind)(ctx, @own_pdf, "image/png")
+        assert %{file_type: [_ | _]} = errors_on(changeset)
+
+        assert {:error, changeset} = unquote(kind)(ctx, @own_local, "application/pdf")
+        assert %{file_type: [_ | _]} = errors_on(changeset)
+      end
+
+      test "rejects an over-long name or a nonsensical size", ctx do
+        long = %{file_name: String.duplicate("a", 256), file_size: 1}
+        assert {:error, changeset} = unquote(kind)(ctx, @own_pdf, "application/pdf", long)
+        assert %{file_name: [_ | _]} = errors_on(changeset)
+
+        negative = %{file_name: "a.pdf", file_size: -1}
+        assert {:error, changeset} = unquote(kind)(ctx, @own_pdf, "application/pdf", negative)
+        assert %{file_size: [_ | _]} = errors_on(changeset)
+      end
     end
+  end
+
+  test "deleting a message also wipes the attachment's name and size", ctx do
+    {:ok, message} =
+      channel_message(ctx, @own_pdf, "application/pdf", %{file_name: "a.pdf", file_size: 9})
+
+    {:ok, deleted} =
+      Chat.delete_message(message.id, %{user_id: ctx.owner.id, channel_id: ctx.channel.id})
+
+    assert {deleted.file_name, deleted.file_size} == {nil, nil}
+
+    {:ok, dm} = dm_message(ctx, @own_pdf, "application/pdf", %{file_name: "a.pdf", file_size: 9})
+
+    {:ok, deleted_dm} =
+      DirectMessages.delete_message(dm.id, %{user_id: ctx.owner.id, dm_room_id: ctx.room.id})
+
+    assert {deleted_dm.file_name, deleted_dm.file_size} == {nil, nil}
   end
 
   test "with S3 storage, accepts that bucket's public URLs and nothing else", ctx do
@@ -90,7 +148,20 @@ defmodule Backend.MessageAttachmentTest do
       public_url_base: "https://pub-123.r2.dev/"
     )
 
-    assert {:ok, _} = channel_message(ctx, "https://pub-123.r2.dev/AbCdEfGhIjKlMnOpQrStUv.webp")
+    assert {:ok, _} =
+             channel_message(
+               ctx,
+               "https://pub-123.r2.dev/AbCdEfGhIjKlMnOpQrStUv.webp",
+               "image/webp"
+             )
+
+    assert {:ok, _} =
+             channel_message(
+               ctx,
+               "https://pub-123.r2.dev/AbCdEfGhIjKlMnOpQrStUv.zip",
+               "application/zip"
+             )
+
     # Earlier local uploads stay valid for messages written after a switch.
     assert {:ok, _} = channel_message(ctx, @own_local)
 

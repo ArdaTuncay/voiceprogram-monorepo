@@ -69,7 +69,7 @@ describe('chat pushes — failure feedback', () => {
     const ws = joinChat();
     const onFailure = vi.fn();
 
-    shout('hello', undefined, undefined, onFailure);
+    shout('hello', undefined, onFailure);
     ws.reply(ws.lastFrame('chat:c1', 'shout'), 'error', { reason: 'rate_limited' });
 
     expect(onFailure).toHaveBeenCalledTimes(1);
@@ -80,7 +80,7 @@ describe('chat pushes — failure feedback', () => {
     const ws = joinChat();
     const onFailure = vi.fn();
 
-    shout('hello', undefined, undefined, onFailure);
+    shout('hello', undefined, onFailure);
     ws.reply(ws.lastFrame('chat:c1', 'shout'), 'error', { errors: { content: ['is too long'] } });
 
     expect(onFailure).toHaveBeenCalledWith({ kind: 'error', reason: undefined });
@@ -90,7 +90,7 @@ describe('chat pushes — failure feedback', () => {
     joinChat();
     const onFailure = vi.fn();
 
-    shout('hello', undefined, undefined, onFailure);
+    shout('hello', undefined, onFailure);
     await vi.advanceTimersByTimeAsync(PUSH_TIMEOUT_MS - 1);
     expect(onFailure).not.toHaveBeenCalled();
 
@@ -98,11 +98,28 @@ describe('chat pushes — failure feedback', () => {
     expect(onFailure).toHaveBeenCalledWith({ kind: 'timeout' });
   });
 
+  it('shout and sendDmMessage send the whole attachment — url, type, name and size', () => {
+    const attachment = {
+      file_url: '/uploads/AbCdEfGhIjKlMnOpQrStUv.pdf',
+      file_type: 'application/pdf',
+      file_name: 'Rapor.pdf',
+      file_size: 2048,
+    };
+
+    const chat = joinChat();
+    shout('ek', attachment);
+    expect(chat.lastFrame('chat:c1', 'shout').payload).toEqual({ content: 'ek', ...attachment });
+
+    const dm = joinDm();
+    sendDmMessage('ek', attachment);
+    expect(dm.lastFrame('dm:r1', 'shout').payload).toEqual({ content: 'ek', ...attachment });
+  });
+
   it('shout never calls onFailure once the server accepted it', async () => {
     const ws = joinChat();
     const onFailure = vi.fn();
 
-    shout('hello', undefined, undefined, onFailure);
+    shout('hello', undefined, onFailure);
     ws.reply(ws.lastFrame('chat:c1', 'shout'), 'ok');
     await vi.advanceTimersByTimeAsync(PUSH_TIMEOUT_MS * 2);
 
@@ -141,7 +158,7 @@ describe('DM pushes — failure feedback', () => {
     const ws = joinDm();
     const onFailure = vi.fn();
 
-    sendDmMessage('hello', undefined, undefined, onFailure);
+    sendDmMessage('hello', undefined, onFailure);
     ws.reply(ws.lastFrame('dm:r1', 'shout'), 'error', { reason: 'blocked' });
 
     expect(onFailure).toHaveBeenCalledWith({ kind: 'error', reason: 'blocked' });
@@ -151,7 +168,7 @@ describe('DM pushes — failure feedback', () => {
     joinDm();
     const onFailure = vi.fn();
 
-    sendDmMessage('hello', undefined, undefined, onFailure);
+    sendDmMessage('hello', undefined, onFailure);
     await vi.advanceTimersByTimeAsync(PUSH_TIMEOUT_MS);
 
     expect(onFailure).toHaveBeenCalledWith({ kind: 'timeout' });

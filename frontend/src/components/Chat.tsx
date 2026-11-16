@@ -14,6 +14,7 @@ import { useSocketSync } from '../stores/useSocketStore';
 import { useConnectionStore } from '../stores/useConnectionStore';
 import { userColor, initials, shouldGroupMessages } from '../utils';
 import { myRoleIn, isModerator, canModerate } from '../utils/permissions';
+import { ATTACHMENT_ACCEPT } from '../utils/attachments';
 import { getMediaPreferences, supportsOutputDeviceSelection } from '../services/mediaPreferences';
 import ServerSidebar from './ServerSidebar';
 import InviteModal from './InviteModal';
@@ -951,7 +952,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  accept={ATTACHMENT_ACCEPT}
                   style={{ display: 'none' }}
                   onChange={handleFileInputChange}
                 />

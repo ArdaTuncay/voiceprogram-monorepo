@@ -35,7 +35,13 @@ defmodule BackendWeb.AvatarTest do
     test "only our own uploaded images are accepted" do
       user = user_fixture()
 
-      for url <- ["https://evil.example/pixel.png", "/uploads/../secret.png", "/uploads/x.svg"] do
+      # A stored PDF/zip is "our file" for a message, but never a picture.
+      for url <- [
+            "https://evil.example/pixel.png",
+            "/uploads/../secret.png",
+            "/uploads/x.svg",
+            "/uploads/AbCdEfGhIjKlMnOpQrStUv.pdf"
+          ] do
         assert json_response(set_avatar(user, url), 422)
       end
     end

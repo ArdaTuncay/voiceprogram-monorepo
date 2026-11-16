@@ -70,6 +70,47 @@ describe('MessageItem', () => {
     });
   });
 
+  describe('attachments', () => {
+    it('shows a non-image file as a download card with its name and size', () => {
+      renderItem({
+        message: makeMessage({
+          content: '',
+          file_url: '/uploads/AbCdEfGhIjKlMnOpQrStUv.pdf',
+          file_type: 'application/pdf',
+          file_name: 'Sözleşme.pdf',
+          file_size: 2048,
+        }),
+      });
+
+      const link = screen.getByRole('link', { name: /Sözleşme\.pdf/ });
+      expect(link.getAttribute('href')).toMatch(/\/uploads\/AbCdEfGhIjKlMnOpQrStUv\.pdf$/);
+      expect(link.getAttribute('rel')).toContain('noopener');
+      expect(link.textContent).toContain('2,0 KB');
+      expect(screen.queryByRole('img', { name: 'ek' })).toBeNull();
+    });
+
+    it('falls back to a generic name for files sent before names were kept', () => {
+      renderItem({
+        message: makeMessage({
+          content: '',
+          file_url: '/uploads/AbCdEfGhIjKlMnOpQrStUv.zip',
+          file_type: 'application/zip',
+        }),
+      });
+
+      expect(screen.getByRole('link', { name: /Dosya \(ZIP\)/ })).not.toBeNull();
+    });
+
+    it('still shows an image inline, with no card', () => {
+      renderItem({
+        message: makeMessage({ file_url: '/uploads/a.png', file_type: 'image/png', file_name: 'a.png' }),
+      });
+
+      expect(screen.getByRole('img', { name: 'ek' })).not.toBeNull();
+      expect(screen.queryByRole('link')).toBeNull();
+    });
+  });
+
   describe('context menu — opening', () => {
     it('opens on right-click at the cursor position', () => {
       renderItem();

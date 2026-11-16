@@ -60,6 +60,7 @@ defmodule BackendWeb.Endpoint do
   # Must run before Plug.Static so static/upload responses get these
   # headers too, not just JSON API responses — see its moduledoc.
   plug BackendWeb.SecurityHeadersPlug
+  plug BackendWeb.UploadDispositionPlug
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -97,15 +98,14 @@ defmodule BackendWeb.Endpoint do
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library(),
-    # Plug's own default multipart body-size ceiling is 8_000_000 bytes —
-    # the exact same number as Backend.Uploads' 8MB attachment limit.
     # Multipart encoding adds boundary/header overhead on top of the raw
-    # file bytes, so a file just under 8MB could blow Plug's ceiling before
-    # ever reaching Backend.Uploads.store/1's own (friendly, "Dosya çok
-    # büyük") check — the request would just fail at the parser instead.
-    # Raised well above the app-level limit so Backend.Uploads is always
-    # the one that actually enforces it and returns the intended error.
-    length: 12_000_000
+    # file bytes, so a file just under Backend.Uploads' largest limit (25MB
+    # for non-image files) could blow the parser's ceiling before ever
+    # reaching Backend.Uploads.store/1's own (friendly, "Dosya çok büyük")
+    # check — the request would just fail at the parser instead. Kept a
+    # little above that limit so Backend.Uploads is always the one that
+    # actually enforces it and returns the intended error.
+    length: 28_000_000
 
   plug Plug.MethodOverride
   plug Plug.Head

@@ -362,7 +362,6 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
     sendDmMessage(
       content,
       undefined,
-      undefined,
       dmPushFailureHandler('send', () => restoreDraftIfEmpty(content)),
       replyToId
     );
@@ -395,8 +394,7 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
     set({ draft: '', actionError: '', replyingTo: null });
     sendDmMessage(
       content,
-      data.file_url,
-      data.file_type,
+      data,
       dmPushFailureHandler('send', () => restoreDraftIfEmpty(content)),
       replyToId
     );

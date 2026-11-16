@@ -321,7 +321,6 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     shout(
       content,
       undefined,
-      undefined,
       chatPushFailureHandler('send', () => restoreDraftIfEmpty(content)),
       replyToId
     );
@@ -356,8 +355,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     // have to be picked (and uploaded) again.
     shout(
       content,
-      data.file_url,
-      data.file_type,
+      data,
       chatPushFailureHandler('send', () => restoreDraftIfEmpty(content)),
       replyToId
     );

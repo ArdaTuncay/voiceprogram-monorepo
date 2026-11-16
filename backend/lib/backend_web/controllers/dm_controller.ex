@@ -102,6 +102,8 @@ defmodule BackendWeb.DmController do
       content: message.content,
       file_url: message.file_url,
       file_type: message.file_type,
+      file_name: message.file_name,
+      file_size: message.file_size,
       user_id: message.user_id,
       username: Backend.Accounts.display_username(message.user),
       avatar_url: message.user && message.user.avatar_url,
