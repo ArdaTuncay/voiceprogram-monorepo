@@ -5,6 +5,11 @@
 # broadcast to the server's notifications topic, which every member's
 # UserChannel listens on — Servers.broadcast_new_message/2).
 #
+# Same comparison for a member coming online or going offline (what
+# BackendWeb.UserChannel does when someone opens or closes Zircle): the old
+# way looked up everyone sharing a server with them and broadcast to each;
+# now it's one broadcast per server they're in (Servers.broadcast_member_status/2).
+#
 #     cd backend && mix run bench/notify_fanout.exs
 #
 # Runs against the dev database: creates throwaway users and a server, and
@@ -15,8 +20,11 @@
 
 Logger.configure(level: :warning)
 
+import Ecto.Query
+
 alias Backend.Repo
 alias Backend.Servers
+alias Backend.Servers.ServerMember
 
 defmodule Bench do
   def median(fun, rounds \\ 15) do
@@ -39,6 +47,10 @@ defmodule Bench do
         loop(parent)
 
       {:new_message, _payload} ->
+        send(parent, :got)
+        loop(parent)
+
+      {:member_status_changed, _payload} ->
         send(parent, :got)
         loop(parent)
 
@@ -143,6 +155,41 @@ for members <- [100, 1_000, 5_000] do
       "member query #{Bench.ms(query)} | " <>
       "before (query + broadcast per member) #{Bench.ms(one_per_member)} | " <>
       "now (one broadcast to the server) #{Bench.ms(one_shared)}"
+  )
+
+  # The old Servers.list_co_member_user_ids/1.
+  co_members = fn user_id ->
+    my_server_ids = from(m in ServerMember, where: m.user_id == ^user_id, select: m.server_id)
+
+    ServerMember
+    |> where([m], m.server_id in subquery(my_server_ids) and m.user_id != ^user_id)
+    |> distinct(true)
+    |> select([m], m.user_id)
+    |> Repo.all()
+  end
+
+  status = %{user_id: owner.id, status: "online"}
+
+  status_per_member =
+    Bench.median(fn ->
+      owner.id
+      |> co_members.()
+      |> Enum.each(&BackendWeb.Endpoint.broadcast("user:#{&1}", "member_status_changed", status))
+
+      # Everyone online but the owner themselves.
+      Bench.await(length(online) - 1)
+    end)
+
+  status_shared =
+    Bench.median(fn ->
+      Servers.broadcast_member_status(owner.id, "online")
+      Bench.await(length(online))
+    end)
+
+  IO.puts(
+    "  status change:  " <>
+      "before (co-member query + broadcast per member) #{Bench.ms(status_per_member)} | " <>
+      "now (one broadcast per server) #{Bench.ms(status_shared)}"
   )
 
   Enum.each(per_user ++ shared, &send(&1, :stop))

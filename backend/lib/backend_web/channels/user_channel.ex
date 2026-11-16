@@ -58,6 +58,21 @@ defmodule BackendWeb.UserChannel do
     {:noreply, socket}
   end
 
+  # Someone in one of the user's servers came online or went offline. Heard
+  # once per server the two share; relayed only from the first of those
+  # (see Servers.broadcast_member_status/2), and never about the user
+  # themselves.
+  def handle_info({:member_status_changed, status}, socket) do
+    followed = socket.assigns.followed_servers
+
+    if status.user_id != socket.assigns.user_id and
+         Enum.find(status.server_ids, &MapSet.member?(followed, &1)) == status.server_id do
+      push(socket, "member_status_changed", Map.take(status, [:user_id, :status]))
+    end
+
+    {:noreply, socket}
+  end
+
   def handle_info({:server_membership_added, server_id}, socket),
     do: {:noreply, follow(socket, server_id)}
 
@@ -78,15 +93,10 @@ defmodule BackendWeb.UserChannel do
   end
 
   # Tells everyone who shares a server with `user_id` that they came
-  # online/went offline. Nothing is stored — readers derive status from
-  # Presence (see Backend.Accounts.online?/1).
-  defp set_status(user_id, status) do
-    payload = %{user_id: user_id, status: status}
-
-    user_id
-    |> Servers.list_co_member_user_ids()
-    |> Enum.each(&BackendWeb.Endpoint.broadcast("user:#{&1}", "member_status_changed", payload))
-  end
+  # online/went offline (see Servers.broadcast_member_status/2). Nothing is
+  # stored — readers derive status from Presence (see
+  # Backend.Accounts.online?/1).
+  defp set_status(user_id, status), do: Servers.broadcast_member_status(user_id, status)
 
   # Listens on the notifications topic of every server the user is in (see
   # Servers.notifications_topic/1), and on what keeps that list right: joins

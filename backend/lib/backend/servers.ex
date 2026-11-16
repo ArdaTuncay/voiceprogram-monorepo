@@ -258,23 +258,28 @@ defmodule Backend.Servers do
   end
 
   @doc """
-  Returns the distinct user ids that share at least one server with
-  `user_id` (excluding `user_id` itself). Used to fan out
-  `"member_status_changed"` broadcasts (see `BackendWeb.UserChannel`) to
-  everyone who'd plausibly want to know — no separate "who's watching
-  whom" subscription list needed.
-  """
-  def list_co_member_user_ids(user_id) do
-    my_server_ids =
-      ServerMember
-      |> where([m], m.user_id == ^user_id)
-      |> select([m], m.server_id)
+  Tells everyone who shares a server with `user_id` that they came online or
+  went offline (`status`), through each of `user_id`'s servers'
+  `notifications_topic/1` — one broadcast per server, however many members
+  it has, instead of one per co-member (see `BackendWeb.UserChannel`).
 
-    ServerMember
-    |> where([m], m.server_id in subquery(my_server_ids) and m.user_id != ^user_id)
-    |> distinct(true)
-    |> select([m], m.user_id)
-    |> Repo.all()
+  Someone who shares several servers with `user_id` hears it on each, so the
+  message names them all (`server_ids`, sorted): a listener relays it only
+  from the first of those it follows, which makes it exactly once.
+  """
+  def broadcast_member_status(user_id, status) do
+    server_ids = user_id |> list_server_ids_for_user() |> Enum.sort()
+
+    for server_id <- server_ids do
+      Phoenix.PubSub.broadcast(
+        Backend.PubSub,
+        notifications_topic(server_id),
+        {:member_status_changed,
+         %{user_id: user_id, status: status, server_id: server_id, server_ids: server_ids}}
+      )
+    end
+
+    :ok
   end
 
   @doc """
