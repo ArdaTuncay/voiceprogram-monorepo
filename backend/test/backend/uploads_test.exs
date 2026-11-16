@@ -83,7 +83,8 @@ defmodule Backend.UploadsTest do
     end
 
     test "images exactly as before" do
-      result = store!("foto.png", "image/png", @png_header)
+      png = File.read!(Path.expand("../support/fixtures/images/location.png", __DIR__))
+      result = store!("foto.png", "image/png", png)
       assert result.content_type == "image/png"
       assert String.ends_with?(result.file_url, ".png")
     end
