@@ -171,6 +171,9 @@ export interface PresenceUser {
   online_at: number;
   muted?: boolean;
   deafened?: boolean;
+  /** Voice through the SFU only (see services/sfu.ts): the tracks this
+   * participant publishes ("audio", "screen"). */
+  sfu_tracks?: string[] | null;
 }
 
 export interface TypingNotification {

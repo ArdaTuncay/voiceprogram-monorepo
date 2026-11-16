@@ -285,6 +285,12 @@ if config_env() == :prod do
     vapid_private_key: System.get_env("VAPID_PRIVATE_KEY"),
     vapid_subject: System.get_env("VAPID_SUBJECT")
 
+  # Sesli kanallar için Cloudflare Realtime SFU (bkz. Backend.Sfu). İsteğe
+  # bağlı: yoksa ses eskisi gibi kişiden kişiye (mesh) gider.
+  config :backend, Backend.Sfu,
+    app_id: System.get_env("CLOUDFLARE_SFU_APP_ID"),
+    app_secret: System.get_env("CLOUDFLARE_SFU_APP_SECRET")
+
   # ## SSL Support
   #
   # To get SSL working, you will need to add the `https` key

@@ -59,3 +59,10 @@ config :backend, Backend.Push,
   vapid_subject: "mailto:test@zircle.test",
   delivery: :inline,
   req_options: [plug: {Req.Test, Backend.Push}]
+
+# Backend.Sfu: a made-up app so the "sfu_*" voice events are on in tests;
+# Cloudflare's API is stubbed through Req.Test.
+config :backend, Backend.Sfu,
+  app_id: "test-app",
+  app_secret: "test-secret",
+  req_options: [plug: {Req.Test, Backend.Sfu}]

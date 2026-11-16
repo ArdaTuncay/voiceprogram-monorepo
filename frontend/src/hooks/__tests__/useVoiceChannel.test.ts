@@ -61,7 +61,7 @@ import { getPeerVolumes, setPeerVolumes } from '../../services/voicePreferences'
 const testUser: User = { id: 'me', username: 'ardatuncay', email: 'a@example.com' };
 
 function resolvedChannel(existingPeerIds: string[] = []): Promise<VoiceChannelHandle> {
-  return Promise.resolve({ existingPeerIds, leave: vi.fn() });
+  return Promise.resolve({ existingPeerIds, sfu: false, leave: vi.fn() });
 }
 
 /**
@@ -205,7 +205,7 @@ describe.sequential('useVoiceChannel — joinGenerationRef race protection', () 
     await waitFor(() => expect(result.current.activeRoomId).toBe('roomB'));
 
     act(() => {
-      joinChannelA.resolve({ existingPeerIds: [], leave: leaveChannelA });
+      joinChannelA.resolve({ existingPeerIds: [], sfu: false, leave: leaveChannelA });
     });
 
     await waitFor(() => expect(leaveChannelA).toHaveBeenCalled());

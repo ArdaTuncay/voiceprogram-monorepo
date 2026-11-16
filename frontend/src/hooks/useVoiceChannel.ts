@@ -8,7 +8,9 @@ import {
   sendVoiceStatus,
   sendIceDiagnostics,
   sendScreenShareStopped,
+  voiceRequest,
 } from '../services/socket';
+import { SfuConnection } from '../services/sfu';
 import { fetchTurnCredentials } from '../services/api';
 import { resolveMicConstraint } from '../services/mediaPreferences';
 import { getPeerVolumes, updatePeerVolume } from '../services/voicePreferences';
@@ -280,6 +282,12 @@ export function useVoiceChannel(user: User) {
   // of clobbering newer state or leaking this attempt's own mic stream/
   // channel/analyser.
   const joinGenerationRef = useRef(0);
+  // Set while in a room whose audio goes through the SFU (see
+  // services/sfu.ts) — then none of the peer-to-peer machinery below is
+  // used. The latest presence is kept so the SFU can catch up on it once its
+  // own session is up.
+  const sfuRef = useRef<SfuConnection | null>(null);
+  const latestParticipantsRef = useRef<PresenceUser[]>([]);
 
   // Test-only visibility hook for Playwright E2E tests (see
   // e2e/voice-channel.spec.ts) — this hook's return value only exposes
@@ -652,6 +660,8 @@ export function useVoiceChannel(user: User) {
 
     const [videoTrack] = stream.getVideoTracks();
 
+    if (sfuRef.current) await sfuRef.current.unpublishScreen().catch(() => {});
+
     await Promise.all(
       Array.from(peersRef.current.entries()).map(async ([peerId, pc]) => {
         const sender = pc.getSenders().find((s) => s.track === videoTrack);
@@ -696,6 +706,11 @@ export function useVoiceChannel(user: User) {
       // Fires when the user stops sharing via the browser's own UI
       // (e.g. the "Stop sharing" bar) rather than our button.
       videoTrack.onended = () => void stopScreenShare();
+
+      if (sfuRef.current) {
+        await sfuRef.current.publishScreen(videoTrack, stream);
+        return;
+      }
 
       await Promise.all(
         Array.from(peersRef.current.entries()).map(([peerId, pc]) => {
@@ -751,6 +766,10 @@ export function useVoiceChannel(user: User) {
     leaveVoiceRef.current?.();
     leaveVoiceRef.current = null;
 
+    sfuRef.current?.close();
+    sfuRef.current = null;
+    latestParticipantsRef.current = [];
+
     peersRef.current.forEach((pc) => pc.close());
     peersRef.current.clear();
     pendingCandidatesRef.current.clear();
@@ -777,6 +796,58 @@ export function useVoiceChannel(user: User) {
     setIsMuted(false);
     setIsDeafened(false);
   }, [stopWatchingSpeaking]);
+
+  /** Connects to the SFU and publishes the microphone; remote tracks then
+   * land in the same state the peer-to-peer path fills (remoteStreams,
+   * screenShares, speaking). */
+  async function startSfu(stream: MediaStream, generation: number) {
+    const iceServers = await getIceServers();
+    if (joinGenerationRef.current !== generation) return;
+
+    const sfu = new SfuConnection({ request: voiceRequest }, iceServers, {
+      onRemoteTrack: (userId, trackName, track) => {
+        const remote = new MediaStream([track]);
+        if (trackName === 'screen') {
+          setScreenShares((prev) => ({ ...prev, [userId]: remote }));
+        } else {
+          setRemoteStreams((prev) => ({ ...prev, [userId]: remote }));
+          watchSpeaking(userId, remote);
+        }
+      },
+      onRemoteTrackRemoved: (userId, trackName) => {
+        if (trackName === 'screen') {
+          handleScreenShareStopped({ user_id: userId });
+        } else {
+          stopWatchingSpeaking(userId);
+          setRemoteStreams((prev) => {
+            if (!(userId in prev)) return prev;
+            const next = { ...prev };
+            delete next[userId];
+            return next;
+          });
+        }
+      },
+      // One connection carries everyone, so its trouble is everyone's.
+      onConnectionStateChange: (state) => {
+        const others = latestParticipantsRef.current
+          .map((u) => u.user_id)
+          .filter((id) => id !== user.id);
+        const reconnecting = state === 'disconnected' || state === 'failed';
+        others.forEach((id) => setReconnecting(id, reconnecting));
+      },
+    });
+    sfuRef.current = sfu;
+
+    try {
+      await sfu.start(stream.getAudioTracks()[0], stream);
+      await sfu.sync(latestParticipantsRef.current.filter((u) => u.user_id !== user.id));
+    } catch (err) {
+      if (joinGenerationRef.current === generation) {
+        setError(voiceJoinErrorMessage(err));
+        leave();
+      }
+    }
+  }
 
   async function join(roomId: string) {
     // leave() itself bumps joinGenerationRef (see above) — capturing the
@@ -825,9 +896,11 @@ export function useVoiceChannel(user: User) {
       watchSpeaking(user.id, stream);
 
       failedStep = 'join';
-      const { leave: leaveChannel, existingPeerIds } = await joinVoiceChannel(roomId, {
+      const { leave: leaveChannel, existingPeerIds, sfu } = await joinVoiceChannel(roomId, {
         onPresenceChange: (users) => {
           setParticipants(users);
+          latestParticipantsRef.current = users;
+          void sfuRef.current?.sync(users.filter((u) => u.user_id !== user.id)).catch(() => {});
           const currentIds = new Set(users.map((u) => u.user_id));
           knownPeerIdsRef.current.forEach((id) => {
             if (id !== user.id && !currentIds.has(id)) closePeer(id);
@@ -853,6 +926,11 @@ export function useVoiceChannel(user: User) {
 
       leaveVoiceRef.current = leaveChannel;
       setActiveRoomId(roomId);
+
+      if (sfu) {
+        await startSfu(stream, myGeneration);
+        return;
+      }
 
       // We're the newcomer: call everyone already in the room so each
       // pair negotiates exactly once (no simultaneous offer/offer glare).
