@@ -53,7 +53,7 @@ defmodule Backend.Chat.Message do
     |> validate_required([:user_id, :channel_id])
     |> validate_length(:content, max: 4000)
     |> validate_content_or_file()
-    |> Backend.Uploads.validate_attachment()
+    |> Backend.Uploads.validate_attachment(:public)
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:channel_id)
     |> foreign_key_constraint(:reply_to_id)

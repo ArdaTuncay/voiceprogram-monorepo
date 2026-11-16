@@ -51,7 +51,8 @@ defmodule Backend.DirectMessages.DmMessage do
     |> validate_required([:user_id, :dm_room_id])
     |> validate_length(:content, max: 4000)
     |> validate_content_or_file()
-    |> Backend.Uploads.validate_attachment()
+    # DM attachments are private: only ever served through expiring links.
+    |> Backend.Uploads.validate_attachment(:private)
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:dm_room_id)
     |> foreign_key_constraint(:reply_to_id)

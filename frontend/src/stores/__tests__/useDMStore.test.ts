@@ -20,7 +20,7 @@ vi.mock('../../services/socket', () => ({
   sendDmMarkRead: vi.fn(),
 }));
 
-import { fetchDmRooms, openDmRoom } from '../../services/api';
+import { fetchDmRooms, openDmRoom, uploadFile } from '../../services/api';
 import {
   sendDmMarkRead,
   deleteDmMessage,
@@ -277,5 +277,21 @@ describe('useDMStore — failed push feedback', () => {
       chatActionErrorMessage(action, { kind: 'error', reason: 'rate_limited' })
     );
     expect(useDMStore.getState().messages).toBe(messages);
+  });
+});
+
+// DM attachments are stored privately and shown through expiring links
+// (see BackendWeb.PrivateFileURL) — the upload has to say so.
+describe('useDMStore — attachments', () => {
+  it('uploads DM files as private and sends the reference along', async () => {
+    useDMStore.setState({ activeRoomId: 'room-1', isUploading: false, draft: '' });
+    const stored = { file_url: 'private:AbCdEfGhIjKlMnOpQrStUv.pdf', file_type: 'application/pdf' };
+    vi.mocked(uploadFile).mockResolvedValue({ data: stored });
+    const file = new File(['%PDF-1.7'], 'a.pdf', { type: 'application/pdf' });
+
+    await useDMStore.getState().handleFileSelected(file);
+
+    expect(uploadFile).toHaveBeenCalledWith(file, { private: true });
+    expect(sendDmMessage).toHaveBeenCalledWith('', stored, expect.any(Function), undefined);
   });
 });

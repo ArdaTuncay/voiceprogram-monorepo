@@ -1,13 +1,19 @@
 defmodule Backend.Uploads.S3 do
   @moduledoc """
-  Uploads a file to an S3-compatible object store (AWS S3, Cloudflare R2,
-  DigitalOcean Spaces, ...) via a hand-rolled SigV4-signed PUT request.
+  Stores and reads files in an S3-compatible object store (AWS S3,
+  Cloudflare R2, DigitalOcean Spaces, ...) via hand-rolled SigV4-signed
+  requests.
 
   No `ex_aws`/`ex_aws_s3` dependency needed — just `Req` (already a
   dependency, used elsewhere) for the HTTP call and `:crypto` for the
   signature. R2 and Spaces both speak the same SigV4 scheme as S3, so this
   one signer covers all three; only `config :backend, :uploads` differs
   (see config/runtime.exs).
+
+  Public files are written at the bucket root and linked to directly by
+  their public URL. Private (DM) files live under `private/` and are only
+  ever read back here, by the backend (see `Backend.Uploads.read_private/1`),
+  so their keys never reach a client.
   """
 
   require Logger
@@ -24,8 +30,44 @@ defmodule Backend.Uploads.S3 do
   """
   def upload(path, key, content_type, extra_headers \\ []) do
     config = Application.fetch_env!(:backend, :uploads)
-    body = File.read!(path)
+    headers = [{"content-type", content_type} | extra_headers]
 
+    case request(config, :put, key, File.read!(path), headers) do
+      {:ok, %Req.Response{status: status}} when status in 200..299 ->
+        {:ok, public_url(config, Keyword.fetch!(config, :bucket), key)}
+
+      {:ok, %Req.Response{status: status, body: resp_body}} ->
+        Logger.error("S3 upload failed (#{status}): #{inspect(resp_body)}")
+        {:error, :s3_upload_failed}
+
+      {:error, reason} ->
+        Logger.error("S3 upload request error: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  @doc "Reads `key`'s contents: `{:ok, body}`, `{:error, :not_found}` or `{:error, reason}`."
+  def download(key) do
+    config = Application.fetch_env!(:backend, :uploads)
+
+    case request(config, :get, key, "", []) do
+      {:ok, %Req.Response{status: 200, body: body}} ->
+        {:ok, body}
+
+      {:ok, %Req.Response{status: status}} when status in [403, 404] ->
+        {:error, :not_found}
+
+      {:ok, %Req.Response{status: status, body: resp_body}} ->
+        Logger.error("S3 download failed (#{status}): #{inspect(resp_body)}")
+        {:error, :s3_download_failed}
+
+      {:error, reason} ->
+        Logger.error("S3 download request error: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  defp request(config, method, key, body, extra_headers) do
     bucket = Keyword.fetch!(config, :bucket)
     region = Keyword.get(config, :region, "auto")
     access_key_id = Keyword.fetch!(config, :access_key_id)
@@ -42,14 +84,14 @@ defmodule Backend.Uploads.S3 do
       Map.merge(Map.new(extra_headers), %{
         "host" => host,
         "x-amz-content-sha256" => payload_hash,
-        "x-amz-date" => amz_date,
-        "content-type" => content_type
+        "x-amz-date" => amz_date
       })
 
     {signed_headers, canonical_headers} = canonical_headers(headers)
+    verb = method |> Atom.to_string() |> String.upcase()
 
     canonical_request =
-      Enum.join(["PUT", uri_path, "", canonical_headers, "", signed_headers, payload_hash], "\n")
+      Enum.join([verb, uri_path, "", canonical_headers, "", signed_headers, payload_hash], "\n")
 
     credential_scope = "#{date_stamp}/#{region}/s3/aws4_request"
 
@@ -68,24 +110,21 @@ defmodule Backend.Uploads.S3 do
       "AWS4-HMAC-SHA256 Credential=#{access_key_id}/#{credential_scope}, " <>
         "SignedHeaders=#{signed_headers}, Signature=#{signature}"
 
-    url = "https://#{host}#{uri_path}"
-
-    case Req.put(url,
-           body: body,
-           headers: Map.to_list(headers) ++ [{"authorization", authorization}]
-         ) do
-      {:ok, %Req.Response{status: status}} when status in 200..299 ->
-        {:ok, public_url(config, bucket, key)}
-
-      {:ok, %Req.Response{status: status, body: resp_body}} ->
-        Logger.error("S3 upload failed (#{status}): #{inspect(resp_body)}")
-        {:error, :s3_upload_failed}
-
-      {:error, reason} ->
-        Logger.error("S3 upload request error: #{inspect(reason)}")
-        {:error, reason}
-    end
+    # Bodies are files, not JSON — never let Req decode them.
+    Req.request(
+      [
+        method: method,
+        url: "https://#{host}#{uri_path}",
+        body: body,
+        headers: Map.to_list(headers) ++ [{"authorization", authorization}],
+        decode_body: false
+      ] ++ req_options()
+    )
   end
+
+  # Test-only seam: config/test.exs routes these through Req.Test.
+  defp req_options,
+    do: Keyword.get(Application.get_env(:backend, __MODULE__, []), :req_options, [])
 
   # Path-style addressing (works uniformly for AWS S3, R2, and Spaces) when
   # a custom `:endpoint` is configured; falls back to AWS's own
@@ -103,7 +142,7 @@ defmodule Backend.Uploads.S3 do
   end
 
   @doc """
-  The part of every public URL `upload/3` returns that comes before the
+  The part of every public URL `upload/4` returns that comes before the
   object key (e.g. `"https://pub-xxx.r2.dev/"`), or `nil` when S3 isn't
   configured. Used by `Backend.Uploads.own_file_url?/1`.
   """

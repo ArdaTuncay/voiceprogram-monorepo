@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUTH_REQUEST_TIMEOUT_MS, fetchFriends, loginUser, registerUser, verifyEmail } from '../api';
+import {
+  AUTH_REQUEST_TIMEOUT_MS,
+  fetchFriends,
+  loginUser,
+  registerUser,
+  uploadFile,
+  verifyEmail,
+} from '../api';
 import { getStoredToken } from '../tokenStorage';
 import { AUTH_REQUEST_ERRORS } from '../../utils/errorMessages';
 import { useLanguageStore } from '../../i18n';
@@ -35,6 +42,21 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+});
+
+describe('uploadFile', () => {
+  it('marks a private (DM) upload, and only that one', async () => {
+    const fetchMock = stubFetch(async () => jsonResponse(200, { file_url: 'x', file_type: 'image/png' }));
+    const file = new File(['x'], 'x.png', { type: 'image/png' });
+
+    await uploadFile(file);
+    await uploadFile(file, { private: true });
+
+    const forms = fetchMock.mock.calls.map(([, init]) => init?.body as FormData);
+    expect(forms[0].get('private')).toBeNull();
+    expect(forms[1].get('private')).toBe('true');
+    expect(forms[1].get('file')).toBeInstanceOf(File);
+  });
 });
 
 describe('Accept-Language', () => {

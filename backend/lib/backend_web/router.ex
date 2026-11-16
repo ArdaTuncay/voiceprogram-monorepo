@@ -30,6 +30,13 @@ defmodule BackendWeb.Router do
     post "/account/email/confirm", EmailChangeController, :confirm
   end
 
+  # Private files (DM attachments) behind expiring links — no :api pipeline:
+  # browsers fetch these as images and downloads, not JSON, and the link
+  # itself is the permission (see BackendWeb.PrivateFileURL).
+  scope "/api", BackendWeb do
+    get "/files/:token", PrivateFileController, :show
+  end
+
   scope "/api", BackendWeb do
     pipe_through [:api, :authenticated]
 

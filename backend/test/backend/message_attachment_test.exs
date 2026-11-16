@@ -12,7 +12,6 @@ defmodule Backend.MessageAttachmentTest do
   alias Backend.{Chat, DirectMessages, Uploads}
 
   @own_local "/uploads/AbCdEfGhIjKlMnOpQrStUv.png"
-  @own_pdf "/uploads/AbCdEfGhIjKlMnOpQrStUv.pdf"
 
   setup do
     owner = user_fixture()
@@ -52,11 +51,37 @@ defmodule Backend.MessageAttachmentTest do
     )
   end
 
+  # Channel messages carry public uploads; DM messages only private
+  # references, handed out as expiring links (see BackendWeb.PrivateFileURL).
+  defp own(:channel_message, ext), do: "/uploads/AbCdEfGhIjKlMnOpQrStUv.#{ext}"
+  defp own(:dm_message, ext), do: "private:AbCdEfGhIjKlMnOpQrStUv.#{ext}"
+
+  describe "public vs private" do
+    test "a DM rejects a public upload and a channel a private one", ctx do
+      assert {:error, changeset} = dm_message(ctx, own(:channel_message, "png"))
+      assert %{file_url: [_ | _]} = errors_on(changeset)
+
+      assert {:error, changeset} = channel_message(ctx, own(:dm_message, "png"))
+      assert %{file_url: [_ | _]} = errors_on(changeset)
+    end
+
+    for ref <- [
+          "private:../../etc/passwd",
+          "private:kisa.png",
+          "private:AbCdEfGhIjKlMnOpQrStUv.svg"
+        ] do
+      test "a DM rejects #{ref}", ctx do
+        assert {:error, changeset} = dm_message(ctx, unquote(ref))
+        assert %{file_url: [_ | _]} = errors_on(changeset)
+      end
+    end
+  end
+
   for kind <- [:channel_message, :dm_message] do
     describe "#{kind}" do
       test "accepts a file this server stored", ctx do
-        assert {:ok, message} = unquote(kind)(ctx, @own_local)
-        assert message.file_url == @own_local
+        assert {:ok, message} = unquote(kind)(ctx, own(unquote(kind), "png"))
+        assert message.file_url == own(unquote(kind), "png")
       end
 
       test "still accepts a text-only message", ctx do
@@ -81,13 +106,13 @@ defmodule Backend.MessageAttachmentTest do
       end
 
       test "rejects a file type the upload endpoint never produces", ctx do
-        assert {:error, changeset} = unquote(kind)(ctx, @own_local, "text/html")
+        assert {:error, changeset} = unquote(kind)(ctx, own(unquote(kind), "png"), "text/html")
         assert %{file_type: [_ | _]} = errors_on(changeset)
       end
 
       test "accepts a stored PDF with its original name and size", ctx do
         assert {:ok, message} =
-                 unquote(kind)(ctx, @own_pdf, "application/pdf", %{
+                 unquote(kind)(ctx, own(unquote(kind), "pdf"), "application/pdf", %{
                    file_name: "Sözleşme.pdf",
                    file_size: 12_345
                  })
@@ -98,20 +123,28 @@ defmodule Backend.MessageAttachmentTest do
       # Otherwise a .zip could be labelled as an image (or a .png as a
       # document) and every reader's client would render it as the wrong thing.
       test "rejects a type that doesn't match the stored file", ctx do
-        assert {:error, changeset} = unquote(kind)(ctx, @own_pdf, "image/png")
+        assert {:error, changeset} = unquote(kind)(ctx, own(unquote(kind), "pdf"), "image/png")
         assert %{file_type: [_ | _]} = errors_on(changeset)
 
-        assert {:error, changeset} = unquote(kind)(ctx, @own_local, "application/pdf")
+        assert {:error, changeset} =
+                 unquote(kind)(ctx, own(unquote(kind), "png"), "application/pdf")
+
         assert %{file_type: [_ | _]} = errors_on(changeset)
       end
 
       test "rejects an over-long name or a nonsensical size", ctx do
         long = %{file_name: String.duplicate("a", 256), file_size: 1}
-        assert {:error, changeset} = unquote(kind)(ctx, @own_pdf, "application/pdf", long)
+
+        assert {:error, changeset} =
+                 unquote(kind)(ctx, own(unquote(kind), "pdf"), "application/pdf", long)
+
         assert %{file_name: [_ | _]} = errors_on(changeset)
 
         negative = %{file_name: "a.pdf", file_size: -1}
-        assert {:error, changeset} = unquote(kind)(ctx, @own_pdf, "application/pdf", negative)
+
+        assert {:error, changeset} =
+                 unquote(kind)(ctx, own(unquote(kind), "pdf"), "application/pdf", negative)
+
         assert %{file_size: [_ | _]} = errors_on(changeset)
       end
     end
@@ -119,14 +152,21 @@ defmodule Backend.MessageAttachmentTest do
 
   test "deleting a message also wipes the attachment's name and size", ctx do
     {:ok, message} =
-      channel_message(ctx, @own_pdf, "application/pdf", %{file_name: "a.pdf", file_size: 9})
+      channel_message(ctx, own(:channel_message, "pdf"), "application/pdf", %{
+        file_name: "a.pdf",
+        file_size: 9
+      })
 
     {:ok, deleted} =
       Chat.delete_message(message.id, %{user_id: ctx.owner.id, channel_id: ctx.channel.id})
 
     assert {deleted.file_name, deleted.file_size} == {nil, nil}
 
-    {:ok, dm} = dm_message(ctx, @own_pdf, "application/pdf", %{file_name: "a.pdf", file_size: 9})
+    {:ok, dm} =
+      dm_message(ctx, own(:dm_message, "pdf"), "application/pdf", %{
+        file_name: "a.pdf",
+        file_size: 9
+      })
 
     {:ok, deleted_dm} =
       DirectMessages.delete_message(dm.id, %{user_id: ctx.owner.id, dm_room_id: ctx.room.id})
