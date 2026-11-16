@@ -12,6 +12,7 @@ import { useDMStore } from '../stores/useDMStore';
 import { useSocketSync } from '../stores/useSocketStore';
 import { useConnectionStore } from '../stores/useConnectionStore';
 import { userColor, initials, shouldGroupMessages } from '../utils';
+import { myRoleIn, isModerator, canModerate } from '../utils/permissions';
 import { getMediaPreferences, supportsOutputDeviceSelection } from '../services/mediaPreferences';
 import ServerSidebar from './ServerSidebar';
 import InviteModal from './InviteModal';
@@ -112,6 +113,8 @@ export default function Chat({ user, onLogout }: Props) {
   const selectChannel = useServerStore((s) => s.selectChannel);
   const setActiveServerId = useServerStore((s) => s.setActiveServerId);
   const loadServers = useServerStore((s) => s.loadServers);
+  const memberRoles = useServerStore((s) => s.memberRoles);
+  const loadMemberRoles = useServerStore((s) => s.loadMemberRoles);
 
   const messages = useChatStore((s) => s.messages);
   const draft = useChatStore((s) => s.draft);
@@ -194,6 +197,15 @@ export default function Chat({ user, onLogout }: Props) {
   useEffect(() => {
     loadServers();
   }, [loadServers]);
+
+  // A moderator may only delete regular members' messages, so their client
+  // needs everyone's role in the open server (see MessageItem's canModerate).
+  // Owners and members don't, so they skip the request.
+  const isActiveServerModerator =
+    servers.find((s) => s.id === activeServerId)?.my_role === 'moderator';
+  useEffect(() => {
+    if (isActiveServerModerator) void loadMemberRoles();
+  }, [activeServerId, isActiveServerModerator, loadMemberRoles]);
 
   // Fetch the user's DM rooms once, on mount — kept loaded regardless of
   // whether the DM view is currently showing, so the room list (and its
@@ -433,6 +445,10 @@ export default function Chat({ user, onLogout }: Props) {
   const activeServerName = activeServer?.name ?? '';
   const activeChannelName = channels.find((c) => c.id === activeChannelId)?.name ?? '';
   const isServerOwner = activeServer?.owner_id === user.id;
+  const myRole = myRoleIn(activeServer, user.id);
+  // Owners and moderators both get the settings modal; a moderator sees
+  // only its members and bans tabs (see ServerSettingsModal).
+  const canOpenSettings = isModerator(myRole);
   const channelGroups = groupChannelsByCategory(channels);
   const hasCategories = channelGroups.length > 1;
   // `servers` (unlike `channels`) holds every server the user belongs to,
@@ -642,7 +658,7 @@ export default function Chat({ user, onLogout }: Props) {
               >
                 <UserPlus size={16} />
               </button>
-              {isServerOwner && (
+              {canOpenSettings && (
                 <button
                   className="invite-people-btn"
                   onClick={() => setShowSettingsModal(true)}
@@ -879,7 +895,7 @@ export default function Chat({ user, onLogout }: Props) {
                     onEditMessage={(content) => editMessage(msg.id, content)}
                     onDeleteMessage={() => deleteMessage(msg.id)}
                     onImageClick={setLightboxUrl}
-                    isServerOwner={isServerOwner}
+                    canModerate={canModerate(myRole, memberRoles[msg.user_id])}
                     isHighlighted={msg.id === highlightedMessageId}
                     isGrouped={shouldGroupMessages(messages[index - 1], msg)}
                   />
@@ -1073,7 +1089,7 @@ export default function Chat({ user, onLogout }: Props) {
         <InviteModal onClose={() => setShowInviteModal(false)} />
       )}
 
-      {showSettingsModal && isServerOwner && (
+      {showSettingsModal && canOpenSettings && (
         <ServerSettingsModal onClose={() => setShowSettingsModal(false)} />
       )}
 

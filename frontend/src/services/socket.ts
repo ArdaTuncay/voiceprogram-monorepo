@@ -12,6 +12,7 @@ import type {
   ServerDeletedNotification,
   MemberKickedNotification,
   MemberLeftNotification,
+  MemberRoleUpdatedNotification,
   MemberStatusChangedNotification,
   VoicePresenceUpdatedNotification,
   ScreenShareStoppedNotification,
@@ -425,6 +426,7 @@ export interface UserChannelCallbacks {
   onNewMessage: (payload: NewMessageNotification) => void;
   onServerDeleted: (payload: ServerDeletedNotification) => void;
   onMemberKicked: (payload: MemberKickedNotification) => void;
+  onMyRoleUpdated: (payload: MemberRoleUpdatedNotification) => void;
   onMemberStatusChanged: (payload: MemberStatusChangedNotification) => void;
   onFriendRequestReceived: (payload: Friendship) => void;
   onFriendRequestAccepted: (payload: Friendship) => void;
@@ -455,6 +457,9 @@ export function joinUserChannel(userId: string, callbacks: UserChannelCallbacks)
   room.on('member_kicked', (payload: MemberKickedNotification) =>
     callbacks.onMemberKicked(payload)
   );
+  room.on('member_role_updated', (payload: MemberRoleUpdatedNotification) =>
+    callbacks.onMyRoleUpdated(payload)
+  );
   room.on('member_status_changed', (payload: MemberStatusChangedNotification) =>
     callbacks.onMemberStatusChanged(payload)
   );
@@ -476,6 +481,7 @@ export interface ServerChannelCallbacks {
   onChannelPositionsUpdated: (payload: ChannelPositionsUpdatedNotification) => void;
   onServerUpdated: (payload: ServerUpdatedNotification) => void;
   onMemberLeft: (payload: MemberLeftNotification) => void;
+  onMemberRoleUpdated: (payload: MemberRoleUpdatedNotification) => void;
   onVoicePresenceUpdated: (payload: VoicePresenceUpdatedNotification) => void;
 }
 
@@ -498,6 +504,9 @@ export function joinServerChannel(serverId: string, callbacks: ServerChannelCall
   );
   room.on('server_updated', (payload: ServerUpdatedNotification) => callbacks.onServerUpdated(payload));
   room.on('member_left', (payload: MemberLeftNotification) => callbacks.onMemberLeft(payload));
+  room.on('member_role_updated', (payload: MemberRoleUpdatedNotification) =>
+    callbacks.onMemberRoleUpdated(payload)
+  );
   room.on('voice_presence_updated', (payload: VoicePresenceUpdatedNotification) =>
     callbacks.onVoicePresenceUpdated(payload)
   );

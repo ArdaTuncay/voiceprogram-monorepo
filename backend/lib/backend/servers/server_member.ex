@@ -24,7 +24,7 @@ defmodule Backend.Servers.ServerMember do
     member
     |> cast(attrs, [:server_id, :user_id, :role])
     |> validate_required([:server_id, :user_id, :role])
-    |> validate_inclusion(:role, ["owner", "member"])
+    |> validate_inclusion(:role, ["owner", "moderator", "member"])
     |> unique_constraint([:server_id, :user_id])
     |> foreign_key_constraint(:server_id)
     |> foreign_key_constraint(:user_id)

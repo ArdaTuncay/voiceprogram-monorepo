@@ -56,6 +56,7 @@ defmodule BackendWeb.Router do
     patch "/servers/:server_id/channels/positions", ServerController, :update_channel_positions
     get "/servers/:id/members", ServerController, :members
     delete "/servers/:server_id/members/:user_id", ServerController, :delete_member
+    patch "/servers/:server_id/members/:user_id", ServerController, :update_member
     get "/servers/:server_id/bans", BanController, :index
     post "/servers/:server_id/bans", BanController, :create
     delete "/servers/:server_id/bans/:user_id", BanController, :delete

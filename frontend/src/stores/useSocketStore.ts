@@ -68,6 +68,7 @@ export function useSocketSync(currentUser: User): void {
         useServerStore.getState().handleChannelPositionsUpdated(payload),
       onServerUpdated: (payload) => useServerStore.getState().handleServerUpdated(payload),
       onMemberLeft: (payload) => useServerStore.getState().handleMemberLeft(payload),
+      onMemberRoleUpdated: (payload) => useServerStore.getState().handleMemberRoleUpdated(payload),
       onVoicePresenceUpdated: (payload) =>
         useServerStore.getState().handleVoicePresenceUpdated(payload),
     });
@@ -157,6 +158,7 @@ export function useSocketSync(currentUser: User): void {
       // Only ever broadcast to the kicked user's own personal channel (see
       // Backend.Servers.kick_member/2) — always about "me", no filter needed.
       onMemberKicked: (payload) => useServerStore.getState().removeServerAndDeselect(payload.server_id),
+      onMyRoleUpdated: (payload) => useServerStore.getState().handleMyRoleUpdated(payload),
       onMemberStatusChanged: (payload) => useServerStore.getState().handleMemberStatusChanged(payload),
       onFriendRequestReceived: (payload) => useFriendStore.getState().handleFriendRequestReceived(payload),
       onFriendRequestAccepted: (payload) => useFriendStore.getState().handleFriendRequestAccepted(payload),

@@ -165,3 +165,32 @@ describe('useDMStore.setActiveRoomId — DM’den DM’e geçiş', () => {
     expect(useDMStore.getState().activeRoomId).toBe('room-b');
   });
 });
+
+describe('useServerStore — moderatör rolü', () => {
+  beforeEach(() => {
+    useServerStore.getState().reset();
+  });
+
+  it('handleMyRoleUpdated updates my_role on that server only', () => {
+    useServerStore.setState({
+      servers: [
+        { id: 'a', name: 'A', owner_id: 'o', my_role: 'member' },
+        { id: 'b', name: 'B', owner_id: 'o', my_role: 'member' },
+      ],
+    });
+
+    useServerStore.getState().handleMyRoleUpdated({ server_id: 'a', user_id: 'me', role: 'moderator' });
+
+    const roles = useServerStore.getState().servers.map((s) => s.my_role);
+    expect(roles).toEqual(['moderator', 'member']);
+  });
+
+  it('handleMemberRoleUpdated tracks roles for the active server', () => {
+    useServerStore.setState({ activeServerId: 'a', memberRoles: { u1: 'member' } });
+
+    useServerStore.getState().handleMemberRoleUpdated({ server_id: 'a', user_id: 'u1', role: 'moderator' });
+    useServerStore.getState().handleMemberRoleUpdated({ server_id: 'other', user_id: 'u2', role: 'moderator' });
+
+    expect(useServerStore.getState().memberRoles).toEqual({ u1: 'moderator' });
+  });
+});

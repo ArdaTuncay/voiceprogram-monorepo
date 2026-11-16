@@ -16,12 +16,12 @@ interface Props {
   onEditMessage: (content: string) => void;
   onDeleteMessage: () => void;
   onImageClick: (fileUrl: string) => void;
-  /** Lets the delete option's author-only gate also pass for the server's
-   * owner (moderation) — Chat.tsx passes this, DMChatView never does. A
-   * DM has no such concept, so simply never passing it (rather than also
-   * threading an `isDM` flag) already makes delete there author-only,
-   * same as edit. */
-  isServerOwner?: boolean;
+  /** Lets the delete option's author-only gate also pass when the viewer
+   * may moderate this message's author — the server's owner, or a
+   * moderator on a regular member's message (see utils/permissions'
+   * canModerate). Chat.tsx passes this, DMChatView never does, so delete
+   * in a DM stays author-only, same as edit. */
+  canModerate?: boolean;
   /** True while this message is the target of a just-completed search
    * "jump to message" — flashes a highlight background (see Chat.css
    * `.message-highlighted`). */
@@ -46,7 +46,7 @@ export default function MessageItem({
   onEditMessage,
   onDeleteMessage,
   onImageClick,
-  isServerOwner,
+  canModerate,
   isHighlighted,
   isGrouped,
 }: Props) {
@@ -68,7 +68,7 @@ export default function MessageItem({
   const color = userColor(message.user_id);
   const name = message.username ?? 'Unknown';
   const isOwnMessage = message.user_id === currentUserId;
-  const canDelete = isOwnMessage || !!isServerOwner;
+  const canDelete = isOwnMessage || !!canModerate;
 
   // KORUMA: editDraft'ın null/undefined olma ihtimaline karşı güvenli trim kontrolü
   const canSave = (editDraft || '').trim() !== '' || !!message.file_url;

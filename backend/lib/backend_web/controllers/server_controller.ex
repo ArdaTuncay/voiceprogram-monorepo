@@ -135,11 +135,46 @@ defmodule BackendWeb.ServerController do
     end
   end
 
-  @doc "DELETE /api/servers/:server_id/members/:user_id — kicks a member. Owner only."
+  @doc """
+  DELETE /api/servers/:server_id/members/:user_id — kicks a member. The
+  owner can kick anyone; a moderator only regular members (see
+  `Servers.can_moderate?/3`).
+  """
   def delete_member(conn, %{"server_id" => server_id, "user_id" => user_id}) do
+    actor_id = conn.assigns.current_user.id
+
+    with %Server{} = server <- Servers.get_server(server_id),
+         true <- Servers.moderator?(server.id, actor_id),
+         true <- user_id == server.owner_id or Servers.can_moderate?(server.id, actor_id, user_id) do
+      do_delete_member(conn, server, user_id)
+    else
+      false -> forbidden(conn)
+      nil -> not_found(conn)
+    end
+  end
+
+  @doc """
+  PATCH /api/servers/:server_id/members/:user_id — sets a member's role to
+  "member" or "moderator". Owner only.
+  """
+  def update_member(conn, %{"server_id" => server_id, "user_id" => user_id} = params) do
     with %Server{} = server <- Servers.get_server(server_id),
          true <- Servers.owner?(server.id, conn.assigns.current_user.id) do
-      do_delete_member(conn, server, user_id)
+      case Servers.set_member_role(server.id, user_id, params["role"]) do
+        {:ok, member} ->
+          json(conn, %{user_id: member.user_id, role: member.role})
+
+        {:error, :not_found} ->
+          conn |> put_status(:not_found) |> json(%{error: "Member not found"})
+
+        {:error, :owner} ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{error: "The server owner's role can't change"})
+
+        {:error, _} ->
+          conn |> put_status(:unprocessable_entity) |> json(%{error: "Invalid role"})
+      end
     else
       false -> forbidden(conn)
       nil -> not_found(conn)
@@ -183,7 +218,7 @@ defmodule BackendWeb.ServerController do
   defp forbidden(conn) do
     conn
     |> put_status(:forbidden)
-    |> json(%{error: "Only the server owner can perform this action"})
+    |> json(%{error: "You don't have permission to perform this action"})
   end
 
   defp not_found(conn) do
@@ -192,8 +227,16 @@ defmodule BackendWeb.ServerController do
     |> json(%{error: "Server not found"})
   end
 
+  # `my_role` is only known when the server came from
+  # `Servers.list_servers_for_user/1`; a freshly created server is always
+  # the creator's own.
   defp server_json(server) do
-    %{id: server.id, name: server.name, owner_id: server.owner_id}
+    %{
+      id: server.id,
+      name: server.name,
+      owner_id: server.owner_id,
+      my_role: Map.get(server, :my_role, "owner")
+    }
   end
 
   defp channel_json(channel) do

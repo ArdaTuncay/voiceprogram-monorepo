@@ -138,10 +138,15 @@ export interface Channel {
   voice_occupants?: { user_id: string; username: string }[];
 }
 
+export type MemberRole = 'owner' | 'moderator' | 'member';
+
 export interface Server {
   id: string;
   name: string;
   owner_id: string;
+  /** The current user's own role here (see Backend.Servers.list_servers_for_user/1).
+   * Missing only on a server object built before the user's role was known. */
+  my_role?: MemberRole;
 }
 
 export type UserStatus = 'online' | 'offline';
@@ -149,7 +154,7 @@ export type UserStatus = 'online' | 'offline';
 export interface ServerMember {
   user_id: string;
   username: string | null;
-  role: 'owner' | 'member';
+  role: MemberRole;
   status: UserStatus;
 }
 
@@ -183,6 +188,15 @@ export interface ServerUpdatedNotification {
 
 export interface ServerDeletedNotification {
   server_id: string;
+}
+
+/** "member_role_updated" — sent to the server topic and to the member's own
+ * user topic when the owner promotes or demotes them (see
+ * Backend.Servers.set_member_role/3). */
+export interface MemberRoleUpdatedNotification {
+  server_id: string;
+  user_id: string;
+  role: MemberRole;
 }
 
 export interface MemberKickedNotification {

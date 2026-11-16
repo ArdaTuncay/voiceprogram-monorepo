@@ -9,6 +9,8 @@ import type {
   ChannelPositionsUpdatedNotification,
   ServerUpdatedNotification,
   MemberLeftNotification,
+  MemberRole,
+  MemberRoleUpdatedNotification,
   MemberStatusChangedNotification,
   VoicePresenceUpdatedNotification,
   UserStatus,
@@ -82,6 +84,11 @@ interface ServerStoreState {
    * list is rendered (e.g. ServerSettingsModal's Members tab), overriding
    * whatever status was last fetched for that user. */
   memberStatuses: Record<string, UserStatus>;
+  /** Roles in the active server, by user id — lets a moderator's client tell
+   * whose messages it may delete (only regular members'; see
+   * Backend.Servers.can_moderate?/3). Loaded by loadMemberRoles, kept live
+   * by "member_role_updated". */
+  memberRoles: Record<string, MemberRole>;
   channelError: string;
   /** Set by `navigateToNotification` for a cross-server jump: tells the
    * channel-load that follows a server switch which channel to select
@@ -97,6 +104,7 @@ interface ServerStoreState {
   setActiveServerId: (serverId: string | null) => void;
   loadChannelsForActiveServer: () => Promise<void>;
   resyncActiveServer: () => Promise<void>;
+  loadMemberRoles: () => Promise<void>;
   selectChannel: (channelId: string) => void;
   navigateToNotification: (serverId: string, channelId: string) => void;
 
@@ -126,6 +134,10 @@ interface ServerStoreState {
   /** No global state currently depends on this — reserved for a live-updating
    * member list (e.g. ServerSettingsModal's Members tab) to consume later. */
   handleMemberLeft: (payload: MemberLeftNotification) => void;
+  /** Server-topic "member_role_updated": someone's role in the open server changed. */
+  handleMemberRoleUpdated: (payload: MemberRoleUpdatedNotification) => void;
+  /** User-topic "member_role_updated": always about me — updates my_role on that server. */
+  handleMyRoleUpdated: (payload: MemberRoleUpdatedNotification) => void;
   /** Updates one channel's `voice_occupants` in place — a no-op if that
    * channel isn't in the currently-loaded `channels` list (we're not
    * viewing its server, or it's since been deleted). */
@@ -148,6 +160,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
   unreadChannelIds: new Set(),
   unreadServerIds: new Set(),
   memberStatuses: {},
+  memberRoles: {},
   channelError: '',
   pendingChannelId: null,
 
@@ -266,7 +279,18 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
         ...state.memberStatuses,
         ...Object.fromEntries(data.map((m) => [m.user_id, m.status])),
       },
+      memberRoles: Object.fromEntries(data.map((m) => [m.user_id, m.role])),
     }));
+  },
+
+  loadMemberRoles: async () => {
+    const serverId = get().activeServerId;
+    set({ memberRoles: {} });
+    if (!serverId) return;
+
+    const { data } = await fetchServerMembers(serverId);
+    if (get().activeServerId !== serverId || !data) return;
+    set({ memberRoles: Object.fromEntries(data.map((m) => [m.user_id, m.role])) });
   },
 
   selectChannel: (channelId) => {
@@ -379,6 +403,17 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     // Intentionally a no-op for now — see the interface doc above.
   },
 
+  handleMemberRoleUpdated: (payload) => {
+    if (payload.server_id !== get().activeServerId) return;
+    set((state) => ({ memberRoles: { ...state.memberRoles, [payload.user_id]: payload.role } }));
+  },
+
+  handleMyRoleUpdated: (payload) => {
+    set((state) => ({
+      servers: state.servers.map((s) => (s.id === payload.server_id ? { ...s, my_role: payload.role } : s)),
+    }));
+  },
+
   handleVoicePresenceUpdated: (payload) => {
     set((state) => {
       if (!state.channels.some((c) => c.id === payload.channel_id)) return state;
@@ -415,6 +450,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
       unreadChannelIds: new Set(),
       unreadServerIds: new Set(),
       memberStatuses: {},
+      memberRoles: {},
       channelError: '',
       pendingChannelId: null,
     }),
