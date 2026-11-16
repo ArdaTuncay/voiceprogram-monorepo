@@ -21,8 +21,8 @@ defmodule Backend.ChatTest do
       result = room_id |> Chat.voice_occupants() |> Enum.sort_by(& &1.user_id)
 
       assert result == [
-               %{user_id: "user-1", username: "Ada"},
-               %{user_id: "user-2", username: "Grace"}
+               %{user_id: "user-1", username: "Ada", avatar_url: nil},
+               %{user_id: "user-2", username: "Grace", avatar_url: nil}
              ]
     end
 

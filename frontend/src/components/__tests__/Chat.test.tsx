@@ -478,6 +478,33 @@ describe('Chat — ses kanalı doluluk önizlemesi (voice_occupants)', () => {
     expect(screen.getByText('başka-kullanıcı')).not.toBeNull();
   });
 
+  it('profil fotoğrafı olan kişinin önizlemesinde baş harfler yerine fotoğrafı gösterilir', () => {
+    const withAvatar: Channel = {
+      ...voiceChannel,
+      voice_occupants: [{ user_id: 'u2', username: 'diğer-kullanıcı', avatar_url: '/uploads/u2.png' }],
+    };
+    useServerStore.setState({ servers: [server], activeServerId: server.id, channels: [withAvatar] });
+
+    const { container } = render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    const img = container.querySelector<HTMLImageElement>('.voice-occupant-preview-avatar img');
+    expect(img?.getAttribute('src')).toContain('/uploads/u2.png');
+  });
+
+  it('çevrimiçi listesinde profil fotoğrafı gösterilir', () => {
+    useServerStore.setState({ servers: [server], activeServerId: server.id, channels: [] });
+    const { container } = render(<Chat user={testUser} onLogout={vi.fn()} />);
+
+    act(() =>
+      useChatStore.setState({
+        onlineUsers: [{ user_id: 'u2', username: 'çevrimiçi-kişi', online_at: 1, avatar_url: '/uploads/on.png' }],
+      })
+    );
+
+    const img = container.querySelector<HTMLImageElement>('.online-user-avatar img');
+    expect(img?.getAttribute('src')).toContain('/uploads/on.png');
+  });
+
   it('voice_occupants boş/tanımsızsa önizleme render edilmez', () => {
     const emptyVoiceChannel: Channel = { ...voiceChannel, voice_occupants: [] };
     useServerStore.setState({ servers: [server], activeServerId: server.id, channels: [emptyVoiceChannel] });

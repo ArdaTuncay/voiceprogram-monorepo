@@ -112,6 +112,7 @@ export function joinChatChannel(channelId: string, callbacks: ChannelCallbacks):
     const users = presence.list<PresenceUser>((user_id, { metas: [meta] }) => ({
       user_id,
       username: meta.username,
+      avatar_url: meta.avatar_url ?? null,
       online_at: meta.online_at,
     }));
     callbacks.onPresenceChange(users);
@@ -217,6 +218,7 @@ export function joinDmChannel(roomId: string, callbacks: ChannelCallbacks): () =
     const users = presence.list<PresenceUser>((user_id, { metas: [meta] }) => ({
       user_id,
       username: meta.username,
+      avatar_url: meta.avatar_url ?? null,
       online_at: meta.online_at,
     }));
     callbacks.onPresenceChange(users);
@@ -330,6 +332,7 @@ export function joinVoiceChannel(
     const users = presence.list<PresenceUser>((user_id, { metas: [meta] }) => ({
       user_id,
       username: meta.username,
+      avatar_url: meta.avatar_url ?? null,
       online_at: meta.online_at,
       muted: meta.muted,
       deafened: meta.deafened,

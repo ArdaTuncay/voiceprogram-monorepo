@@ -60,6 +60,16 @@ defmodule Backend.Accounts do
     Repo.get(User, id)
   end
 
+  @doc """
+  The user's current profile picture URL (nil without one or for an unknown
+  id). Read straight from the database rather than from the socket's
+  assigns, so a picture changed after the socket connected still shows up
+  the next time a channel tracks the user's Presence.
+  """
+  def get_avatar_url(id) do
+    Repo.one(from u in User, where: u.id == ^id, select: u.avatar_url)
+  end
+
   @doc "Fetches a user by username. Returns nil if not found."
   def get_user_by_username(username) when is_binary(username) do
     Repo.get_by(User, username: username)

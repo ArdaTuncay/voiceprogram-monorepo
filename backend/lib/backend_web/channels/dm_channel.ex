@@ -12,6 +12,7 @@ defmodule BackendWeb.DmChannel do
   alias Backend.Friends
   alias Backend.Presence
   alias BackendWeb.ChannelRateLimiter
+  alias BackendWeb.PresenceMeta
 
   # See BackendWeb.ChatChannel for the reasoning behind these limits — DMs
   # use the same values since it's the same "shout"/"update_message"/
@@ -58,11 +59,7 @@ defmodule BackendWeb.DmChannel do
 
   @impl true
   def handle_info(:after_join, socket) do
-    {:ok, _} =
-      Presence.track(socket, socket.assigns.user_id, %{
-        username: socket.assigns.username,
-        online_at: System.system_time(:second)
-      })
+    {:ok, _} = Presence.track(socket, socket.assigns.user_id, PresenceMeta.for_socket(socket))
 
     push(socket, "presence_state", Presence.list(socket))
 

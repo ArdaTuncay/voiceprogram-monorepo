@@ -50,7 +50,7 @@ defmodule BackendWeb.ServerControllerTest do
       voice_json = Enum.find(channels, &(&1["id"] == voice_channel.id))
 
       assert voice_json["voice_occupants"] == [
-               %{"user_id" => owner.id, "username" => owner.username}
+               %{"user_id" => owner.id, "username" => owner.username, "avatar_url" => nil}
              ]
     end
   end

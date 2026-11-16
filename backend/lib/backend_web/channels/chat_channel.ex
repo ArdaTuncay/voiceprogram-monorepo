@@ -12,6 +12,7 @@ defmodule BackendWeb.ChatChannel do
   alias Backend.Presence
   alias Backend.Servers
   alias BackendWeb.ChannelRateLimiter
+  alias BackendWeb.PresenceMeta
 
   # "shout": ~human typing speed multiplied several times over, not a hard
   # per-message-content check — flags flood/script traffic without
@@ -64,11 +65,7 @@ defmodule BackendWeb.ChatChannel do
 
   @impl true
   def handle_info(:after_join, socket) do
-    {:ok, _} =
-      Presence.track(socket, socket.assigns.user_id, %{
-        username: socket.assigns.username,
-        online_at: System.system_time(:second)
-      })
+    {:ok, _} = Presence.track(socket, socket.assigns.user_id, PresenceMeta.for_socket(socket))
 
     push(socket, "presence_state", Presence.list(socket))
 

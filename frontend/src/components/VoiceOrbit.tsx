@@ -3,12 +3,15 @@ import type { ReactNode } from 'react';
 import { MicOff, VolumeX, RefreshCw } from 'lucide-react';
 import { circularLayout } from '../utils/circularLayout';
 import { t, useT } from '../i18n';
+import AvatarFace from './AvatarFace';
 import './VoiceOrbit.css';
 
 export interface OrbitParticipant {
   id: string;
   displayName: string;
   initials: string;
+  /** Profile picture, shown instead of the initials when present. */
+  avatarUrl?: string | null;
   avatarColor: string;
   isSpeaking: boolean;
   isMuted: boolean;
@@ -145,7 +148,7 @@ function ParticipantAvatar({ p, size }: { p: OrbitParticipant; size: number }) {
       style={{ width: size, height: size, background: p.avatarColor }}
       title={`${p.displayName} — ${p.statusText}`}
     >
-      {p.initials}
+      <AvatarFace url={p.avatarUrl} fallback={p.initials} />
       {p.isMuted && (
         <span className="voice-orbit-badge voice-orbit-badge-mute" title={t('Mikrofon Kapalı')}>
           <MicOff size={9} />
@@ -220,7 +223,7 @@ export default function VoiceOrbit({ participants, maxOrbitSize = 8, currentUser
               style={{ background: p.avatarColor }}
               title={p.displayName}
             >
-              {p.initials}
+              <AvatarFace url={p.avatarUrl} fallback={p.initials} />
             </div>
           );
           return (

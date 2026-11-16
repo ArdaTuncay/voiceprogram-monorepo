@@ -54,7 +54,7 @@ defmodule Backend.Chat do
 
   @doc """
   Who's currently connected to voice room `room_id`, as a plain
-  `[%{user_id: ..., username: ...}]` list — every other bit of Presence
+  `[%{user_id: ..., username: ..., avatar_url: ...}]` list — every other bit of Presence
   metadata (`muted`/`deafened`/`online_at`, see `BackendWeb.VoiceChannel`'s
   `Presence.track/3` call) only matters to someone who's actually joined
   the room's own `"voice:<id>"` topic, not to "who's in here" callers
@@ -74,7 +74,7 @@ defmodule Backend.Chat do
     "voice:#{room_id}"
     |> Presence.list()
     |> Enum.map(fn {user_id, %{metas: [meta | _]}} ->
-      %{user_id: user_id, username: meta[:username]}
+      %{user_id: user_id, username: meta[:username], avatar_url: meta[:avatar_url]}
     end)
   end
 

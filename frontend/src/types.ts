@@ -166,6 +166,8 @@ export interface NewMessageNotification extends ChatMessage {
 export interface PresenceUser {
   user_id: string;
   username: string | null;
+  /** Profile picture (see BackendWeb.PresenceMeta), or null without one. */
+  avatar_url?: string | null;
   online_at: number;
   muted?: boolean;
   deafened?: boolean;
@@ -194,7 +196,7 @@ export interface Channel {
    * Backend.Chat.voice_occupants/1 and the channel-list endpoint's
    * `channel_json/1`). Kept live via "voice_presence_updated" broadcasts
    * (see VoicePresenceUpdatedNotification) rather than re-fetched. */
-  voice_occupants?: { user_id: string; username: string }[];
+  voice_occupants?: { user_id: string; username: string; avatar_url?: string | null }[];
 }
 
 export type MemberRole = 'owner' | 'moderator' | 'member';
