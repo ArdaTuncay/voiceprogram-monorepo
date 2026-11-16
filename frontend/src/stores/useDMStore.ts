@@ -133,6 +133,9 @@ interface DMStoreState {
   handleDraftChange: (value: string) => void;
   stopTypingNow: () => void;
   sendMessage: () => void;
+  /** The message the next send answers (shown above the message box), or null. */
+  replyingTo: ChatMessage | null;
+  setReplyingTo: (message: ChatMessage | null) => void;
   handleFileSelected: (file: File) => Promise<void>;
   setDraggingFile: (value: boolean) => void;
   setLightboxUrl: (url: string | null) => void;
@@ -184,6 +187,7 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
   isLoadingOlderMessages: false,
 
   searchQuery: '',
+  replyingTo: null,
   searchResults: [],
   isSearching: false,
   isSearchPanelOpen: false,
@@ -250,6 +254,7 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
       hasMoreMessages: true,
       isLoadingOlderMessages: false,
       searchQuery: '',
+      replyingTo: null,
       searchResults: [],
       isSearching: false,
       isSearchPanelOpen: false,
@@ -345,17 +350,21 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
     typingStopTimer = window.setTimeout(() => get().stopTypingNow(), TYPING_STOP_DELAY_MS);
   },
 
+  setReplyingTo: (message) => set({ replyingTo: message }),
+
   sendMessage: () => {
     const content = get().draft.trim();
     if (!content) return;
     get().stopTypingNow();
     // Cleared before the push — see useChatStore.sendMessage.
-    set({ draft: '', actionError: '' });
+    const replyToId = get().replyingTo?.id;
+    set({ draft: '', actionError: '', replyingTo: null });
     sendDmMessage(
       content,
       undefined,
       undefined,
-      dmPushFailureHandler('send', () => restoreDraftIfEmpty(content))
+      dmPushFailureHandler('send', () => restoreDraftIfEmpty(content)),
+      replyToId
     );
   },
 
@@ -382,12 +391,14 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
 
     get().stopTypingNow();
     const content = get().draft.trim();
-    set({ draft: '', actionError: '' });
+    const replyToId = get().replyingTo?.id;
+    set({ draft: '', actionError: '', replyingTo: null });
     sendDmMessage(
       content,
       data.file_url,
       data.file_type,
-      dmPushFailureHandler('send', () => restoreDraftIfEmpty(content))
+      dmPushFailureHandler('send', () => restoreDraftIfEmpty(content)),
+      replyToId
     );
   },
 
@@ -471,6 +482,7 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
       hasMoreMessages: true,
       isLoadingOlderMessages: false,
       searchQuery: '',
+      replyingTo: null,
       searchResults: [],
       isSearching: false,
       isSearchPanelOpen: false,

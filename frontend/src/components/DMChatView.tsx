@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ChangeEvent, DragEvent, UIEvent } from 'react';
-import { AtSign, Ban, Paperclip, Send, AlertTriangle, Search } from 'lucide-react';
+import { AtSign, Ban, Paperclip, Send, AlertTriangle, Search, CornerUpLeft, X } from 'lucide-react';
 import { resolveFileUrl } from '../config';
 import { useDMStore } from '../stores/useDMStore';
 import { useFriendStore } from '../stores/useFriendStore';
@@ -48,6 +48,8 @@ export default function DMChatView({ currentUserId }: Props) {
   const searchDmMessages = useDMStore((s) => s.searchDmMessages);
   const closeSearchPanel = useDMStore((s) => s.closeSearchPanel);
   const jumpToMessage = useDMStore((s) => s.jumpToMessage);
+  const replyingTo = useDMStore((s) => s.replyingTo);
+  const setReplyingTo = useDMStore((s) => s.setReplyingTo);
   const clearHighlight = useDMStore((s) => s.clearHighlight);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -153,6 +155,11 @@ export default function DMChatView({ currentUserId }: Props) {
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Escape' && replyingTo) {
+      e.preventDefault();
+      setReplyingTo(null);
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -251,6 +258,11 @@ export default function DMChatView({ currentUserId }: Props) {
               onDeleteMessage={() => deleteMessage(msg.id)}
               onImageClick={setLightboxUrl}
               onReport={() => setReportTarget({ kind: 'dm', id: msg.id })}
+              onReply={() => {
+                setReplyingTo(msg);
+                textareaRef.current?.focus();
+              }}
+              onJumpToMessage={(id) => void jumpToMessage(id)}
               isHighlighted={msg.id === highlightedMessageId}
               isGrouped={shouldGroupMessages(messages[index - 1], msg)}
             />
@@ -260,6 +272,17 @@ export default function DMChatView({ currentUserId }: Props) {
       </div>
 
       <div className="message-input-area">
+        {replyingTo && (
+          <div className="reply-banner">
+            <span>
+              <CornerUpLeft size={14} /> <strong>{replyingTo.username ?? 'Bilinmeyen'}</strong> kişisine yanıt
+              veriliyor
+            </span>
+            <button type="button" onClick={() => setReplyingTo(null)} aria-label="Yanıtı iptal et">
+              <X size={14} />
+            </button>
+          </div>
+        )}
         <div className="message-input-box">
           <input
             ref={fileInputRef}

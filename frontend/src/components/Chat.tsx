@@ -5,6 +5,7 @@ import { resolveFileUrl } from '../config';
 import { disconnectSocket } from '../services/socket';
 import { useVoiceChannel } from '../hooks/useVoiceChannel';
 import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
+import { useMentionSuggestions } from '../hooks/useMentionSuggestions';
 import { useCollapsedCategories } from '../hooks/useCollapsedCategories';
 import { useServerStore, groupChannelsByCategory } from '../stores/useServerStore';
 import { useChatStore } from '../stores/useChatStore';
@@ -34,25 +35,7 @@ import UserSettingsModal from './UserSettingsModal';
 import VoiceStatusBar from './VoiceStatusBar';
 import VoiceOrbit from './VoiceOrbit';
 import type { OrbitParticipant } from './VoiceOrbit';
-import {
-  Volume2,
-  ScreenShare,
-  ScreenShareOff,
-  Hash,
-  UserPlus,
-  Settings,
-  DoorOpen,
-  LogOut,
-  ChevronDown,
-  AlertTriangle,
-  Circle,
-  Paperclip,
-  Send,
-  Search,
-  Maximize2,
-  X,
-  Menu,
-} from 'lucide-react';
+import { Volume2, ScreenShare, ScreenShareOff, Hash, UserPlus, Settings, DoorOpen, LogOut, ChevronDown, AlertTriangle, Circle, Paperclip, Send, Search, Maximize2, X, Menu, CornerUpLeft } from 'lucide-react';
 import './Chat.css';
 
 interface Props {
@@ -141,6 +124,8 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
   const toggleReaction = useChatStore((s) => s.toggleReaction);
   const editMessage = useChatStore((s) => s.editMessage);
   const deleteMessage = useChatStore((s) => s.deleteMessage);
+  const replyingTo = useChatStore((s) => s.replyingTo);
+  const setReplyingTo = useChatStore((s) => s.setReplyingTo);
   const searchResults = useChatStore((s) => s.searchResults);
   const isSearching = useChatStore((s) => s.isSearching);
   const isSearchPanelOpen = useChatStore((s) => s.isSearchPanelOpen);
@@ -435,7 +420,15 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
     if (file) void handleFileSelected(file);
   }
 
+  const mention = useMentionSuggestions(activeServerId, draft, handleDraftChange, user.id);
+
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (mention.handleKeyDown(e)) return;
+    if (e.key === 'Escape' && replyingTo) {
+      e.preventDefault();
+      setReplyingTo(null);
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -906,6 +899,12 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                     onImageClick={setLightboxUrl}
                     canModerate={canModerate(myRole, memberRoles[msg.user_id])}
                     onReport={() => setReportTarget({ kind: 'message', id: msg.id })}
+                    onReply={() => {
+                      setReplyingTo(msg);
+                      textareaRef.current?.focus();
+                    }}
+                    onJumpToMessage={(id) => void jumpToMessage(id)}
+                    currentUsername={user.username}
                     isHighlighted={msg.id === highlightedMessageId}
                     isGrouped={shouldGroupMessages(messages[index - 1], msg)}
                   />
@@ -919,6 +918,35 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
             )}
 
             <div className="message-input-area">
+              {mention.suggestions.length > 0 && (
+                <ul className="mention-suggestions" role="listbox" aria-label="Bahsedilecek üye">
+                  {mention.suggestions.map((m, i) => (
+                    <li
+                      key={m.user_id}
+                      role="option"
+                      aria-selected={i === mention.activeIndex}
+                      className={`mention-suggestion${i === mention.activeIndex ? ' active' : ''}`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (m.username) mention.pick(m.username);
+                      }}
+                    >
+                      @{m.username}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {replyingTo && (
+                <div className="reply-banner">
+                  <span>
+                    <CornerUpLeft size={14} /> <strong>{replyingTo.username ?? 'Bilinmeyen'}</strong> kişisine yanıt
+                    veriliyor
+                  </span>
+                  <button type="button" onClick={() => setReplyingTo(null)} aria-label="Yanıtı iptal et">
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
               <div className="message-input-box">
                 <input
                   ref={fileInputRef}

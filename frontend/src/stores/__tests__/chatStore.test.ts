@@ -82,7 +82,7 @@ describe('useChatStore', () => {
 
     useChatStore.getState().sendMessage();
 
-    expect(shout).toHaveBeenCalledWith('hello world', undefined, undefined, expect.any(Function));
+    expect(shout).toHaveBeenCalledWith('hello world', undefined, undefined, expect.any(Function), undefined);
     expect(useChatStore.getState().draft).toBe('');
   });
 
@@ -162,7 +162,7 @@ describe('useChatStore', () => {
 
     await useChatStore.getState().handleFileSelected(new File(['x'], 'x.png', { type: 'image/png' }));
 
-    expect(shout).toHaveBeenCalledWith('', '/uploads/x.png', 'image/png', expect.any(Function));
+    expect(shout).toHaveBeenCalledWith('', '/uploads/x.png', 'image/png', expect.any(Function), undefined);
     expect(useChatStore.getState().uploadError).toBe('');
   });
 });
@@ -176,7 +176,8 @@ describe('useChatStore — failed push feedback', () => {
   function lastFailureHandler(push: unknown): PushFailureHandler {
     const call = (push as Mock).mock.calls.at(-1);
     if (!call) throw new Error('push was never called');
-    return call.at(-1) as PushFailureHandler;
+    // The failure handler isn't always the last argument (a reply id can follow it).
+    return call.find((arg: unknown) => typeof arg === 'function') as PushFailureHandler;
   }
 
   beforeEach(() => {
@@ -286,5 +287,28 @@ describe('useChatStore — failed push feedback', () => {
 
     expect(useChatStore.getState().draft).toBe('caption');
     expect(useChatStore.getState().actionError).not.toBe('');
+  });
+});
+
+describe('useChatStore — yanıt', () => {
+  beforeEach(() => {
+    useChatStore.getState().reset();
+    vi.clearAllMocks();
+  });
+
+  it('sendMessage sends the reply target along and clears it', () => {
+    useChatStore.getState().setReplyingTo(makeMessage({ id: 'orig' }));
+    useChatStore.getState().setDraft('cevap');
+
+    useChatStore.getState().sendMessage();
+
+    expect(shout).toHaveBeenCalledWith('cevap', undefined, undefined, expect.any(Function), 'orig');
+    expect(useChatStore.getState().replyingTo).toBeNull();
+  });
+
+  it('switching channels drops the reply target', () => {
+    useChatStore.getState().setReplyingTo(makeMessage({ id: 'orig' }));
+    useChatStore.getState().resetForChannelSwitch();
+    expect(useChatStore.getState().replyingTo).toBeNull();
   });
 });

@@ -100,6 +100,7 @@ defmodule BackendWeb.ChatChannel do
         content: Map.get(params, "content", ""),
         file_url: Map.get(params, "file_url"),
         file_type: Map.get(params, "file_type"),
+        reply_to_id: Map.get(params, "reply_to_id"),
         user_id: socket.assigns.user_id,
         channel_id: socket.assigns.channel_id
       }
@@ -254,6 +255,7 @@ defmodule BackendWeb.ChatChannel do
       user_id: message.user_id,
       username: Backend.Accounts.display_username(message.user),
       avatar_url: message.user && message.user.avatar_url,
+      reply_to: BackendWeb.MessageJSON.reply_preview(message),
       inserted_at: message.inserted_at,
       is_edited: message.is_edited,
       reactions: message.reactions,

@@ -208,7 +208,8 @@ describe('useDMStore — failed push feedback', () => {
   function lastFailureHandler(push: unknown): PushFailureHandler {
     const call = (push as Mock).mock.calls.at(-1);
     if (!call) throw new Error('push was never called');
-    return call.at(-1) as PushFailureHandler;
+    // The failure handler isn't always the last argument (a reply id can follow it).
+    return call.find((arg: unknown) => typeof arg === 'function') as PushFailureHandler;
   }
 
   beforeEach(() => {

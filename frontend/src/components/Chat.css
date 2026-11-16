@@ -1733,3 +1733,105 @@
   border-radius: 50%;
   background: var(--danger);
 }
+
+/* ---- Replies and @mentions ---- */
+.message-reply-quote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  background: none;
+  border: none;
+  padding: 0 0 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.message-reply-quote:hover .message-reply-text {
+  color: var(--text-normal);
+}
+
+.message-reply-author {
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.message-reply-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.message-mention {
+  background: color-mix(in srgb, var(--brand, #5865f2) 25%, transparent);
+  color: var(--text-normal);
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 500;
+}
+
+.message-mentioned {
+  background: color-mix(in srgb, #f0b232 10%, transparent);
+  box-shadow: inset 2px 0 0 #f0b232;
+}
+
+.reply-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 8px 8px 0 0;
+}
+
+.reply-banner span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reply-banner strong {
+  color: var(--text-normal);
+}
+
+.reply-banner button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+}
+
+.reply-banner button:hover {
+  color: var(--text-normal);
+}
+
+.mention-suggestions {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 4px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.mention-suggestion {
+  padding: 6px 10px;
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.mention-suggestion.active,
+.mention-suggestion:hover {
+  background: var(--bg-tertiary);
+}

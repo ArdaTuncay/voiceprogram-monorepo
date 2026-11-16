@@ -120,6 +120,9 @@ interface ChatStoreState {
   handleDraftChange: (value: string) => void;
   stopTypingNow: () => void;
   sendMessage: () => void;
+  /** The message the next send answers (shown above the message box), or null. */
+  replyingTo: ChatMessage | null;
+  setReplyingTo: (message: ChatMessage | null) => void;
   handleFileSelected: (file: File) => Promise<void>;
 
   setDraggingFile: (value: boolean) => void;
@@ -168,6 +171,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   isLoadingOlderMessages: false,
 
   searchQuery: '',
+  replyingTo: null,
   searchResults: [],
   isSearching: false,
   isSearchPanelOpen: false,
@@ -213,6 +217,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       hasMoreMessages: true,
       isLoadingOlderMessages: false,
       searchQuery: '',
+      replyingTo: null,
       searchResults: [],
       isSearching: false,
       isSearchPanelOpen: false,
@@ -303,18 +308,22 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     typingStopTimer = window.setTimeout(() => get().stopTypingNow(), TYPING_STOP_DELAY_MS);
   },
 
+  setReplyingTo: (message) => set({ replyingTo: message }),
+
   sendMessage: () => {
     const content = get().draft.trim();
     if (!content) return;
     get().stopTypingNow();
     // Cleared before the push, not after, so a failure callback that runs
     // early can't have its restored draft wiped by this.
-    set({ draft: '', actionError: '' });
+    const replyToId = get().replyingTo?.id;
+    set({ draft: '', actionError: '', replyingTo: null });
     shout(
       content,
       undefined,
       undefined,
-      chatPushFailureHandler('send', () => restoreDraftIfEmpty(content))
+      chatPushFailureHandler('send', () => restoreDraftIfEmpty(content)),
+      replyToId
     );
   },
 
@@ -341,14 +350,16 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
     get().stopTypingNow();
     const content = get().draft.trim();
-    set({ draft: '', actionError: '' });
+    const replyToId = get().replyingTo?.id;
+    set({ draft: '', actionError: '', replyingTo: null });
     // Only the text can be put back on a rejection — the attachment would
     // have to be picked (and uploaded) again.
     shout(
       content,
       data.file_url,
       data.file_type,
-      chatPushFailureHandler('send', () => restoreDraftIfEmpty(content))
+      chatPushFailureHandler('send', () => restoreDraftIfEmpty(content)),
+      replyToId
     );
   },
 
@@ -399,6 +410,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       hasMoreMessages: true,
       isLoadingOlderMessages: false,
       searchQuery: '',
+      replyingTo: null,
       searchResults: [],
       isSearching: false,
       isSearchPanelOpen: false,

@@ -11,6 +11,10 @@ defmodule Backend.Chat do
   alias Backend.Repo
   alias Backend.Servers
 
+  # Every message handed to a client carries its author and, for a reply,
+  # the original and its author (see BackendWeb.MessageJSON.reply_preview/1).
+  @message_preloads [:user, reply_to: :user]
+
   @default_message_limit 50
   @search_limit 50
 
@@ -97,7 +101,7 @@ defmodule Backend.Chat do
     |> apply_cursor(before_id, channel_id)
     |> order_by([m], desc: m.seq)
     |> limit(^limit)
-    |> preload(:user)
+    |> preload(^@message_preloads)
     |> Repo.all()
     |> Enum.reverse()
     |> attach_reactions()
@@ -126,7 +130,7 @@ defmodule Backend.Chat do
     |> apply_has_file_filter(Map.get(filters, "has_file"))
     |> order_by([m], desc: m.seq)
     |> limit(@search_limit)
-    |> preload(:user)
+    |> preload(^@message_preloads)
     |> Repo.all()
     |> attach_reactions()
   end
@@ -186,9 +190,10 @@ defmodule Backend.Chat do
   def create_message(attrs) do
     %Message{}
     |> Message.changeset(attrs)
+    |> validate_reply_target(Message, :channel_id)
     |> Repo.insert()
     |> case do
-      {:ok, message} -> {:ok, Repo.preload(message, :user)}
+      {:ok, message} -> {:ok, Repo.preload(message, @message_preloads)}
       error -> error
     end
   end
@@ -220,7 +225,7 @@ defmodule Backend.Chat do
           {:ok, updated} ->
             {:ok,
              updated
-             |> Repo.preload(:user)
+             |> Repo.preload(@message_preloads)
              |> Map.put(:reactions, list_reactions_for_message(message_id))}
 
           error ->
@@ -276,7 +281,7 @@ defmodule Backend.Chat do
       {:ok, updated} ->
         {:ok,
          updated
-         |> Repo.preload(:user)
+         |> Repo.preload(@message_preloads)
          |> Map.put(:reactions, list_reactions_for_message(message_id))}
 
       error ->
@@ -364,5 +369,25 @@ defmodule Backend.Chat do
       %{emoji: emoji, count: length(rows), user_ids: Enum.map(rows, & &1.user_id)}
     end)
     |> Enum.sort_by(& &1.emoji)
+  end
+
+  # A reply must point at a message in the same channel/room — otherwise a
+  # client could quote (and so leak) a message from somewhere it can't see.
+  defp validate_reply_target(changeset, schema, scope_field) do
+    reply_to_id = Ecto.Changeset.get_change(changeset, :reply_to_id)
+    scope_id = Ecto.Changeset.get_field(changeset, scope_field)
+
+    cond do
+      is_nil(reply_to_id) ->
+        changeset
+
+      Repo.exists?(
+        from m in schema, where: m.id == ^reply_to_id and field(m, ^scope_field) == ^scope_id
+      ) ->
+        changeset
+
+      true ->
+        Ecto.Changeset.add_error(changeset, :reply_to_id, "not found")
+    end
   end
 end
