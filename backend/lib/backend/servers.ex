@@ -177,6 +177,14 @@ defmodule Backend.Servers do
 
   def set_member_role(_server_id, _user_id, _role), do: {:error, :invalid_role}
 
+  @doc "The user ids of the server's owner and moderators."
+  def list_moderator_ids(server_id) do
+    ServerMember
+    |> where([m], m.server_id == ^server_id and m.role in ["owner", "moderator"])
+    |> select([m], m.user_id)
+    |> Repo.all()
+  end
+
   @doc "Returns the user ids of every member of the given server."
   def list_member_user_ids(server_id) do
     ServerMember

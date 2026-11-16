@@ -199,6 +199,35 @@ export interface MemberRoleUpdatedNotification {
   role: MemberRole;
 }
 
+export type ReportReason = 'spam' | 'harassment' | 'inappropriate' | 'other';
+
+/** What a report is about: a server channel message or a DM message. */
+export interface ReportTarget {
+  kind: 'message' | 'dm';
+  id: string;
+}
+
+/** An open report as the server's owner/moderators see it (see BackendWeb.ReportController). */
+export interface ServerReport {
+  id: string;
+  reason: ReportReason;
+  details: string | null;
+  /** A copy of the message taken when it was reported. */
+  content: string | null;
+  file_url: string | null;
+  message_id: string | null;
+  status: 'open' | 'resolved' | 'dismissed';
+  created_at: string;
+  reporter: { id: string | null; username: string | null };
+  reported_user: { id: string | null; username: string | null };
+}
+
+/** "report_created" on the user topic of a server's owner and moderators. */
+export interface ReportCreatedNotification {
+  server_id: string;
+  report_id: string;
+}
+
 export interface MemberKickedNotification {
   server_id: string;
   user_id: string;

@@ -3,7 +3,10 @@ import type {
   Channel,
   ChannelType,
   MemberRole,
+  ReportReason,
+  ReportTarget,
   Server,
+  ServerReport,
   ServerMember,
   Invite,
   UploadResult,
@@ -353,6 +356,35 @@ export function setMemberRole(
   role: 'moderator' | 'member'
 ): Promise<ApiResult<{ user_id: string; role: MemberRole }>> {
   return authedPatch(`/servers/${serverId}/members/${userId}`, { role });
+}
+
+/** Reports a message. Channel reports go to the server's owner and
+ * moderators; DM reports to the Zircle team (see Backend.Reports). */
+export function reportMessage(
+  target: ReportTarget,
+  reason: ReportReason,
+  details: string
+): Promise<ApiResult<{ id: string }>> {
+  const body: Record<string, string> = {
+    [target.kind === 'dm' ? 'dm_message_id' : 'message_id']: target.id,
+    reason,
+  };
+  if (details) body.details = details;
+  return authedPost('/reports', body);
+}
+
+/** Owner or moderator. The server's open reports, newest first. */
+export function fetchServerReports(serverId: string): Promise<ApiResult<ServerReport[]>> {
+  return authedGet<ServerReport[]>(`/servers/${serverId}/reports`);
+}
+
+/** Owner or moderator. Closes a report as resolved or dismissed. */
+export function reviewReport(
+  serverId: string,
+  reportId: string,
+  status: 'resolved' | 'dismissed'
+): Promise<ApiResult<{ id: string; status: string }>> {
+  return authedPatch(`/servers/${serverId}/reports/${reportId}`, { status });
 }
 
 export interface ServerBan {

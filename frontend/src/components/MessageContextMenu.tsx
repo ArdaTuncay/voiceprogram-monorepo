@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Pencil, Trash2, Smile } from 'lucide-react';
+import { Pencil, Trash2, Smile, Flag } from 'lucide-react';
 import './MessageContextMenu.css';
 
 interface Props {
@@ -11,6 +11,8 @@ interface Props {
   y: number;
   canEdit: boolean;
   canDelete: boolean;
+  /** Shown only when given — MessageItem passes it for other people's messages. */
+  onReport?: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onReact: () => void;
@@ -23,7 +25,17 @@ interface Props {
  * RadialServerSwitcher, which this is modeled on). The caller is
  * responsible for not rendering this at all for a deleted message — it
  * has no "is_deleted" awareness of its own. */
-export default function MessageContextMenu({ x, y, canEdit, canDelete, onEdit, onDelete, onReact, onClose }: Props) {
+export default function MessageContextMenu({
+  x,
+  y,
+  canEdit,
+  canDelete,
+  onReport,
+  onEdit,
+  onDelete,
+  onReact,
+  onClose,
+}: Props) {
   useEffect(() => {
     function handleEscape(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -61,6 +73,12 @@ export default function MessageContextMenu({ x, y, canEdit, canDelete, onEdit, o
           <Smile size={14} />
           İfade Bırak
         </button>
+        {onReport && (
+          <button type="button" role="menuitem" className="message-context-menu-item" onClick={() => pick(onReport)}>
+            <Flag size={14} />
+            Raporla
+          </button>
+        )}
       </div>
     </div>
   );

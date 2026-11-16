@@ -271,6 +271,11 @@ if config_env() == :prod do
 
   config :backend, :mailer_from, mailer_from_email
 
+  # DM raporlarının e-postayla gideceği platform adresi (bkz. Backend.Reports).
+  # İsteğe bağlı: yoksa raporlar yine kaydedilir ama kimseye e-posta gitmez,
+  # sadece bir uyarı loglanır.
+  config :backend, :reports_email, System.get_env("REPORTS_EMAIL")
+
   # ## SSL Support
   #
   # To get SSL working, you will need to add the `https` key

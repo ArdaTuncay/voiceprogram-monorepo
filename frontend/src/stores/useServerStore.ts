@@ -11,6 +11,7 @@ import type {
   MemberLeftNotification,
   MemberRole,
   MemberRoleUpdatedNotification,
+  ReportCreatedNotification,
   MemberStatusChangedNotification,
   VoicePresenceUpdatedNotification,
   UserStatus,
@@ -89,6 +90,9 @@ interface ServerStoreState {
    * Backend.Servers.can_moderate?/3). Loaded by loadMemberRoles, kept live
    * by "member_role_updated". */
   memberRoles: Record<string, MemberRole>;
+  /** Servers with a report that came in since their staff last opened the
+   * Raporlar tab — drives the dot on the settings button. */
+  reportServerIds: Set<string>;
   channelError: string;
   /** Set by `navigateToNotification` for a cross-server jump: tells the
    * channel-load that follows a server switch which channel to select
@@ -138,6 +142,9 @@ interface ServerStoreState {
   handleMemberRoleUpdated: (payload: MemberRoleUpdatedNotification) => void;
   /** User-topic "member_role_updated": always about me — updates my_role on that server. */
   handleMyRoleUpdated: (payload: MemberRoleUpdatedNotification) => void;
+  /** User-topic "report_created" (only staff get it). */
+  handleReportCreated: (payload: ReportCreatedNotification) => void;
+  clearReportMarker: (serverId: string) => void;
   /** Updates one channel's `voice_occupants` in place — a no-op if that
    * channel isn't in the currently-loaded `channels` list (we're not
    * viewing its server, or it's since been deleted). */
@@ -161,6 +168,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
   unreadServerIds: new Set(),
   memberStatuses: {},
   memberRoles: {},
+  reportServerIds: new Set(),
   channelError: '',
   pendingChannelId: null,
 
@@ -408,6 +416,19 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     set((state) => ({ memberRoles: { ...state.memberRoles, [payload.user_id]: payload.role } }));
   },
 
+  handleReportCreated: (payload) => {
+    set((state) => ({ reportServerIds: new Set(state.reportServerIds).add(payload.server_id) }));
+  },
+
+  clearReportMarker: (serverId) => {
+    set((state) => {
+      if (!state.reportServerIds.has(serverId)) return state;
+      const next = new Set(state.reportServerIds);
+      next.delete(serverId);
+      return { reportServerIds: next };
+    });
+  },
+
   handleMyRoleUpdated: (payload) => {
     set((state) => ({
       servers: state.servers.map((s) => (s.id === payload.server_id ? { ...s, my_role: payload.role } : s)),
@@ -451,6 +472,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
       unreadServerIds: new Set(),
       memberStatuses: {},
       memberRoles: {},
+      reportServerIds: new Set(),
       channelError: '',
       pendingChannelId: null,
     }),

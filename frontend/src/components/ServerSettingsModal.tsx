@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Volume2, Hash, Trash2, UserX, Ban, Shield, ShieldOff } from 'lucide-react';
 import StatusIndicator from './StatusIndicator';
-import type { Channel, MemberRole, Server, ServerMember, Invite } from '../types';
+import type { Channel, MemberRole, Server, ServerMember, ServerReport, Invite } from '../types';
 import type { ServerBan } from '../services/api';
 import {
   updateServer,
@@ -15,13 +15,16 @@ import {
   fetchServerInvites,
   revokeInvite,
   setMemberRole,
+  fetchServerReports,
+  reviewReport,
 } from '../services/api';
+import { REPORT_REASON_LABELS } from '../utils/reports';
 import { canModerate } from '../utils/permissions';
 import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
 import './ServerSettingsModal.css';
 
-type Tab = 'general' | 'channels' | 'members' | 'bans' | 'invites';
+type Tab = 'general' | 'channels' | 'members' | 'bans' | 'reports' | 'invites';
 
 interface Props {
   onClose: () => void;
@@ -71,6 +74,12 @@ export default function ServerSettingsModal({ onClose }: Props) {
         >
           Yasaklılar
         </button>
+        <button
+          className={`settings-tab${tab === 'reports' ? ' active' : ''}`}
+          onClick={() => setTab('reports')}
+        >
+          Raporlar
+        </button>
         {isOwner && (
           <button
             className={`settings-tab${tab === 'invites' ? ' active' : ''}`}
@@ -85,6 +94,7 @@ export default function ServerSettingsModal({ onClose }: Props) {
       {isOwner && tab === 'channels' && <ChannelsTab channels={channels} />}
       {tab === 'members' && <MembersTab serverId={server.id} myRole={myRole} />}
       {tab === 'bans' && <BansTab serverId={server.id} />}
+      {tab === 'reports' && <ReportsTab serverId={server.id} />}
       {isOwner && tab === 'invites' && <InvitesTab serverId={server.id} />}
     </Modal>
   );
@@ -454,6 +464,87 @@ function BansTab({ serverId }: { serverId: string }) {
           </li>
         ))}
         {bans.length === 0 && <li className="list-empty-hint">Yasaklı kullanıcı yok.</li>}
+      </ul>
+    </div>
+  );
+}
+
+function ReportsTab({ serverId }: { serverId: string }) {
+  const [reports, setReports] = useState<ServerReport[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const clearReportMarker = useServerStore((s) => s.clearReportMarker);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    clearReportMarker(serverId);
+    fetchServerReports(serverId).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error || !data) setError(error ?? 'Raporlar alınamadı');
+      else setReports(data);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId, clearReportMarker]);
+
+  async function handleReview(reportId: string, status: 'resolved' | 'dismissed') {
+    setReviewingId(reportId);
+    setError('');
+    const { error } = await reviewReport(serverId, reportId, status);
+    setReviewingId(null);
+    if (error) {
+      setError(error);
+      return;
+    }
+    setReports((prev) => prev.filter((r) => r.id !== reportId));
+  }
+
+  if (loading) {
+    return <div className="settings-section">Yükleniyor…</div>;
+  }
+
+  return (
+    <div className="settings-section">
+      {error && <div className="settings-error"><AlertTriangle size={14} /> {error}</div>}
+      <ul className="settings-list">
+        {reports.map((report) => (
+          <li key={report.id} className="settings-list-item settings-report-item">
+            <div className="settings-report-head">
+              <span>
+                <strong>{report.reported_user.username ?? 'Bilinmeyen'}</strong>
+                <span className="settings-owner-badge">{REPORT_REASON_LABELS[report.reason]}</span>
+              </span>
+              <span className="settings-report-meta">
+                Raporlayan: {report.reporter.username ?? 'Bilinmeyen'} · {formatExpiresAt(report.created_at)}
+              </span>
+            </div>
+            <div className="settings-report-content">
+              {report.content || (report.file_url ? 'Dosya eki' : '(boş mesaj)')}
+            </div>
+            {report.details && <div className="settings-report-meta">{report.details}</div>}
+            <div className="settings-report-actions">
+              <button
+                className="settings-cancel-btn"
+                onClick={() => handleReview(report.id, 'dismissed')}
+                disabled={reviewingId === report.id}
+              >
+                Yoksay
+              </button>
+              <button
+                className="settings-confirm-delete-btn"
+                onClick={() => handleReview(report.id, 'resolved')}
+                disabled={reviewingId === report.id}
+              >
+                Çözüldü
+              </button>
+            </div>
+          </li>
+        ))}
+        {reports.length === 0 && <li className="list-empty-hint">Açık rapor yok.</li>}
       </ul>
     </div>
   );
