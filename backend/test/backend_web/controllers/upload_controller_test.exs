@@ -62,7 +62,14 @@ defmodule BackendWeb.UploadControllerTest do
     assert get_resp_header(pdf, "x-content-type-options") == ["nosniff"]
 
     %{"file_url" => png_url} =
-      upload!(user, file("a.png", "image/png", <<0x89, "PNG", 0x0D, 0x0A, 0x1A, 0x0A, 0::32>>))
+      upload!(
+        user,
+        file(
+          "a.png",
+          "image/png",
+          File.read!(Path.expand("../../support/fixtures/images/location.png", __DIR__))
+        )
+      )
 
     png = get(build_conn(), png_url)
     assert png.status == 200

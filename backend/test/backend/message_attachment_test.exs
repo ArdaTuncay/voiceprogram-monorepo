@@ -176,7 +176,7 @@ defmodule Backend.MessageAttachmentTest do
 
   test "own_file_url?/1 recognizes what store/1 returns" do
     path = Path.join(System.tmp_dir!(), "upload-#{System.unique_integer([:positive])}.png")
-    File.write!(path, <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0>>)
+    File.cp!(Path.expand("../support/fixtures/images/location.png", __DIR__), path)
     on_exit(fn -> File.rm(path) end)
 
     {:ok, %{file_url: url}} =

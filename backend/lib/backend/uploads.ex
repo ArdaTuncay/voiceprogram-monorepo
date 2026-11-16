@@ -28,7 +28,7 @@ defmodule Backend.Uploads do
 
   require Logger
 
-  alias Backend.Uploads.S3
+  alias Backend.Uploads.{Metadata, S3}
 
   # Stored extension => canonical content type.
   @image_types %{
@@ -74,22 +74,54 @@ defmodule Backend.Uploads do
   """
   def store(%Plug.Upload{} = upload) do
     with {:ok, extension, content_type} <- resolve_type(upload),
-         {:ok, size} <- validate_size(upload.path, extension),
-         :ok <- validate_signature(upload.path, content_type) do
-      filename = random_filename() <> "." <> extension
-      file_name = clean_file_name(upload.filename, extension)
-      disposition = content_disposition(filename, file_name)
-
-      result =
-        case adapter() do
-          :s3 -> store_s3(upload.path, filename, content_type, disposition)
-          :local -> store_local(upload.path, filename)
-        end
-
-      with {:ok, file_url} <- result do
-        {:ok,
-         %{file_url: file_url, content_type: content_type, file_name: file_name, file_size: size}}
+         {:ok, _size} <- validate_size(upload.path, extension),
+         :ok <- validate_signature(upload.path, content_type),
+         {:ok, source, size} <- without_metadata(upload.path, content_type) do
+      try do
+        persist(source, upload.filename, extension, content_type, size)
+      after
+        if source != upload.path, do: File.rm(source)
       end
+    end
+  end
+
+  defp persist(source, client_name, extension, content_type, size) do
+    filename = random_filename() <> "." <> extension
+    file_name = clean_file_name(client_name, extension)
+    disposition = content_disposition(filename, file_name)
+
+    result =
+      case adapter() do
+        :s3 -> store_s3(source, filename, content_type, disposition)
+        :local -> store_local(source, filename)
+      end
+
+    with {:ok, file_url} <- result do
+      {:ok,
+       %{file_url: file_url, content_type: content_type, file_name: file_name, file_size: size}}
+    end
+  end
+
+  # Images are stored without their EXIF/XMP/text metadata (location,
+  # device, capture time — see Backend.Uploads.Metadata), written to a
+  # temporary file next to the upload; other files are stored as they came.
+  # An image whose structure doesn't parse is refused rather than stored
+  # with its metadata.
+  defp without_metadata(path, "image/" <> _ = content_type) do
+    with {:ok, data} <- File.read(path),
+         {:ok, cleaned} <- Metadata.strip(data, content_type) do
+      cleaned_path = path <> ".clean"
+      File.write!(cleaned_path, cleaned)
+      {:ok, cleaned_path, byte_size(cleaned)}
+    else
+      _ -> {:error, :invalid_file}
+    end
+  end
+
+  defp without_metadata(path, _content_type) do
+    case File.stat(path) do
+      {:ok, %{size: size}} -> {:ok, path, size}
+      {:error, _} -> {:error, :invalid_file}
     end
   end
 
