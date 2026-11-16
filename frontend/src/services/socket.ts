@@ -306,6 +306,10 @@ export interface VoiceChannelCallbacks {
   onAnswer: (payload: VoiceSignalPayload) => void;
   onIceCandidate: (payload: VoiceSignalPayload) => void;
   onScreenShareStopped: (payload: ScreenShareStoppedNotification) => void;
+  /** Phoenix joined the room again by itself (after a network drop or a
+   * server restart). The channel on the server is a new one, so anything
+   * it held for us — our SFU session — is gone. */
+  onRejoin?: () => void;
 }
 
 export interface VoiceChannelHandle {
@@ -340,6 +344,7 @@ export function joinVoiceChannel(
       muted: meta.muted,
       deafened: meta.deafened,
       sfu_tracks: meta.sfu_tracks ?? null,
+      sfu_session: meta.sfu_session ?? null,
     }));
     callbacks.onPresenceChange(users);
   });
@@ -379,7 +384,10 @@ export function joinVoiceChannel(
     room
       .join()
       .receive('ok', (resp: { peers: string[]; sfu?: boolean }) => {
-        if (settled) return;
+        if (settled) {
+          callbacks.onRejoin?.();
+          return;
+        }
         settled = true;
         resolve({
           existingPeerIds: resp.peers,

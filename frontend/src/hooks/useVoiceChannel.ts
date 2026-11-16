@@ -14,6 +14,7 @@ import { SfuConnection } from '../services/sfu';
 import { fetchTurnCredentials } from '../services/api';
 import { resolveMicConstraint } from '../services/mediaPreferences';
 import { getPeerVolumes, updatePeerVolume } from '../services/voicePreferences';
+import { t } from '../i18n';
 import {
   microphoneErrorMessage,
   screenShareErrorMessage,
@@ -174,6 +175,19 @@ export const ICE_DISCONNECT_GRACE_MS = 3000;
 // signaling state rather than immediately retrying into the same failure.
 export const GLARE_RECOVERY_DELAY_MS = 1000;
 
+// Through the SFU (see services/sfu.ts) everyone's audio rides on one
+// connection, so a dropped one isn't patched up with an ICE restart: we
+// start over in a new SFU session. "failed" starts over straight away;
+// "disconnected" first gets this long to recover by itself (longer than
+// ICE_DISCONNECT_GRACE_MS, since starting over costs more — everyone
+// re-pulls our tracks).
+export const SFU_DISCONNECT_GRACE_MS = 5000;
+
+// The pause before each attempt at starting over. An attempt counts as
+// done once the new connection reaches "connected"; after the last one
+// fails the call ends with an error rather than sitting there silent.
+export const SFU_RESTART_DELAYS_MS = [1000, 2000, 4000, 8000, 15000];
+
 interface AnalyserHandle {
   ctx: AudioContext;
   raf: number;
@@ -288,6 +302,15 @@ export function useVoiceChannel(user: User) {
   // own session is up.
   const sfuRef = useRef<SfuConnection | null>(null);
   const latestParticipantsRef = useRef<PresenceUser[]>([]);
+  // Starting the SFU connection over after it dropped (see restartSfu):
+  // attempts since it was last connected, the pending timers, and a run
+  // counter that lets an in-flight restart see it's been superseded.
+  const sfuRecoveryRef = useRef({
+    attempts: 0,
+    restartTimer: null as number | null,
+    graceTimer: null as number | null,
+    run: 0,
+  });
 
   // Test-only visibility hook for Playwright E2E tests (see
   // e2e/voice-channel.spec.ts) — this hook's return value only exposes
@@ -770,6 +793,11 @@ export function useVoiceChannel(user: User) {
     sfuRef.current = null;
     latestParticipantsRef.current = [];
 
+    const recovery = sfuRecoveryRef.current;
+    if (recovery.restartTimer !== null) window.clearTimeout(recovery.restartTimer);
+    if (recovery.graceTimer !== null) window.clearTimeout(recovery.graceTimer);
+    sfuRecoveryRef.current = { attempts: 0, restartTimer: null, graceTimer: null, run: recovery.run + 1 };
+
     peersRef.current.forEach((pc) => pc.close());
     peersRef.current.clear();
     pendingCandidatesRef.current.clear();
@@ -797,15 +825,18 @@ export function useVoiceChannel(user: User) {
     setIsDeafened(false);
   }, [stopWatchingSpeaking]);
 
-  /** Connects to the SFU and publishes the microphone; remote tracks then
-   * land in the same state the peer-to-peer path fills (remoteStreams,
-   * screenShares, speaking). */
-  async function startSfu(stream: MediaStream, generation: number) {
-    const iceServers = await getIceServers();
-    if (joinGenerationRef.current !== generation) return;
+  function otherParticipantIds(): string[] {
+    return latestParticipantsRef.current.map((u) => u.user_id).filter((id) => id !== user.id);
+  }
 
-    const sfu = new SfuConnection({ request: voiceRequest }, iceServers, {
+  /** A connection to the SFU whose remote tracks land in the same state the
+   * peer-to-peer path fills (remoteStreams, screenShares, speaking). Once
+   * replaced by a newer one (see restartSfu), whatever it still reports is
+   * ignored. */
+  function createSfu(iceServers: RTCIceServer[]): SfuConnection {
+    const sfu: SfuConnection = new SfuConnection({ request: voiceRequest }, iceServers, {
       onRemoteTrack: (userId, trackName, track) => {
+        if (sfuRef.current !== sfu) return;
         const remote = new MediaStream([track]);
         if (trackName === 'screen') {
           setScreenShares((prev) => ({ ...prev, [userId]: remote }));
@@ -815,6 +846,7 @@ export function useVoiceChannel(user: User) {
         }
       },
       onRemoteTrackRemoved: (userId, trackName) => {
+        if (sfuRef.current !== sfu) return;
         if (trackName === 'screen') {
           handleScreenShareStopped({ user_id: userId });
         } else {
@@ -827,15 +859,109 @@ export function useVoiceChannel(user: User) {
           });
         }
       },
-      // One connection carries everyone, so its trouble is everyone's.
       onConnectionStateChange: (state) => {
-        const others = latestParticipantsRef.current
-          .map((u) => u.user_id)
-          .filter((id) => id !== user.id);
-        const reconnecting = state === 'disconnected' || state === 'failed';
-        others.forEach((id) => setReconnecting(id, reconnecting));
+        if (sfuRef.current === sfu) handleSfuConnectionState(state);
       },
     });
+    return sfu;
+  }
+
+  // One connection carries everyone, so its trouble is everyone's.
+  function handleSfuConnectionState(state: RTCPeerConnectionState) {
+    const recovery = sfuRecoveryRef.current;
+
+    if (state === 'connected') {
+      if (recovery.graceTimer !== null) window.clearTimeout(recovery.graceTimer);
+      recovery.graceTimer = null;
+      recovery.attempts = 0;
+      otherParticipantIds().forEach((id) => setReconnecting(id, false));
+    } else if (state === 'disconnected') {
+      otherParticipantIds().forEach((id) => setReconnecting(id, true));
+      if (recovery.graceTimer === null) {
+        recovery.graceTimer = window.setTimeout(() => {
+          recovery.graceTimer = null;
+          scheduleSfuRestart();
+        }, SFU_DISCONNECT_GRACE_MS);
+      }
+    } else if (state === 'failed') {
+      if (recovery.graceTimer !== null) window.clearTimeout(recovery.graceTimer);
+      recovery.graceTimer = null;
+      otherParticipantIds().forEach((id) => setReconnecting(id, true));
+      scheduleSfuRestart();
+    }
+  }
+
+  /** Starts the SFU connection over after the next pause in
+   * SFU_RESTART_DELAYS_MS — or at once (`immediate`) when the voice channel
+   * was joined again, since the new channel on the server holds no session
+   * for us. Gives up, ending the call, once every attempt has been used. */
+  function scheduleSfuRestart(immediate = false) {
+    if (!sfuRef.current) return;
+    const recovery = sfuRecoveryRef.current;
+
+    if (recovery.restartTimer !== null) {
+      if (!immediate) return;
+      window.clearTimeout(recovery.restartTimer);
+      recovery.restartTimer = null;
+    }
+
+    if (recovery.attempts >= SFU_RESTART_DELAYS_MS.length) {
+      leave();
+      setError(t('Ses bağlantısı koptu. Lütfen kanala yeniden katılın.'));
+      return;
+    }
+
+    const delay = immediate ? 0 : SFU_RESTART_DELAYS_MS[recovery.attempts];
+    recovery.attempts += 1;
+    otherParticipantIds().forEach((id) => setReconnecting(id, true));
+
+    const generation = joinGenerationRef.current;
+    recovery.restartTimer = window.setTimeout(() => {
+      recovery.restartTimer = null;
+      void restartSfu(generation);
+    }, delay);
+  }
+
+  /** Closes the SFU connection and starts a new one in a fresh session:
+   * the microphone, the screen if it's being shared, and everyone else's
+   * tracks again. */
+  async function restartSfu(generation: number) {
+    const stream = localStreamRef.current;
+    if (joinGenerationRef.current !== generation || !sfuRef.current || !stream) return;
+
+    const run = ++sfuRecoveryRef.current.run;
+    sfuRef.current.close();
+
+    // What came over the old connection is dead; the new one pulls it again.
+    Array.from(analysersRef.current.keys())
+      .filter((id) => id !== user.id)
+      .forEach(stopWatchingSpeaking);
+    setRemoteStreams({});
+    setScreenShares((prev) => (user.id in prev ? { [user.id]: prev[user.id] } : {}));
+
+    const iceServers = await getIceServers();
+    if (joinGenerationRef.current !== generation || sfuRecoveryRef.current.run !== run) return;
+
+    const sfu = createSfu(iceServers);
+    sfuRef.current = sfu;
+
+    try {
+      await sfu.start(stream.getAudioTracks()[0], stream, { renew: true });
+      const screen = screenStreamRef.current;
+      const [screenTrack] = screen?.getVideoTracks() ?? [];
+      if (screen && screenTrack) await sfu.publishScreen(screenTrack, screen);
+      await sfu.sync(latestParticipantsRef.current.filter((u) => u.user_id !== user.id));
+    } catch {
+      if (joinGenerationRef.current === generation && sfuRef.current === sfu) scheduleSfuRestart();
+    }
+  }
+
+  /** Connects to the SFU and publishes the microphone. */
+  async function startSfu(stream: MediaStream, generation: number) {
+    const iceServers = await getIceServers();
+    if (joinGenerationRef.current !== generation) return;
+
+    const sfu = createSfu(iceServers);
     sfuRef.current = sfu;
 
     try {
@@ -911,6 +1037,7 @@ export function useVoiceChannel(user: User) {
         onAnswer: (payload) => void handleAnswer(payload),
         onIceCandidate: (payload) => void handleIceCandidate(payload),
         onScreenShareStopped: (payload) => handleScreenShareStopped(payload),
+        onRejoin: () => scheduleSfuRestart(true),
       });
 
       if (joinGenerationRef.current !== myGeneration) {

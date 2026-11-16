@@ -194,6 +194,31 @@ describe('SfuConnection', () => {
     expect(FakePeerConnection.last.transceivers[1].stopped).toBe(true);
   });
 
+  it('can start over in a fresh session, and says which session it is in', async () => {
+    const { calls, signaling } = fakeSignaling();
+    const sfu = new SfuConnection(signaling, [], callbacks());
+    expect(sfu.sessionId).toBeNull();
+
+    await sfu.start(mic, stream, { renew: true });
+
+    expect(calls[0]).toEqual({ event: 'sfu_session', payload: { renew: true } });
+    expect(sfu.sessionId).toBe('mine');
+  });
+
+  it("pulls someone's tracks again when they come back in a new session", async () => {
+    const { calls, signaling } = fakeSignaling();
+    const cb = callbacks();
+    const sfu = new SfuConnection(signaling, [], cb);
+    await sfu.start(mic, stream);
+    await sfu.sync([{ user_id: 'ayse', sfu_session: 'old', sfu_tracks: ['audio'] }]);
+
+    await sfu.sync([{ user_id: 'ayse', sfu_session: 'new', sfu_tracks: ['audio'] }]);
+
+    expect(cb.removed).toEqual(['ayse/audio']);
+    expect(cb.added).toEqual(['ayse/audio', 'ayse/audio']);
+    expect(calls.map((c) => c.event).slice(-3)).toEqual(['sfu_close', 'sfu_pull', 'sfu_renegotiate']);
+  });
+
   it('keeps going after a failed step, and does nothing once closed', async () => {
     const { calls, signaling } = fakeSignaling();
     const sfu = new SfuConnection(signaling, [], callbacks());

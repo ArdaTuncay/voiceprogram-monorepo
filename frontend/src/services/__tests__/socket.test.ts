@@ -258,8 +258,8 @@ describe('joinVoiceChannel — an established call keeps Phoenix\'s automatic re
   /** Joins successfully, then drops the connection and lets Phoenix
    * reconnect on its own — returning the new connection, on which Phoenix
    * has already re-sent the voice join by itself. */
-  async function joinThenReconnect(): Promise<FakeWebSocket> {
-    const pending = joinVoiceChannel('v1', voiceCallbacks());
+  async function joinThenReconnect(callbacks = voiceCallbacks()): Promise<FakeWebSocket> {
+    const pending = joinVoiceChannel('v1', callbacks);
     const first = FakeWebSocket.latest();
     first.open();
     first.reply(first.lastFrame('voice:v1', 'phx_join'), 'ok', { peers: [] });
@@ -285,6 +285,16 @@ describe('joinVoiceChannel — an established call keeps Phoenix\'s automatic re
     expect(FakeWebSocket.framesEverywhere('voice:v1', 'phx_leave')).toHaveLength(0);
     // Joined: no further join attempts were needed.
     expect(FakeWebSocket.framesEverywhere('voice:v1', 'phx_join')).toHaveLength(2);
+  });
+
+  it('says so once the room is joined again, so what the old channel held can be set up anew', async () => {
+    const callbacks = { ...voiceCallbacks(), onRejoin: vi.fn() };
+    const ws = await joinThenReconnect(callbacks);
+    expect(callbacks.onRejoin).not.toHaveBeenCalled();
+
+    ws.reply(ws.lastFrame('voice:v1', 'phx_join'), 'ok', { peers: [] });
+
+    expect(callbacks.onRejoin).toHaveBeenCalledTimes(1);
   });
 
   it('a rejoin the server rejects (e.g. its old session not cleaned up yet) is retried, not left', async () => {
