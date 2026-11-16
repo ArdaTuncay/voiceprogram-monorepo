@@ -229,7 +229,10 @@ defmodule BackendWeb.ChatChannel do
   # Lets every other server member know a message landed, even if they aren't
   # viewing this channel right now — their personal "user:<id>" channel is
   # how Chat.tsx drives desktop notifications and unread badges for channels
-  # they don't currently have open.
+  # they don't currently have open. One broadcast to the server's shared
+  # topic, which each member's UserChannel relays (skipping the author's own
+  # message) — not one per member, which grew with the server and held up
+  # this process (see bench/notify_fanout.exs).
   defp notify_other_members(socket, message, serialized) do
     payload =
       Map.merge(serialized, %{
@@ -238,12 +241,7 @@ defmodule BackendWeb.ChatChannel do
         server_id: socket.assigns.server_id
       })
 
-    socket.assigns.server_id
-    |> Servers.list_member_user_ids()
-    |> Enum.reject(&(&1 == message.user_id))
-    |> Enum.each(fn member_id ->
-      BackendWeb.Endpoint.broadcast("user:#{member_id}", "new_message", payload)
-    end)
+    Servers.broadcast_new_message(socket.assigns.server_id, payload)
 
     push_to_mentioned(socket, message, serialized)
   end

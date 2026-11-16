@@ -35,6 +35,15 @@ defmodule Backend.Servers do
   a default "genel" text channel — all in one transaction.
   """
   def create_server(attrs, user_id) do
+    attrs
+    |> insert_server(user_id)
+    |> tap(fn
+      {:ok, server} -> announce_membership_added(server.id, user_id)
+      _ -> :ok
+    end)
+  end
+
+  defp insert_server(attrs, user_id) do
     Repo.transaction(fn ->
       with {:ok, server} <-
              %Server{}
@@ -77,6 +86,45 @@ defmodule Backend.Servers do
   `revoke_channel_access/2`.
   """
   def membership_topic(server_id, user_id), do: "server_membership:#{server_id}:#{user_id}"
+
+  @doc """
+  Where a server announces every new channel message to all of its members
+  at once (see `broadcast_new_message/2`): each member's
+  `BackendWeb.UserChannel` listens on it for every server they're in, and
+  relays it as `"new_message"`. One broadcast per message, however big the
+  server, instead of one per member.
+  """
+  def notifications_topic(server_id), do: "server_notifications:#{server_id}"
+
+  @doc """
+  Where `user_id`'s `BackendWeb.UserChannel` hears that they joined a server
+  (`{:server_membership_added, server_id}`), so it can start listening on
+  that server's `notifications_topic/1`. Leaving goes through
+  `revoke_channel_access/2`, like every other server-scoped channel.
+  """
+  def user_servers_topic(user_id), do: "user_servers:#{user_id}"
+
+  @doc "Sends `payload` (a serialized message) to every member of `server_id` — see `notifications_topic/1`."
+  def broadcast_new_message(server_id, payload) do
+    Phoenix.PubSub.broadcast(
+      Backend.PubSub,
+      notifications_topic(server_id),
+      {:new_message, payload}
+    )
+  end
+
+  @doc "The ids of the servers `user_id` is a member of."
+  def list_server_ids_for_user(user_id) do
+    Repo.all(from m in ServerMember, where: m.user_id == ^user_id, select: m.server_id)
+  end
+
+  defp announce_membership_added(server_id, user_id) do
+    Phoenix.PubSub.broadcast(
+      Backend.PubSub,
+      user_servers_topic(user_id),
+      {:server_membership_added, server_id}
+    )
+  end
 
   @doc """
   Subscribes the calling channel process to `membership_topic/2`.
@@ -678,8 +726,12 @@ defmodule Backend.Servers do
       end)
 
     case result do
-      {:ok, server} -> {:ok, server}
-      {:error, changeset} -> {:error, changeset}
+      {:ok, server} ->
+        announce_membership_added(server.id, user_id)
+        {:ok, server}
+
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 end
