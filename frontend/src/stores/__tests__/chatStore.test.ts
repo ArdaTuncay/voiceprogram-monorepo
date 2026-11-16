@@ -82,7 +82,7 @@ describe('useChatStore', () => {
 
     useChatStore.getState().sendMessage();
 
-    expect(shout).toHaveBeenCalledWith('hello world', undefined, undefined, expect.any(Function), undefined);
+    expect(shout).toHaveBeenCalledWith('hello world', undefined, expect.any(Function), undefined);
     expect(useChatStore.getState().draft).toBe('');
   });
 
@@ -162,7 +162,12 @@ describe('useChatStore', () => {
 
     await useChatStore.getState().handleFileSelected(new File(['x'], 'x.png', { type: 'image/png' }));
 
-    expect(shout).toHaveBeenCalledWith('', '/uploads/x.png', 'image/png', expect.any(Function), undefined);
+    expect(shout).toHaveBeenCalledWith(
+      '',
+      { file_url: '/uploads/x.png', file_type: 'image/png' },
+      expect.any(Function),
+      undefined
+    );
     expect(useChatStore.getState().uploadError).toBe('');
   });
 });
@@ -302,7 +307,7 @@ describe('useChatStore — yanıt', () => {
 
     useChatStore.getState().sendMessage();
 
-    expect(shout).toHaveBeenCalledWith('cevap', undefined, undefined, expect.any(Function), 'orig');
+    expect(shout).toHaveBeenCalledWith('cevap', undefined, expect.any(Function), 'orig');
     expect(useChatStore.getState().replyingTo).toBeNull();
   });
 

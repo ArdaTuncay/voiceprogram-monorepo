@@ -8,6 +8,7 @@ import { userColor, initials } from '../utils';
 import { formatMessageTime } from '../utils/formatMessageTime';
 import { isMentioned } from '../services/notificationPreferences';
 import AvatarFace from './AvatarFace';
+import FileAttachment from './FileAttachment';
 import MessageContent from './MessageContent';
 import MessageReactions from './MessageReactions';
 import MessageContextMenu from './MessageContextMenu';
@@ -194,14 +195,22 @@ export default function MessageItem({
         ) : (
           <>
             {message.content && <MessageContent content={message.content} />}
-            {message.file_url && message.file_type?.startsWith('image/') && (
-              <img
-                src={resolveFileUrl(message.file_url)}
-                alt="ek"
-                className="message-attachment-image"
-                onClick={() => onImageClick(message.file_url!)}
-              />
-            )}
+            {message.file_url &&
+              (message.file_type?.startsWith('image/') ? (
+                <img
+                  src={resolveFileUrl(message.file_url)}
+                  alt="ek"
+                  className="message-attachment-image"
+                  onClick={() => onImageClick(message.file_url!)}
+                />
+              ) : (
+                <FileAttachment
+                  fileUrl={message.file_url}
+                  fileType={message.file_type}
+                  fileName={message.file_name}
+                  fileSize={message.file_size}
+                />
+              ))}
           </>
         )}
 

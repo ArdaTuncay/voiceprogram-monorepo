@@ -50,6 +50,10 @@ export interface ChatMessage {
   content: string;
   file_url: string | null;
   file_type: string | null;
+  /** The attachment's original name and size in bytes; absent/null on
+   * text-only messages and on files sent before these were kept. */
+  file_name?: string | null;
+  file_size?: number | null;
   user_id: string;
   username: string | null;
   /** Profile picture URL (see Backend.Uploads), or null for the initials. */
@@ -110,9 +114,14 @@ export interface ReactionToggledPayload {
  * rejoin, even after its timeout has fired. */
 export type PushFailure = { kind: 'error'; reason?: string } | { kind: 'timeout' };
 
+/** `POST /api/upload`'s reply — also exactly what a message push carries as
+ * its attachment (see services/socket.ts's shout/sendDmMessage). */
 export interface UploadResult {
   file_url: string;
   file_type: string;
+  /** Optional only for older fixtures; the server always sends both. */
+  file_name?: string;
+  file_size?: number;
 }
 
 export interface NewMessageNotification extends ChatMessage {

@@ -12,6 +12,10 @@ defmodule Backend.DirectMessages.DmMessage do
     field :content, :string
     field :file_url, :string
     field :file_type, :string
+    # The attachment's original name and size in bytes, for display (see
+    # Backend.Uploads.store/1); nil on older messages.
+    field :file_name, :string
+    field :file_size, :integer
     field :is_edited, :boolean, default: false
     field :reactions, {:array, :map}, virtual: true, default: []
     # DB-assigned monotonic sequence — the authoritative send order for
@@ -34,11 +38,20 @@ defmodule Backend.DirectMessages.DmMessage do
 
   def changeset(message, attrs) do
     message
-    |> cast(attrs, [:content, :file_url, :file_type, :user_id, :dm_room_id, :reply_to_id])
+    |> cast(attrs, [
+      :content,
+      :file_url,
+      :file_type,
+      :file_name,
+      :file_size,
+      :user_id,
+      :dm_room_id,
+      :reply_to_id
+    ])
     |> validate_required([:user_id, :dm_room_id])
     |> validate_length(:content, max: 4000)
     |> validate_content_or_file()
-    |> validate_attachment()
+    |> Backend.Uploads.validate_attachment()
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:dm_room_id)
     |> foreign_key_constraint(:reply_to_id)
@@ -68,6 +81,8 @@ defmodule Backend.DirectMessages.DmMessage do
       content: nil,
       file_url: nil,
       file_type: nil,
+      file_name: nil,
+      file_size: nil,
       deleted_at: DateTime.truncate(DateTime.utc_now(), :second)
     )
   end
@@ -86,18 +101,4 @@ defmodule Backend.DirectMessages.DmMessage do
 
   defp blank?(nil), do: true
   defp blank?(value), do: String.trim(value) == ""
-
-  # Attachments must be files this server stored (see
-  # Backend.Uploads.own_file_url?/1) — not any URL a client sends.
-  defp validate_attachment(changeset) do
-    changeset
-    |> validate_change(:file_url, fn :file_url, url ->
-      if Backend.Uploads.own_file_url?(url), do: [], else: [file_url: "is not an uploaded file"]
-    end)
-    |> validate_change(:file_type, fn :file_type, type ->
-      if Backend.Uploads.allowed_content_type?(type),
-        do: [],
-        else: [file_type: "is not a supported attachment type"]
-    end)
-  end
 end

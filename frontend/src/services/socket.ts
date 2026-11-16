@@ -1,6 +1,7 @@
 import { Socket, Channel, Presence } from 'phoenix';
 import type {
   ChatMessage,
+  UploadResult,
   PresenceUser,
   VoiceSignalPayload,
   NewMessageNotification,
@@ -159,16 +160,14 @@ function pushErrorHandler(onFailure: PushFailureHandler | undefined) {
 /** Sends a "shout" event with the message content (and optional attachment); the server attributes it to the authenticated user. `onFailure` also hears about a push that got no reply in time. */
 export function shout(
   content: string,
-  fileUrl?: string,
-  fileType?: string,
+  attachment?: UploadResult,
   onFailure?: PushFailureHandler,
   replyToId?: string
 ): void {
   textChannel
     ?.push('shout', {
       content,
-      file_url: fileUrl,
-      file_type: fileType,
+      ...attachment,
       ...(replyToId ? { reply_to_id: replyToId } : {}),
     })
     .receive('error', pushErrorHandler(onFailure))
@@ -246,16 +245,14 @@ export function joinDmChannel(roomId: string, callbacks: ChannelCallbacks): () =
 /** Sends a "shout" event with the message content (and optional attachment) to the active DM room. Same `onFailure` contract as `shout`, plus a "blocked" rejection. */
 export function sendDmMessage(
   content: string,
-  fileUrl?: string,
-  fileType?: string,
+  attachment?: UploadResult,
   onFailure?: PushFailureHandler,
   replyToId?: string
 ): void {
   dmChannel
     ?.push('shout', {
       content,
-      file_url: fileUrl,
-      file_type: fileType,
+      ...attachment,
       ...(replyToId ? { reply_to_id: replyToId } : {}),
     })
     .receive('error', pushErrorHandler(onFailure))

@@ -9,10 +9,11 @@ defmodule BackendWeb.SecurityHeadersPlug do
   JSON routes, WebSocket sockets, and dev-only LiveDashboard), and the
   React frontend is deployed separately (Vercel), not served from this
   endpoint. `Plug.Static` here only ever serves `favicon.ico`, `robots.txt`,
-  and user-uploaded chat images under `/uploads` (see `Backend.Uploads`,
-  which only accepts `image/png|jpeg|gif|webp`). The CSP below is scoped
-  to exactly that: nothing needs to load a script, a stylesheet, or a
-  cross-origin resource from this origin.
+  and user-uploaded chat attachments under `/uploads` (see
+  `Backend.Uploads`: images, which display inline, and documents/archives,
+  which `BackendWeb.UploadDispositionPlug` makes download). The CSP below
+  is scoped to exactly that: nothing needs to load a script, a stylesheet,
+  or a cross-origin resource from this origin.
 
   HSTS is gated on the runtime `:environment` flag (see config/runtime.exs)
   rather than compile-time `Mix.env()`, and only sent in `:prod` — sending
