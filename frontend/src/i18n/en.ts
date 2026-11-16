@@ -469,4 +469,15 @@ export const en = {
   'Kimseyi engellemedin.': "You haven't blocked anyone.",
   'Kaldırılıyor…': 'Removing…',
   'Engeli Kaldır': 'Unblock',
+
+  // ── Active sessions (ActiveSessions.tsx, utils/device.ts) ────────────
+  'Aktif Oturumlar': 'Active Sessions',
+  'Oturumlar alınamadı': "Couldn't load your sessions",
+  'Bu cihaz': 'This device',
+  'Son etkinlik: {when}': 'Last active: {when}',
+  'Oturumu kapat': 'Sign out',
+  '{device} oturumunu kapat': 'Sign out {device}',
+  'Diğer tüm oturumları kapat': 'Sign out all other sessions',
+  'Bilinmeyen cihaz': 'Unknown device',
+  'Zircle Masaüstü': 'Zircle Desktop',
 } satisfies Record<string, Translation>;

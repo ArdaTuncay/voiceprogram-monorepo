@@ -40,7 +40,10 @@ defmodule BackendWeb.Router do
   scope "/api", BackendWeb do
     pipe_through [:api, :authenticated]
 
+    post "/users/logout", SessionController, :logout
     post "/users/logout_all", UserController, :logout_all
+    get "/account/sessions", SessionController, :index
+    delete "/account/sessions/:id", SessionController, :delete
     post "/users/renew-token", UserController, :renew_token
 
     patch "/account/username", AccountController, :update_username

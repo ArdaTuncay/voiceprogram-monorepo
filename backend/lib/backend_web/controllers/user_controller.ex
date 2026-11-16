@@ -53,7 +53,7 @@ defmodule BackendWeb.UserController do
           username: user.username,
           email: user.email,
           avatar_url: user.avatar_url,
-          token: Accounts.generate_user_token(user)
+          token: Accounts.generate_user_token(user, BackendWeb.DeviceInfo.from_conn(conn))
         })
 
       {:error, _} ->
@@ -73,7 +73,6 @@ defmodule BackendWeb.UserController do
   def logout_all(conn, _params) do
     user = conn.assigns.current_user
     {:ok, _user} = Accounts.revoke_all_tokens(user)
-    BackendWeb.Endpoint.broadcast("user_socket:#{user.id}", "disconnect", %{})
     send_resp(conn, :no_content, "")
   end
 
@@ -83,7 +82,14 @@ defmodule BackendWeb.UserController do
   on app start and every 12 hours while open.
   """
   def renew_token(conn, _params) do
-    json(conn, %{token: Accounts.renew_user_token(conn.assigns.current_user)})
+    token =
+      Accounts.renew_user_token(
+        conn.assigns.current_user,
+        conn.assigns.current_session_id,
+        BackendWeb.DeviceInfo.from_conn(conn)
+      )
+
+    json(conn, %{token: token})
   end
 
   defp format_errors(changeset) do

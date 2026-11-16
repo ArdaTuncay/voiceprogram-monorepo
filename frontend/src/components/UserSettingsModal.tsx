@@ -30,6 +30,7 @@ import { microphoneErrorMessage } from '../utils/errorMessages';
 import { t, useT, type MessageKey } from '../i18n';
 import { rich } from '../i18n/rich';
 import LanguageSelect from './LanguageSelect';
+import ActiveSessions from './ActiveSessions';
 import './UserSettingsModal.css';
 
 type Category =
@@ -941,6 +942,9 @@ function PrivacySettings({ user }: { user: User }) {
           </button>
         ))}
       </div>
+
+      <h4 className="account-form-title privacy-blocked-title">{t('Aktif Oturumlar')}</h4>
+      <ActiveSessions />
 
       <h4 className="account-form-title privacy-blocked-title">{t('Engellenen Kullanıcılar')}</h4>
 

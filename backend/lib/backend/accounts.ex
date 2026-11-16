@@ -8,7 +8,7 @@ defmodule Backend.Accounts do
 
   require Logger
 
-  alias Backend.Accounts.{User, UserNotifier}
+  alias Backend.Accounts.{Session, User, UserNotifier}
   alias Backend.Friends.Friendship
   alias Backend.Repo
   alias Backend.Servers
@@ -90,62 +90,189 @@ defmodule Backend.Accounts do
   end
 
   @doc """
-  Signs a token identifying the given user, valid for 7 days (subject to
-  early invalidation — see `authenticate_token/1`). The signed payload
-  carries `token_version` alongside the user id so verification can check
-  it against the user's *current* `token_version` column.
+  Signs a token for `user`, valid for 7 days, and opens a session for it
+  (see `Backend.Accounts.Session`) recording `device` — `%{user_agent:,
+  ip:}` from the sign-in request. The payload carries the session's id
+  and `token_version` alongside the user id; `authenticate_session/1`
+  checks both against the database, so a token stops working the moment
+  its session is signed out or every session is (password change,
+  "sign out everywhere").
 
-  This used to compare wall-clock timestamps (`signed_at` vs. a
-  `token_valid_from` column) instead, but that was racy: two
-  `DateTime.utc_now()` reads close together can compare equal rather than
-  older whenever OS clock resolution exceeds the real gap between them (as
-  little as ~15ms on this project's Windows dev host — the same class of
-  bug that hit `messages.inserted_at`, see the `add_seq_to_messages`
-  migration), and the old check treated "not older" as still valid — so an
-  actually-revoked token could occasionally keep working. A plain integer
-  bumped by exactly 1 per revocation has no clock to race: validity is a
-  DB-consistent equality check, not a timestamp comparison.
+  `token_version` replaced an earlier wall-clock comparison (`signed_at`
+  vs. a `token_valid_from` column) that was racy: two `DateTime.utc_now()`
+  reads close together can compare equal rather than older whenever OS
+  clock resolution exceeds the real gap between them (as little as ~15ms
+  on this project's Windows dev host — the same class of bug that hit
+  `messages.inserted_at`, see the `add_seq_to_messages` migration). A plain
+  integer bumped by exactly 1 per revocation has no clock to race.
   """
-  def generate_user_token(user) do
-    payload = %{user_id: user.id, token_version: user.token_version}
+  def generate_user_token(%User{} = user, device \\ %{}) do
+    session = create_session(user, device)
+    sign_token(user, session.id)
+  end
+
+  defp sign_token(user, session_id) do
+    payload = %{user_id: user.id, token_version: user.token_version, session_id: session_id}
     Phoenix.Token.sign(BackendWeb.Endpoint, @token_salt, payload)
   end
 
   @doc """
-  Verifies a token produced by `generate_user_token/1` and returns the user
-  it identifies.
-
-  Rejects the token (as `{:error, :invalid}`) if the signature/max_age check
-  fails, the user no longer exists, or — the point of this check — the
-  token's `token_version` no longer matches the user's current one (bumped
-  on password change and by `POST /api/users/logout_all`), so tokens issued
-  before a security-relevant event stop working immediately instead of
-  lingering until their natural 7-day expiry.
+  Verifies a token produced by `generate_user_token/2` and returns the user
+  it identifies — see `authenticate_session/1`.
   """
   def authenticate_token(token) do
-    with {:ok, %{user_id: user_id, token_version: token_version}} <-
+    case authenticate_session(token) do
+      {:ok, user, _session_id} -> {:ok, user}
+      error -> error
+    end
+  end
+
+  @doc """
+  Verifies a token and returns `{:ok, user, session_id}`.
+
+  Rejects it (`{:error, :invalid}`) if the signature/max_age check fails,
+  the user no longer exists, its session has been signed out, or its
+  `token_version` no longer matches the user's current one (bumped on
+  password change and by `revoke_all_tokens/1`).
+
+  Tokens issued before sessions existed carry no session id; they keep
+  working until they expire (`session_id` is `nil`) — the app renews its
+  token as soon as it opens, which gives it a session (`renew_user_token/3`).
+  """
+  def authenticate_session(token) do
+    with {:ok, %{user_id: user_id, token_version: token_version} = payload} <-
            Phoenix.Token.verify(BackendWeb.Endpoint, @token_salt, token, max_age: @token_max_age),
-         %User{} = user <- get_user(user_id),
+         {%User{} = user, session_id} <- session_user(user_id, Map.get(payload, :session_id)),
          true <- token_version == user.token_version do
-      {:ok, user}
+      {:ok, user, session_id}
     else
       _ -> {:error, :invalid}
     end
   end
 
-  @doc """
-  Issues a fresh 7-day token for an already-authenticated `user` — how an
-  open app keeps its session alive (POST /api/users/renew-token). Carries
-  the user's current `token_version`, so revocation still applies: a token
-  revoked by `revoke_all_tokens/1` or a password change can't get this far
-  (it fails authentication first).
-  """
-  def renew_user_token(%User{} = user), do: generate_user_token(user)
+  defp session_user(user_id, nil), do: {get_user(user_id), nil}
+
+  defp session_user(user_id, session_id) do
+    query =
+      from s in Session,
+        join: u in assoc(s, :user),
+        where: s.id == ^session_id and s.user_id == ^user_id,
+        select: {u, s}
+
+    case Repo.one(query) do
+      {user, session} ->
+        touch_session(session)
+        {user, session.id}
+
+      nil ->
+        :error
+    end
+  end
+
+  # "Last active" only needs minute-level accuracy: write at most every
+  # five minutes per session rather than on every request.
+  @touch_interval 5 * 60
+
+  defp touch_session(%Session{id: id, last_seen_at: last_seen_at}) do
+    now = DateTime.utc_now(:second)
+
+    if DateTime.diff(now, last_seen_at) >= @touch_interval do
+      Repo.update_all(from(s in Session, where: s.id == ^id), set: [last_seen_at: now])
+    end
+
+    :ok
+  end
 
   @doc """
-  Bumps `token_version`, invalidating every token issued before this call —
-  used by `POST /api/users/logout_all` to force every other (and this)
-  device to re-authenticate.
+  Issues a fresh 7-day token for an already-authenticated `user` — how an
+  open app keeps its session alive (POST /api/users/renew-token). Keeps the
+  same session (updating its IP and activity); a token from before sessions
+  existed gets one now. Carries the user's current `token_version`, so
+  revocation still applies: a revoked token can't get this far (it fails
+  authentication first).
+  """
+  def renew_user_token(%User{} = user, nil, device), do: generate_user_token(user, device)
+
+  def renew_user_token(%User{} = user, session_id, device) do
+    Repo.update_all(from(s in Session, where: s.id == ^session_id),
+      set: [last_seen_at: DateTime.utc_now(:second), ip: device[:ip]]
+    )
+
+    sign_token(user, session_id)
+  end
+
+  @doc """
+  The user's active sessions, most recently active first. A session whose
+  last activity is older than a token's lifetime can't hold a valid token
+  any more, so it isn't listed (and is cleaned up at the next sign-in).
+  """
+  def list_sessions(%User{id: user_id}) do
+    Repo.all(
+      from s in Session,
+        where: s.user_id == ^user_id and s.last_seen_at >= ^oldest_live_activity(),
+        order_by: [desc: s.last_seen_at, desc: s.inserted_at]
+    )
+  end
+
+  @doc """
+  Signs out one of `user`'s sessions: its token stops working and its live
+  sockets are dropped. `{:error, :not_found}` if it isn't theirs.
+  """
+  def revoke_session(%User{id: user_id}, session_id) do
+    with {:ok, id} <- Ecto.UUID.cast(session_id),
+         {1, _} <-
+           Repo.delete_all(from s in Session, where: s.id == ^id and s.user_id == ^user_id) do
+      disconnect_session(id)
+      :ok
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Ends every session of `user_id` and drops all of their live sockets —
+  after a password change or reset, "sign out everywhere" and account
+  deletion. (Their tokens are already invalid by then through
+  `token_version`; this clears the session list and the sockets.)
+  """
+  def end_all_sessions(user_id) do
+    {_count, ids} =
+      Repo.delete_all(from(s in Session, where: s.user_id == ^user_id, select: s.id))
+
+    Enum.each(ids, &disconnect_session/1)
+    # Sockets opened with a token from before sessions existed.
+    BackendWeb.Endpoint.broadcast("user_socket:#{user_id}", "disconnect", %{})
+    :ok
+  end
+
+  defp disconnect_session(id),
+    do: BackendWeb.Endpoint.broadcast("user_socket:session:#{id}", "disconnect", %{})
+
+  defp create_session(%User{id: user_id}, device) do
+    # Sessions no token can still be valid for — dropped as new ones open.
+    Repo.delete_all(
+      from s in Session, where: s.user_id == ^user_id and s.last_seen_at < ^oldest_live_activity()
+    )
+
+    now = DateTime.utc_now(:second)
+
+    Repo.insert!(%Session{
+      user_id: user_id,
+      user_agent: device |> Map.get(:user_agent) |> truncate(512),
+      ip: Map.get(device, :ip),
+      last_seen_at: now
+    })
+  end
+
+  defp oldest_live_activity, do: DateTime.add(DateTime.utc_now(:second), -@token_max_age)
+
+  defp truncate(nil, _max), do: nil
+  defp truncate(text, max), do: String.slice(text, 0, max)
+
+  @doc """
+  Bumps `token_version`, invalidating every token issued before this call,
+  and ends every session — used by `POST /api/users/logout_all` to force
+  every other (and this) device to re-authenticate.
 
   Increments atomically at the DB level (`Repo.update_all/3` with `inc:`)
   rather than reading `user.token_version`, adding 1 in Elixir, and writing
@@ -158,8 +285,12 @@ defmodule Backend.Accounts do
     query = from(u in User, where: u.id == ^id, select: u)
 
     case Repo.update_all(query, inc: [token_version: 1]) do
-      {1, [user]} -> {:ok, user}
-      {0, []} -> {:error, :not_found}
+      {1, [user]} ->
+        end_all_sessions(id)
+        {:ok, user}
+
+      {0, []} ->
+        {:error, :not_found}
     end
   end
 
@@ -235,6 +366,7 @@ defmodule Backend.Accounts do
       user
       |> User.password_changeset(%{"password" => new_password})
       |> Repo.update()
+      |> tap(&with({:ok, updated} <- &1, do: end_all_sessions(updated.id)))
     else
       {:error, :invalid_current_password}
     end
@@ -432,7 +564,7 @@ defmodule Backend.Accounts do
     end)
     |> case do
       {:ok, user} ->
-        BackendWeb.Endpoint.broadcast("user_socket:#{user.id}", "disconnect", %{})
+        end_all_sessions(user.id)
         {:ok, user}
 
       error ->
@@ -615,6 +747,7 @@ defmodule Backend.Accounts do
       |> Repo.transaction()
       |> case do
         {:ok, result} ->
+          end_all_sessions(user.id)
           broadcast_deletion_effects(result)
           {:ok, result.anonymized_user}
 

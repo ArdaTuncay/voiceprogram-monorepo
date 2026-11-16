@@ -3,7 +3,7 @@ import type { User } from './types';
 import { getStoredToken, loadStoredUser, storeUser } from './services/tokenStorage';
 import { forceLogout } from './services/session';
 import { useSessionStore } from './stores/useSessionStore';
-import { renewSessionToken } from './services/api';
+import { logoutCurrentSession, renewSessionToken } from './services/api';
 import Auth from './components/Auth';
 import Chat from './components/Chat';
 import VerifyEmailPage from './components/VerifyEmailPage';
@@ -44,6 +44,10 @@ export default function App() {
   // (rather than relying solely on the forcedLogoutAt effect below) makes
   // the transition immediate rather than waiting on a second render.
   function handleLogout() {
+    // Sent with the current token before it's cleared below (authedFetch
+    // reads it synchronously); not awaited — signing out here never waits
+    // on the network.
+    void logoutCurrentSession();
     forceLogout();
     setUser(null);
   }

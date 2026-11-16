@@ -14,6 +14,9 @@ vi.mock('../../services/api', () => ({
   blockUser: vi.fn(),
   unblockUser: vi.fn(),
   deleteAccount: vi.fn(),
+  // The privacy tab also lists active sessions (see ActiveSessions.test.tsx).
+  fetchSessions: vi.fn().mockResolvedValue({ data: [] }),
+  revokeSession: vi.fn(),
 }));
 
 vi.mock('../../services/socket', () => ({
