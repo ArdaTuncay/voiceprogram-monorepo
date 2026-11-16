@@ -6,6 +6,7 @@ import type { ThemePreference } from '../services/theme';
 import { getStoredPreference, setThemePreference } from '../services/theme';
 import {
   deleteAccount,
+  fetchAdminStatus,
   updateEmail,
   updateFriendRequestPrivacy,
   updateAvatar,
@@ -34,6 +35,7 @@ import { rich } from '../i18n/rich';
 import LanguageSelect from './LanguageSelect';
 import ActiveSessions from './ActiveSessions';
 import TwoFactorSettings from './TwoFactorSettings';
+import DmReports from './DmReports';
 import './UserSettingsModal.css';
 
 type Category =
@@ -43,7 +45,8 @@ type Category =
   | 'voice'
   | 'privacy'
   | 'shortcuts'
-  | 'data';
+  | 'data'
+  | 'dm-reports';
 
 const CATEGORIES: { id: Category; label: MessageKey }[] = [
   { id: 'account', label: 'Hesabım' },
@@ -54,6 +57,9 @@ const CATEGORIES: { id: Category; label: MessageKey }[] = [
   { id: 'shortcuts', label: 'Klavye Kısayolları' },
   { id: 'data', label: 'Hesap Silme / Veri Yönetimi' },
 ];
+
+// Only for platform admins (see BackendWeb.AdminReportController).
+const ADMIN_CATEGORIES: { id: Category; label: MessageKey }[] = [{ id: 'dm-reports', label: 'DM Raporları' }];
 
 interface Props {
   user: User;
@@ -73,6 +79,17 @@ export default function UserSettingsModal({ user, onUserUpdated, onClose }: Prop
   // and re-render along with this one.
   useT();
   const [category, setCategory] = useState<Category>('appearance');
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAdminStatus().then(({ data }) => {
+      if (!cancelled) setIsAdmin(data?.is_admin === true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     function handleKeyDown(e: globalThis.KeyboardEvent) {
@@ -95,7 +112,7 @@ export default function UserSettingsModal({ user, onUserUpdated, onClose }: Prop
 
       <div className="user-settings-panel">
         <nav className="user-settings-sidebar" aria-label={t('Ayar kategorileri')}>
-          {CATEGORIES.map((c) => (
+          {[...CATEGORIES, ...(isAdmin ? ADMIN_CATEGORIES : [])].map((c) => (
             <button
               key={c.id}
               type="button"
@@ -120,6 +137,14 @@ export default function UserSettingsModal({ user, onUserUpdated, onClose }: Prop
             <VoiceSettings />
           ) : category === 'privacy' ? (
             <PrivacySettings user={user} />
+          ) : category === 'dm-reports' ? (
+            <div className="user-settings-section">
+              <h3 className="user-settings-heading">{t('DM Raporları')}</h3>
+              <p className="user-settings-placeholder">
+                {t('Kullanıcıların raporladığı özel mesajlar. Mesaj sonradan silinse bile raporda bir kopyası kalır.')}
+              </p>
+              <DmReports />
+            </div>
           ) : (
             <AccountDeletionSettings />
           )}

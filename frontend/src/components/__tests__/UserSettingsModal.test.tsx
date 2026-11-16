@@ -22,6 +22,10 @@ vi.mock('../../services/api', () => ({
   startTwoFactorSetup: vi.fn(),
   enableTwoFactor: vi.fn(),
   disableTwoFactor: vi.fn(),
+  // ...and, for platform admins only, DM reports (see DmReports.test.tsx).
+  fetchAdminStatus: vi.fn().mockResolvedValue({ data: { is_admin: false } }),
+  fetchDmReports: vi.fn().mockResolvedValue({ data: [] }),
+  reviewDmReport: vi.fn(),
 }));
 
 vi.mock('../../services/socket', () => ({
@@ -34,6 +38,7 @@ vi.mock('../../services/session', () => ({
 
 import {
   deleteAccount,
+  fetchAdminStatus,
   fetchBlockedUsers,
   unblockUser,
   updateEmail,
@@ -62,6 +67,19 @@ describe('UserSettingsModal', () => {
     vi.clearAllMocks();
     useFriendStore.getState().reset();
     vi.mocked(fetchBlockedUsers).mockResolvedValue({ data: [] });
+    vi.mocked(fetchAdminStatus).mockResolvedValue({ data: { is_admin: false } });
+  });
+
+  it('offers "DM Raporları" to platform admins only', async () => {
+    const { unmount } = render(<UserSettingsModal user={testUser} onClose={() => {}} />);
+    await act(async () => {});
+    expect(screen.queryByRole('button', { name: 'DM Raporları' })).toBeNull();
+    unmount();
+
+    vi.mocked(fetchAdminStatus).mockResolvedValue({ data: { is_admin: true } });
+    render(<UserSettingsModal user={testUser} onClose={() => {}} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'DM Raporları' }));
+    expect(await screen.findByText('Açık rapor yok.')).toBeInTheDocument();
   });
 
   afterEach(() => {

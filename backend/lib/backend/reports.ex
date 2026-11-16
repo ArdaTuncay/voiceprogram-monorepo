@@ -5,9 +5,11 @@ defmodule Backend.Reports do
   A report on a server channel message is reviewed by that server's owner
   and moderators (`list_server_reports/1`, `review_report/4`), who are told
   live through a `"report_created"` broadcast on their own user topics. A
-  report on a DM goes to the platform instead, as an email to the address
-  in `config :backend, :reports_email` (`REPORTS_EMAIL`), since a DM has no
-  server staff to review it.
+  report on a DM goes to the platform instead, since a DM has no server
+  staff to review it: an email to the address in
+  `config :backend, :reports_email` (`REPORTS_EMAIL`), and the platform
+  admins' list in the app (`list_dm_reports/0`, `review_dm_report/3` — see
+  `Backend.Accounts.platform_admin?/1`).
 
   Each report stores a copy of the message's content, so deleting the
   message afterwards doesn't erase the evidence. A user can report a given
@@ -82,20 +84,45 @@ defmodule Backend.Reports do
   Returns `{:ok, report}`, `{:error, :not_found}`, `{:error, :invalid_status}`
   or `{:error, changeset}`.
   """
-  def review_report(server_id, report_id, reviewer_id, status) do
-    if status in Report.review_statuses(),
-      do: do_review(server_id, report_id, reviewer_id, status),
-      else: {:error, :invalid_status}
+  def review_report(server_id, report_id, reviewer_id, status),
+    do: review({:server, server_id}, report_id, reviewer_id, status)
+
+  @doc """
+  The open DM reports, newest first, with reporter and reported user
+  preloaded — for the platform admins (the caller checks).
+  """
+  def list_dm_reports do
+    Report
+    |> where([r], not is_nil(r.dm_message_id) and r.status == "open")
+    |> order_by([r], desc: r.inserted_at, desc: r.id)
+    |> preload([:reporter, :reported_user])
+    |> Repo.all()
   end
 
-  defp do_review(server_id, report_id, reviewer_id, status) do
-    with {:ok, _} <- Ecto.UUID.cast(report_id),
-         %Report{} = report <- Repo.get_by(Report, id: report_id, server_id: server_id) do
+  @doc """
+  Marks a DM report `"resolved"` or `"dismissed"` — for the platform admins
+  (the caller checks). Same return values as `review_report/4`; a server
+  report's id is `{:error, :not_found}` here.
+  """
+  def review_dm_report(report_id, reviewer_id, status),
+    do: review(:dm, report_id, reviewer_id, status)
+
+  defp review(scope, report_id, reviewer_id, status) do
+    with true <- status in Report.review_statuses() || {:error, :invalid_status},
+         {:ok, _} <- Ecto.UUID.cast(report_id),
+         %Report{} = report <- Repo.one(scoped(scope, report_id)) || {:error, :not_found} do
       report |> Report.review_changeset(status, reviewer_id) |> Repo.update()
     else
-      _ -> {:error, :not_found}
+      :error -> {:error, :not_found}
+      {:error, _} = error -> error
     end
   end
+
+  defp scoped({:server, server_id}, report_id),
+    do: where(Report, [r], r.id == ^report_id and r.server_id == ^server_id)
+
+  defp scoped(:dm, report_id),
+    do: where(Report, [r], r.id == ^report_id and not is_nil(r.dm_message_id))
 
   defp fetch(schema, id) do
     with {:ok, _} <- Ecto.UUID.cast(id),

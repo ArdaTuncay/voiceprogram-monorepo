@@ -1,0 +1,112 @@
+.dm-reports {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dm-reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dm-report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  min-width: 0;
+}
+
+.dm-report-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.dm-report-user {
+  font-weight: 600;
+}
+
+.dm-report-reason {
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+.dm-report-meta {
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+.dm-report-head .dm-report-meta {
+  flex-basis: 100%;
+}
+
+.dm-report-content {
+  padding: var(--space-2);
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text-normal);
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dm-report-image {
+  max-width: min(100%, 320px);
+  max-height: 240px;
+  border-radius: 4px;
+  object-fit: contain;
+  align-self: flex-start;
+}
+
+.dm-report-file {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: flex-start;
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.dm-report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.dm-report-actions .account-form-submit-btn {
+  align-self: auto;
+}
+
+.dm-report-btn {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 14px;
+  font-weight: 600;
+  padding: var(--space-2-5) var(--space-4);
+  cursor: pointer;
+}
+
+.dm-report-btn:hover:not(:disabled) {
+  background: var(--bg-input);
+}
+
+.dm-report-btn:disabled,
+.dm-report-actions .account-form-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

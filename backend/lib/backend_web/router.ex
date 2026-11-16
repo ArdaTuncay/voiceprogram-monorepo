@@ -84,6 +84,9 @@ defmodule BackendWeb.Router do
     get "/servers/:server_id/reports", ReportController, :index
     patch "/servers/:server_id/reports/:id", ReportController, :update
     post "/reports", ReportController, :create
+    get "/admin", AdminReportController, :show
+    get "/admin/dm-reports", AdminReportController, :index
+    patch "/admin/dm-reports/:id", AdminReportController, :update
 
     get "/servers/:server_id/channels/:channel_id/messages", ChannelController, :messages
     get "/channels/:channel_id/search", ChannelController, :search

@@ -25,6 +25,7 @@ defmodule Backend.Reports.ReportNotifier do
     Mesaj:
     #{report.content || "(metin yok)"}
     #{file_line}
+    Uygulamada incelemek için: Ayarlar → DM Raporları (ADMIN_EMAILS'teki hesaplar).
     """
 
     new()
