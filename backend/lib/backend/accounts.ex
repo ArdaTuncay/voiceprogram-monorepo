@@ -200,6 +200,13 @@ defmodule Backend.Accounts do
     |> Repo.update()
   end
 
+  @doc "Sets or clears (nil) the user's profile picture — see `User.avatar_changeset/2`."
+  def update_avatar(%User{} = user, avatar_url) do
+    user
+    |> User.avatar_changeset(%{avatar_url: avatar_url})
+    |> Repo.update()
+  end
+
   @doc """
   Updates a user's email. No confirmation step — see
   `Backend.Accounts.User.email_changeset/2`'s moduledoc for why. Same

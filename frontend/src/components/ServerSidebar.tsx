@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Home, Users } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
 import { serverInitials } from '../utils';
+import AvatarFace from './AvatarFace';
 import JoinServerModal from './JoinServerModal';
 import CreateServerModal from './CreateServerModal';
 import ServerAddMenu from './ServerAddMenu';
@@ -67,7 +68,7 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
             }}
             title={server.name}
           >
-            {serverInitials(server.name)}
+            <AvatarFace url={server.icon_url} fallback={serverInitials(server.name)} />
             {unreadServerIds.has(server.id) && <span className="server-unread-badge" />}
           </button>
         ))}

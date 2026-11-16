@@ -5,6 +5,7 @@ import type { Friendship } from '../types';
 import { useFriendStore } from '../stores/useFriendStore';
 import { useDMStore } from '../stores/useDMStore';
 import { userColor, initials } from '../utils';
+import AvatarFace from './AvatarFace';
 import StatusIndicator from './StatusIndicator';
 import './FriendsPanel.css';
 
@@ -142,7 +143,7 @@ function FriendAvatar({ friendship }: { friendship: Friendship }) {
   return (
     <div className="friends-list-avatar-wrapper">
       <div className="friends-list-avatar" style={{ background: color }} title={name}>
-        {initials(name)}
+        <AvatarFace url={friendship.avatar_url} fallback={initials(name)} />
       </div>
       <StatusIndicator
         status={friendship.user_status === 'online' ? 'online' : 'offline'}

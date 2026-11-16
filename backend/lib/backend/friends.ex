@@ -258,6 +258,7 @@ defmodule Backend.Friends do
       direction: direction,
       user_id: other.id,
       username: other.username,
+      avatar_url: other.avatar_url,
       user_status: Backend.Accounts.status(other.id)
     }
   end

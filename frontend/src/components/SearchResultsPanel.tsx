@@ -2,6 +2,7 @@ import { X, Paperclip } from 'lucide-react';
 import type { ChatMessage } from '../types';
 import { userColor, initials } from '../utils';
 import { formatMessageTime } from '../utils/formatMessageTime';
+import AvatarFace from './AvatarFace';
 
 interface Props {
   results: ChatMessage[];
@@ -40,7 +41,7 @@ export default function SearchResultsPanel({ results, isSearching, onSelectMessa
             return (
               <div key={msg.id} className="search-result-item" onClick={() => onSelectMessage(msg.id)}>
                 <div className="search-result-avatar" style={{ background: color }} title={name}>
-                  {initials(name)}
+                  <AvatarFace url={msg.avatar_url} fallback={initials(name)} />
                 </div>
                 <div className="search-result-body">
                   <div className="search-result-meta">

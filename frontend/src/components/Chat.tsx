@@ -20,6 +20,7 @@ import ServerSettingsModal from './ServerSettingsModal';
 import CreateChannelModal from './CreateChannelModal';
 import LeaveServerModal from './LeaveServerModal';
 import ReportModal from './ReportModal';
+import AvatarFace from './AvatarFace';
 import FriendsPanel from './FriendsPanel';
 import EmptyState from './EmptyState';
 import DMChatView from './DMChatView';
@@ -57,6 +58,8 @@ import './Chat.css';
 interface Props {
   user: User;
   onLogout: () => void;
+  /** Persists an updated profile (e.g. a new profile picture) for the rest of the session. */
+  onUserUpdated?: (user: User) => void;
 }
 
 function typingIndicatorText(usernames: (string | null)[]): string {
@@ -103,7 +106,7 @@ function buildOrbitParticipants(
   });
 }
 
-export default function Chat({ user, onLogout }: Props) {
+export default function Chat({ user, onLogout, onUserUpdated }: Props) {
   const servers = useServerStore((s) => s.servers);
   const activeServerId = useServerStore((s) => s.activeServerId);
   const channels = useServerStore((s) => s.channels);
@@ -551,7 +554,7 @@ export default function Chat({ user, onLogout }: Props) {
         style={{ background: myColor }}
         title={user.username}
       >
-        {initials(user.username)}
+        <AvatarFace url={user.avatar_url} fallback={initials(user.username)} />
       </div>
       <div className="user-info">
         <div className="user-name-sm">{user.username}</div>
@@ -764,7 +767,7 @@ export default function Chat({ user, onLogout }: Props) {
                   >
                     <div className="dm-room-avatar-wrapper">
                       <div className="dm-room-avatar" style={{ background: color }} title={name}>
-                        {initials(name)}
+                        <AvatarFace url={room.avatar_url} fallback={initials(name)} />
                       </div>
                       <StatusIndicator
                         status={room.user_status === 'online' ? 'online' : 'offline'}
@@ -1115,7 +1118,11 @@ export default function Chat({ user, onLogout }: Props) {
       )}
 
       {showUserSettingsModal && (
-        <UserSettingsModal user={user} onClose={() => setShowUserSettingsModal(false)} />
+        <UserSettingsModal
+          user={user}
+          onUserUpdated={onUserUpdated}
+          onClose={() => setShowUserSettingsModal(false)}
+        />
       )}
     </div>
   );

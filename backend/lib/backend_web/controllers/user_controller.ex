@@ -51,6 +51,7 @@ defmodule BackendWeb.UserController do
           id: user.id,
           username: user.username,
           email: user.email,
+          avatar_url: user.avatar_url,
           token: Accounts.generate_user_token(user)
         })
 

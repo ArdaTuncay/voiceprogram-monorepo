@@ -431,6 +431,24 @@ export function acceptInvite(code: string): Promise<ApiResult<Server>> {
 }
 
 /** Uploads a chat attachment as multipart/form-data; the browser sets the boundary header itself. */
+/** Sets the profile picture to an uploaded image's URL, or null to remove it. */
+export function updateAvatar(avatarUrl: string | null): Promise<ApiResult<User>> {
+  return authedFetch<User>('/account/avatar', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avatar_url: avatarUrl }),
+  });
+}
+
+/** Owner only. Sets the server icon to an uploaded image's URL, or null to remove it. */
+export function updateServerIcon(serverId: string, iconUrl: string | null): Promise<ApiResult<Server>> {
+  return authedFetch<Server>(`/servers/${serverId}/icon`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ icon_url: iconUrl }),
+  });
+}
+
 export function uploadFile(file: File): Promise<ApiResult<UploadResult>> {
   const formData = new FormData();
   formData.append('file', file);

@@ -5,6 +5,7 @@ import { resolveFileUrl } from '../config';
 import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
 import { userColor, initials } from '../utils';
 import { formatMessageTime } from '../utils/formatMessageTime';
+import AvatarFace from './AvatarFace';
 import MessageContent from './MessageContent';
 import MessageReactions from './MessageReactions';
 import MessageContextMenu from './MessageContextMenu';
@@ -122,7 +123,7 @@ export default function MessageItem({
     >
       {!isGrouped && (
         <div className="message-avatar" style={{ background: color }} title={name}>
-          {initials(name)}
+          <AvatarFace url={message.avatar_url} fallback={initials(name)} />
         </div>
       )}
       <div className={`message-body${isGrouped ? ' message-content-grouped' : ''}`}>

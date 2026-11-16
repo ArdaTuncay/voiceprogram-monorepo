@@ -81,6 +81,16 @@ defmodule Backend.Uploads do
     end
   end
 
+  @doc """
+  Changeset validation: `field`, when set, must be a file `store/1` produced
+  (see `own_file_url?/1`) — every stored file is an image.
+  """
+  def validate_own_image(%Ecto.Changeset{} = changeset, field) do
+    Ecto.Changeset.validate_change(changeset, field, fn ^field, url ->
+      if own_file_url?(url), do: [], else: [{field, "must be an uploaded image"}]
+    end)
+  end
+
   @doc "True for the content types `store/1` accepts (and so the only ones an attachment can have)."
   def allowed_content_type?(content_type), do: Map.has_key?(@allowed_extensions, content_type)
 

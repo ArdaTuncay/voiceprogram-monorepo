@@ -15,10 +15,13 @@ import {
   fetchServerInvites,
   revokeInvite,
   setMemberRole,
+  updateServerIcon,
   fetchServerReports,
   reviewReport,
 } from '../services/api';
 import { REPORT_REASON_LABELS } from '../utils/reports';
+import { serverInitials } from '../utils';
+import ImagePicker from './ImagePicker';
 import { canModerate } from '../utils/permissions';
 import { useServerStore } from '../stores/useServerStore';
 import Modal from './Modal';
@@ -143,8 +146,25 @@ function GeneralTab({ server, onClose }: { server: Server; onClose: () => void }
     onClose();
   }
 
+  async function handleIconSave(url: string | null) {
+    const { data, error } = await updateServerIcon(server.id, url);
+    if (error || !data) return error ?? 'İkon kaydedilemedi';
+    useServerStore.getState().handleServerUpdated({
+      server_id: data.id,
+      name: data.name,
+      icon_url: data.icon_url ?? null,
+    });
+    return undefined;
+  }
+
   return (
     <div className="settings-section">
+      <ImagePicker
+        label="Sunucu İkonu"
+        currentUrl={server.icon_url}
+        fallback={serverInitials(server.name)}
+        onSave={handleIconSave}
+      />
       <label className="settings-label" htmlFor="server-name-input">
         Sunucu Adı
       </label>
