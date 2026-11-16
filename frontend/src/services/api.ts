@@ -12,6 +12,7 @@ import type {
   ReportTarget,
   Server,
   ServerReport,
+  DmReport,
   ServerMember,
   Invite,
   UploadResult,
@@ -462,6 +463,24 @@ export function reviewReport(
   status: 'resolved' | 'dismissed'
 ): Promise<ApiResult<{ id: string; status: string }>> {
   return authedPatch(`/servers/${serverId}/reports/${reportId}`, { status });
+}
+
+/** Whether the signed-in user is a platform admin (reviews DM reports). */
+export function fetchAdminStatus(): Promise<ApiResult<{ is_admin: boolean }>> {
+  return authedGet<{ is_admin: boolean }>('/admin');
+}
+
+/** Platform admins. The open DM reports, newest first. */
+export function fetchDmReports(): Promise<ApiResult<DmReport[]>> {
+  return authedGet<DmReport[]>('/admin/dm-reports');
+}
+
+/** Platform admins. Closes a DM report as resolved or dismissed. */
+export function reviewDmReport(
+  reportId: string,
+  status: 'resolved' | 'dismissed'
+): Promise<ApiResult<{ id: string; status: string }>> {
+  return authedPatch(`/admin/dm-reports/${reportId}`, { status });
 }
 
 export interface ServerBan {

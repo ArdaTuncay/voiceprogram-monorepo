@@ -294,6 +294,24 @@ export interface ServerReport {
   reported_user: { id: string | null; username: string | null };
 }
 
+/** A report on a direct message, for the platform admins (see
+ * BackendWeb.AdminReportController). `file_url` is a short-lived link for a
+ * private attachment, and `file_type` its stored type. */
+export interface DmReport {
+  id: string;
+  reason: ReportReason;
+  details: string | null;
+  /** A copy of the message taken when it was reported. */
+  content: string | null;
+  file_url: string | null;
+  file_type: string | null;
+  dm_message_id: string | null;
+  status: 'open' | 'resolved' | 'dismissed';
+  created_at: string;
+  reporter: { id: string | null; username: string | null };
+  reported_user: { id: string | null; username: string | null };
+}
+
 /** "report_created" on the user topic of a server's owner and moderators. */
 export interface ReportCreatedNotification {
   server_id: string;

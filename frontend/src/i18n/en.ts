@@ -401,6 +401,10 @@ export const en = {
   'Yoksay': 'Dismiss',
   'Çözüldü': 'Resolved',
   'Açık rapor yok.': 'No open reports.',
+  'DM Raporları': 'DM Reports',
+  'Kullanıcıların raporladığı özel mesajlar. Mesaj sonradan silinse bile raporda bir kopyası kalır.':
+    'Direct messages people have reported. Each report keeps a copy of the message, even if it was deleted later.',
+  'Eki aç': 'Open attachment',
   'Süresiz': 'Never expires',
   'Davet listesi alınamadı': "Couldn't load invites",
   'Süresi doldu': 'Expired',

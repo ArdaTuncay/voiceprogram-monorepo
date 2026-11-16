@@ -53,6 +53,16 @@ frontend_url =
 
 config :backend, :frontend_url, frontend_url
 
+# Platform admins: the accounts that review DM reports in the app (see
+# Backend.Accounts.platform_admin?/1) — matched on a verified email, any
+# case. Comma-separated; unset means nobody.
+config :backend,
+       :admin_emails,
+       (System.get_env("ADMIN_EMAILS") || "")
+       |> String.split(",")
+       |> Enum.map(&String.trim/1)
+       |> Enum.reject(&(&1 == ""))
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

@@ -722,6 +722,23 @@ defmodule Backend.Accounts do
     do: if(User.deleted?(user), do: "[silinmiş kullanıcı]", else: user.username)
 
   @doc """
+  True if `user` is a platform admin — one of the accounts that review DM
+  reports in the app (see `Backend.Reports.list_dm_reports/0`): their email
+  is verified and listed in `config :backend, :admin_emails`
+  (`ADMIN_EMAILS`), in any case. An unverified address doesn't count, so
+  signing up with an admin's address before they do gets nothing.
+  """
+  def platform_admin?(%User{email_verified: true, email: email}) when is_binary(email) do
+    email = String.downcase(email)
+
+    :backend
+    |> Application.get_env(:admin_emails, [])
+    |> Enum.any?(&(String.downcase(&1) == email))
+  end
+
+  def platform_admin?(_user), do: false
+
+  @doc """
   Permanently and irreversibly deletes/anonymizes `user`'s account, after
   verifying `current_password`. All-or-nothing (a single `Ecto.Multi`
   transaction) — see PROJECT_ARCHITECTURE.md's account deletion section
