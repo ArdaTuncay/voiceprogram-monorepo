@@ -76,6 +76,51 @@ defmodule BackendWeb.UploadControllerTest do
     assert get_resp_header(png, "content-disposition") == []
   end
 
+  test "a local document downloads under the name the link asks for" do
+    %{"file_url" => url} =
+      upload!(user_fixture(), file("rapor.pdf", "application/pdf", "%PDF-1.7\n%%EOF"))
+
+    conn = get(build_conn(), url <> "?name=" <> URI.encode_www_form("Ödev 1.pdf"))
+    assert conn.status == 200
+
+    assert get_resp_header(conn, "content-disposition") == [
+             ~s(attachment; filename="_dev 1.pdf"; filename*=UTF-8''%C3%96dev%201.pdf)
+           ]
+  end
+
+  test "a requested download name always keeps the stored file's extension" do
+    %{"file_url" => url} =
+      upload!(user_fixture(), file("rapor.pdf", "application/pdf", "%PDF-1.7\n%%EOF"))
+
+    conn = get(build_conn(), url <> "?name=" <> URI.encode_www_form("../kurulum.exe"))
+
+    assert get_resp_header(conn, "content-disposition") == [
+             ~s(attachment; filename="kurulum.exe.pdf"; filename*=UTF-8''kurulum.exe.pdf)
+           ]
+
+    conn = get(build_conn(), url <> "?name=" <> URI.encode_www_form("Rapor.PDF"))
+
+    assert get_resp_header(conn, "content-disposition") == [
+             ~s(attachment; filename="Rapor.PDF"; filename*=UTF-8''Rapor.PDF)
+           ]
+  end
+
+  test "an image ignores a requested download name" do
+    %{"file_url" => url} =
+      upload!(
+        user_fixture(),
+        file(
+          "a.png",
+          "image/png",
+          File.read!(Path.expand("../../support/fixtures/images/location.png", __DIR__))
+        )
+      )
+
+    conn = get(build_conn(), url <> "?name=x.pdf")
+    assert conn.status == 200
+    assert get_resp_header(conn, "content-disposition") == []
+  end
+
   test "message history carries the attachment's name and size" do
     owner = user_fixture()
     server = server_fixture(owner)

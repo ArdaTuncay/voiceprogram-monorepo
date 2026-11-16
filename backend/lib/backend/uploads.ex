@@ -303,6 +303,32 @@ defmodule Backend.Uploads do
     end
   end
 
+  @doc """
+  The name a stored file should download under when a link asks for
+  `requested` (see `BackendWeb.UploadDispositionPlug`): the requested name,
+  cleaned up like an uploaded one (see `clean_file_name/2`), with the stored
+  file's own extension added unless it already ends in it — so a link can
+  rename a PDF, but never make it download as a `.exe`. `nil` when there's
+  nothing usable to go on.
+  """
+  def download_name(url_or_name, requested) when is_binary(requested) do
+    extension = extension_of(url_or_name)
+
+    with true <- Map.has_key?(@types_by_extension, extension),
+         cleaned when cleaned != "" <- clean_file_name(requested, "") do
+      requested_extension =
+        cleaned |> Path.extname() |> String.trim_leading(".") |> String.downcase()
+
+      if Map.get(@extension_aliases, requested_extension, requested_extension) == extension,
+        do: cleaned,
+        else: cleaned <> "." <> extension
+    else
+      _ -> nil
+    end
+  end
+
+  def download_name(_url_or_name, _requested), do: nil
+
   defp store_local(path, filename) do
     dest = Path.join(upload_dir(), filename)
     File.mkdir_p!(upload_dir())
@@ -395,7 +421,11 @@ defmodule Backend.Uploads do
         ""
       end
 
-    if cleaned == "", do: "dosya." <> extension, else: cleaned
+    cond do
+      cleaned != "" -> cleaned
+      extension == "" -> ""
+      true -> "dosya." <> extension
+    end
   end
 
   # Client-declared Content-Type headers (and file names) are trivially

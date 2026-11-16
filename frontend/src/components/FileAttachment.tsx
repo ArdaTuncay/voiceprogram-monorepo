@@ -1,6 +1,6 @@
 import { Download, FileArchive, FileText } from 'lucide-react';
 import { resolveFileUrl } from '../config';
-import { attachmentLabel, formatFileSize } from '../utils/attachments';
+import { attachmentLabel, downloadPath, formatFileSize } from '../utils/attachments';
 
 interface Props {
   fileUrl: string;
@@ -22,7 +22,7 @@ export default function FileAttachment({ fileUrl, fileType, fileName, fileSize }
   return (
     <a
       className="message-attachment-file"
-      href={resolveFileUrl(fileUrl)}
+      href={resolveFileUrl(downloadPath(fileUrl, fileName))}
       target="_blank"
       rel="noopener noreferrer"
       download={fileName ?? true}
