@@ -12,9 +12,14 @@ defmodule BackendWeb.UploadController do
   @doc """
   POST /api/upload — stores a multipart file upload (see `Backend.Uploads`),
   returns its public URL, canonical type, display name and size in bytes.
+
+  With `private=true` (DM attachments) the file is stored privately and
+  `file_url` is a `"private:…"` reference rather than a URL: it goes into
+  the DM message, and readers get expiring links to it (see
+  `BackendWeb.PrivateFileURL`).
   """
-  def create(conn, %{"file" => %Plug.Upload{} = upload}) do
-    case Uploads.store(upload) do
+  def create(conn, %{"file" => %Plug.Upload{} = upload} = params) do
+    case Uploads.store(upload, private: params["private"] in ["true", true]) do
       {:ok, stored} ->
         json(conn, %{
           file_url: stored.file_url,

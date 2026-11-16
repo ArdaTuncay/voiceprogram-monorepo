@@ -460,9 +460,13 @@ export function updateServerIcon(serverId: string, iconUrl: string | null): Prom
   });
 }
 
-export function uploadFile(file: File): Promise<ApiResult<UploadResult>> {
+/** `private: true` for DM attachments: the server stores them privately and
+ * returns a `private:…` reference instead of a URL; readers get expiring
+ * links to it (see BackendWeb.PrivateFileURL). */
+export function uploadFile(file: File, options: { private?: boolean } = {}): Promise<ApiResult<UploadResult>> {
   const formData = new FormData();
   formData.append('file', file);
+  if (options.private) formData.append('private', 'true');
   return authedFetch<UploadResult>('/upload', { method: 'POST', body: formData });
 }
 

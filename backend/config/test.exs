@@ -47,3 +47,4 @@ config :phoenix,
 # stubs (Backend.TurnTest) instead of the network.
 config :backend, Backend.Turn, refresh: :inline
 config :backend, Backend.Turn.Metered, req_options: [plug: {Req.Test, Backend.Turn.Metered}]
+config :backend, Backend.Uploads.S3, req_options: [plug: {Req.Test, Backend.Uploads.S3}]

@@ -297,7 +297,7 @@ defmodule Backend.DirectMessagesTest do
       {:ok, message} =
         DirectMessages.create_message(%{
           content: "oops",
-          file_url: "/uploads/AbCdEfGhIjKlMnOpQrStUv.png",
+          file_url: "private:AbCdEfGhIjKlMnOpQrStUv.png",
           file_type: "image/png",
           user_id: a.id,
           dm_room_id: room.id

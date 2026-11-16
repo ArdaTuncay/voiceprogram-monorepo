@@ -72,28 +72,32 @@ defmodule Backend.Uploads do
   `file_name` is the client's name for the file, cleaned up for display
   (see `clean_file_name/2`); it never touches the stored file's own name.
   """
-  def store(%Plug.Upload{} = upload) do
+  def store(%Plug.Upload{} = upload, opts \\ []) do
+    visibility = if Keyword.get(opts, :private, false), do: :private, else: :public
+
     with {:ok, extension, content_type} <- resolve_type(upload),
          {:ok, _size} <- validate_size(upload.path, extension),
          :ok <- validate_signature(upload.path, content_type),
          {:ok, source, size} <- without_metadata(upload.path, content_type) do
       try do
-        persist(source, upload.filename, extension, content_type, size)
+        persist(source, upload.filename, extension, content_type, size, visibility)
       after
         if source != upload.path, do: File.rm(source)
       end
     end
   end
 
-  defp persist(source, client_name, extension, content_type, size) do
+  defp persist(source, client_name, extension, content_type, size, visibility) do
     filename = random_filename() <> "." <> extension
     file_name = clean_file_name(client_name, extension)
     disposition = content_disposition(filename, file_name)
 
     result =
-      case adapter() do
-        :s3 -> store_s3(source, filename, content_type, disposition)
-        :local -> store_local(source, filename)
+      case {visibility, adapter()} do
+        {:public, :s3} -> store_s3(source, filename, content_type, disposition)
+        {:public, :local} -> store_local(source, filename)
+        {:private, :s3} -> store_private_s3(source, filename, content_type)
+        {:private, :local} -> store_private_local(source, filename)
       end
 
     with {:ok, file_url} <- result do
@@ -159,6 +163,39 @@ defmodule Backend.Uploads do
     end
   end
 
+  @private_ref Regex.compile!("\\Aprivate:" <> @stored_name <> "\\z")
+
+  @doc """
+  True for a reference `store(upload, private: true)` returns —
+  `"private:<name>"`. It's not a URL: private files (DM attachments) are
+  only ever handed out as expiring links (see `BackendWeb.PrivateFileURL`),
+  and the reference itself never leaves the server except to the uploader.
+  """
+  def private_ref?(ref) when is_binary(ref), do: Regex.match?(@private_ref, ref)
+  def private_ref?(_ref), do: false
+
+  @doc """
+  The contents of a private file: `{:ok, {:file, path}}` on local disk,
+  `{:ok, {:binary, data}}` from S3, or `{:error, :not_found}`.
+  """
+  def read_private("private:" <> name = ref) do
+    if private_ref?(ref), do: read_private(adapter(), name), else: {:error, :not_found}
+  end
+
+  def read_private(_ref), do: {:error, :not_found}
+
+  defp read_private(:local, name) do
+    path = Path.join(private_dir(), name)
+    if File.regular?(path), do: {:ok, {:file, path}}, else: {:error, :not_found}
+  end
+
+  defp read_private(:s3, name) do
+    case S3.download("private/" <> name) do
+      {:ok, data} -> {:ok, {:binary, data}}
+      {:error, _} -> {:error, :not_found}
+    end
+  end
+
   @doc "True if `url` is one of our stored files (see `own_file_url?/1`) and an image."
   def image_url?(url), do: own_file_url?(url) and Map.has_key?(@image_types, extension_of(url))
 
@@ -189,8 +226,11 @@ defmodule Backend.Uploads do
   `file_type`, `file_name`, `file_size` — see `Backend.Chat.Message` and
   `Backend.DirectMessages.DmMessage`):
 
-    * `file_url` must be a file `store/1` produced (see `own_file_url?/1`),
-      not any URL a client sends;
+    * `file_url` must be a file `store/2` produced, not any URL a client
+      sends: a public upload (see `own_file_url?/1`) for `:public`
+      (channel messages), a private reference (see `private_ref?/1`) for
+      `:private` (DMs — never shown to anyone but their two participants,
+      and only through expiring links);
     * `file_type` must be the type that file was stored as — otherwise a
       .zip could be labelled an image (or a .png a document) and every
       reader's client would render it as the wrong thing. Filled in from
@@ -198,12 +238,15 @@ defmodule Backend.Uploads do
     * `file_name` is display text only, at most 255 characters;
     * `file_size` is a positive byte count.
   """
-  def validate_attachment(%Ecto.Changeset{} = changeset) do
+  def validate_attachment(%Ecto.Changeset{} = changeset, visibility)
+      when visibility in [:public, :private] do
     import Ecto.Changeset
+
+    allowed? = if visibility == :public, do: &own_file_url?/1, else: &private_ref?/1
 
     changeset
     |> validate_change(:file_url, fn :file_url, url ->
-      if own_file_url?(url), do: [], else: [file_url: "is not an uploaded file"]
+      if allowed?.(url), do: [], else: [file_url: "is not an uploaded file"]
     end)
     |> validate_change(:file_type, fn :file_type, type ->
       if allowed_content_type?(type),
@@ -267,6 +310,29 @@ defmodule Backend.Uploads do
     case File.cp(path, dest) do
       :ok -> {:ok, "/uploads/#{filename}"}
       {:error, _} -> {:error, :invalid_file}
+    end
+  end
+
+  # Private files: outside priv/static (so Plug.Static never serves them)
+  # locally, under private/ in the bucket on S3 — whose public URL for that
+  # key is never computed, let alone handed out.
+  defp store_private_local(path, filename) do
+    File.mkdir_p!(private_dir())
+
+    case File.cp(path, Path.join(private_dir(), filename)) do
+      :ok -> {:ok, "private:" <> filename}
+      {:error, _} -> {:error, :invalid_file}
+    end
+  end
+
+  defp store_private_s3(path, filename, content_type) do
+    case S3.upload(path, "private/" <> filename, content_type) do
+      {:ok, _public_url} ->
+        {:ok, "private:" <> filename}
+
+      {:error, reason} ->
+        Logger.error("Backend.Uploads: S3 private store failed: #{inspect(reason)}")
+        {:error, :invalid_file}
     end
   end
 
@@ -440,6 +506,10 @@ defmodule Backend.Uploads do
 
   defp upload_dir do
     Path.join([:code.priv_dir(:backend), "static", "uploads"])
+  end
+
+  defp private_dir do
+    Path.join(:code.priv_dir(:backend), "private_uploads")
   end
 
   defp adapter do

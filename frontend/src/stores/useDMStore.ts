@@ -373,7 +373,8 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
     if (!activeRoomId || get().isUploading) return;
 
     set({ isUploading: true, uploadError: '' });
-    const { data, error } = await uploadFile(file);
+    // Private: the server shows DM files only through expiring links.
+    const { data, error } = await uploadFile(file, { private: true });
     set({ isUploading: false });
 
     if (error || !data) {

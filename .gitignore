@@ -24,6 +24,7 @@ backend-*.tar
 
 # ── User-uploaded media (local disk storage, not meant for version control) ──
 /backend/priv/static/uploads/*
+/backend/priv/private_uploads/
 !/backend/priv/static/uploads/.gitkeep
 
 # ── Environment / secrets ──

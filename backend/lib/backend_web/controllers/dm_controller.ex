@@ -100,7 +100,7 @@ defmodule BackendWeb.DmController do
     %{
       id: message.id,
       content: message.content,
-      file_url: message.file_url,
+      file_url: BackendWeb.PrivateFileURL.for_message(message),
       file_type: message.file_type,
       file_name: message.file_name,
       file_size: message.file_size,
