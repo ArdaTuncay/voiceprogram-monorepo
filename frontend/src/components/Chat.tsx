@@ -85,6 +85,7 @@ function buildOrbitParticipants(
       id: p.user_id,
       displayName: name,
       initials: initials(name),
+      avatarUrl: p.avatar_url,
       avatarColor: userColor(p.user_id),
       isSpeaking: speaking,
       isMuted: !!p.muted,
@@ -523,7 +524,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                     className="voice-occupant-preview-avatar"
                     style={{ background: userColor(occupant.user_id) }}
                   >
-                    {initials(occupant.username)}
+                    <AvatarFace url={occupant.avatar_url} fallback={initials(occupant.username)} />
                   </div>
                   <span className="voice-occupant-preview-name">{occupant.username}</span>
                 </div>
@@ -1095,7 +1096,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                       style={{ background: color }}
                       title={name}
                     >
-                      {initials(name)}
+                      <AvatarFace url={presenceUser.avatar_url} fallback={initials(name)} />
                     </div>
                     <StatusIndicator status="online" size={11} className="online-status-dot" />
                   </div>

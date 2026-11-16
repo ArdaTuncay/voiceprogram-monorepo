@@ -28,6 +28,17 @@ describe('VoiceOrbit', () => {
     expect(container.querySelectorAll('.voice-participant')).toHaveLength(0);
   });
 
+  it('shows the profile picture instead of initials, in the orbit and in the stacked list', () => {
+    const withPicture = makeParticipants(3, { avatarUrl: '/uploads/me.png' });
+    const orbit = render(<VoiceOrbit participants={withPicture} />);
+    expect(orbit.container.querySelectorAll('.voice-orbit-avatar img')).toHaveLength(3);
+    expect(orbit.container.textContent).not.toContain('U0');
+    orbit.unmount();
+
+    const list = render(<VoiceOrbit participants={withPicture} maxOrbitSize={2} />);
+    expect(list.container.querySelectorAll('.voice-participant-avatar img')).toHaveLength(3);
+  });
+
   it('renders nothing (no avatars) for 0 participants', () => {
     const { container } = render(<VoiceOrbit participants={[]} />);
     expect(container.querySelectorAll('.voice-orbit-avatar')).toHaveLength(0);

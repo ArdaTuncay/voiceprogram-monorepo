@@ -15,6 +15,7 @@ defmodule BackendWeb.VoiceChannel do
   alias Backend.Servers
   alias Backend.Telemetry.IceStatsCounter
   alias BackendWeb.ChannelRateLimiter
+  alias BackendWeb.PresenceMeta
 
   # "update_status" (mute/deafen): infrequent, deliberate user action —
   # generous headroom, just a backstop against a buggy client looping.
@@ -73,12 +74,11 @@ defmodule BackendWeb.VoiceChannel do
         # `self()` by Phoenix before `join/3` runs, so this is safe to call
         # here rather than deferring it.
         {:ok, _} =
-          Presence.track(socket, socket.assigns.user_id, %{
-            username: socket.assigns.username,
-            online_at: System.system_time(:second),
-            muted: false,
-            deafened: false
-          })
+          Presence.track(
+            socket,
+            socket.assigns.user_id,
+            PresenceMeta.for_socket(socket, %{muted: false, deafened: false})
+          )
 
         send(self(), :after_join)
 
