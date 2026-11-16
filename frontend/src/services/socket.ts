@@ -311,6 +311,9 @@ export interface VoiceChannelCallbacks {
 export interface VoiceChannelHandle {
   /** User ids already present in the room at join time. */
   existingPeerIds: string[];
+  /** Whether this room's audio goes through the SFU (see services/sfu.ts)
+   * rather than peer to peer. */
+  sfu: boolean;
   leave: () => void;
 }
 
@@ -336,6 +339,7 @@ export function joinVoiceChannel(
       online_at: meta.online_at,
       muted: meta.muted,
       deafened: meta.deafened,
+      sfu_tracks: meta.sfu_tracks ?? null,
     }));
     callbacks.onPresenceChange(users);
   });
@@ -374,11 +378,12 @@ export function joinVoiceChannel(
 
     room
       .join()
-      .receive('ok', (resp: { peers: string[] }) => {
+      .receive('ok', (resp: { peers: string[]; sfu?: boolean }) => {
         if (settled) return;
         settled = true;
         resolve({
           existingPeerIds: resp.peers,
+          sfu: resp.sfu === true,
           leave: () => {
             room.leave();
             if (voiceChannel === room) voiceChannel = null;
@@ -389,6 +394,22 @@ export function joinVoiceChannel(
         failInitialJoin(resp.reason ?? 'Failed to join voice channel');
       })
       .receive('timeout', () => failInitialJoin(VOICE_JOIN_TIMEOUT_REASON));
+  });
+}
+
+/** One of the voice channel's "sfu_*" requests (see services/sfu.ts):
+ * resolves with the reply, rejects with its reason. */
+export function voiceRequest<T>(event: string, payload: Record<string, unknown> = {}): Promise<T> {
+  return new Promise((resolve, reject) => {
+    if (!voiceChannel) {
+      reject(new Error('not_in_voice'));
+      return;
+    }
+    voiceChannel
+      .push(event, payload)
+      .receive('ok', (reply: T) => resolve(reply))
+      .receive('error', (reply: { reason?: string }) => reject(new Error(reply?.reason ?? 'sfu_error')))
+      .receive('timeout', () => reject(new Error('timeout')));
   });
 }
 

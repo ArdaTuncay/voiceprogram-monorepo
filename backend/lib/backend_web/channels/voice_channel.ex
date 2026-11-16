@@ -13,6 +13,7 @@ defmodule BackendWeb.VoiceChannel do
   alias Backend.Chat
   alias Backend.Presence
   alias Backend.Servers
+  alias Backend.Sfu
   alias Backend.Telemetry.IceStatsCounter
   alias BackendWeb.ChannelRateLimiter
   alias BackendWeb.PresenceMeta
@@ -44,6 +45,13 @@ defmodule BackendWeb.VoiceChannel do
   # signaling in another.
   @signal_scale :timer.seconds(10)
   @signal_limit 50
+
+  # "sfu_*": setting up this participant's Cloudflare SFU session (see
+  # Backend.Sfu) — a handful per join, plus one pull per track someone else
+  # publishes. Each is an API call on our app's account, so it's capped.
+  @sfu_scale :timer.minutes(1)
+  @sfu_limit 120
+  @sfu_track_names ~w(audio screen)
 
   @impl true
   def join("voice:" <> room_id, _params, socket) do
@@ -91,7 +99,9 @@ defmodule BackendWeb.VoiceChannel do
         # just joined).
         broadcast_voice_presence(channel.server_id, room_id)
 
-        {:ok, %{peers: existing_peers}, socket}
+        # `sfu`: whether this room's audio goes through Cloudflare's SFU
+        # (see Backend.Sfu and the "sfu_*" events below) or peer to peer.
+        {:ok, %{peers: existing_peers, sfu: Sfu.enabled?()}, socket}
       end
     else
       nil -> {:error, %{reason: "channel not found"}}
@@ -204,6 +214,38 @@ defmodule BackendWeb.VoiceChannel do
   def handle_in("ice_candidate", payload, socket),
     do: relay_signal(socket, "ice_candidate", payload)
 
+  # Cloudflare SFU setup, proxied because the API calls carry the app secret
+  # (see Backend.Sfu). Every call acts on this participant's own session
+  # only; pulling someone else's track names *them* (a user id in this room)
+  # and the session comes from their Presence here, so nobody can pull from
+  # another room or from a session they merely know the id of. What each
+  # participant publishes is announced in their Presence metadata
+  # (`sfu_session`, `sfu_tracks`), which is how the others know to pull it.
+  @impl true
+  def handle_in("sfu_" <> _ = event, payload, socket) do
+    key = {:voice, "sfu", socket.topic, socket.assigns.user_id}
+
+    cond do
+      not Sfu.enabled?() ->
+        {:reply, {:error, %{reason: "sfu_unavailable"}}, socket}
+
+      ChannelRateLimiter.limited?(
+        key,
+        @sfu_scale,
+        @sfu_limit,
+        socket.assigns.user_id,
+        "voice_sfu"
+      ) ->
+        {:reply, {:error, %{reason: "rate_limited"}}, socket}
+
+      event != "sfu_session" and is_nil(socket.assigns[:sfu_session]) ->
+        {:reply, {:error, %{reason: "no_session"}}, socket}
+
+      true ->
+        sfu(event, payload, socket)
+    end
+  end
+
   # Diagnostic-only — see useVoiceChannel.ts's logIceOutcome, which sends
   # this once per peer connection when it reaches "connected" or "failed",
   # after inspecting its own getStats() to find the selected candidate
@@ -276,5 +318,142 @@ defmodule BackendWeb.VoiceChannel do
     end
 
     {:noreply, socket}
+  end
+
+  defp sfu("sfu_session", _payload, %{assigns: %{sfu_session: id}} = socket) when is_binary(id),
+    do: {:reply, {:ok, %{session_id: id}}, socket}
+
+  defp sfu("sfu_session", _payload, socket) do
+    case Sfu.new_session() do
+      {:ok, id} ->
+        update_meta(socket, fn meta -> Map.merge(meta, %{sfu_session: id, sfu_tracks: []}) end)
+        {:reply, {:ok, %{session_id: id}}, assign(socket, :sfu_session, id)}
+
+      {:error, reason} ->
+        sfu_failed(socket, "sfu_session", reason)
+    end
+  end
+
+  # Publishes local tracks: the browser's offer, plus a name for each of its
+  # transceivers ("audio", "screen").
+  defp sfu("sfu_publish", %{"session_description" => sdp, "tracks" => tracks}, socket)
+       when is_list(tracks) do
+    names = Enum.map(tracks, &(is_map(&1) && &1["trackName"]))
+
+    if names != [] and Enum.all?(names, &(&1 in @sfu_track_names)),
+      do: publish(socket, sdp, tracks, names),
+      else: {:reply, {:error, %{reason: "invalid_tracks"}}, socket}
+  end
+
+  # Pulls other participants' tracks: `[%{user_id, trackName}]`. Each must be
+  # someone in this room who has published that track.
+  defp sfu("sfu_pull", %{"tracks" => tracks}, socket) when is_list(tracks) and tracks != [] do
+    metas = socket |> Presence.list() |> Map.new(fn {id, %{metas: [meta | _]}} -> {id, meta} end)
+
+    remote = Enum.map(tracks, &remote_track(&1, metas, socket.assigns.user_id))
+
+    if Enum.any?(remote, &is_nil/1) do
+      {:reply, {:error, %{reason: "invalid_tracks"}}, socket}
+    else
+      case Sfu.tracks_new(socket.assigns.sfu_session, %{tracks: remote}) do
+        {:ok, response} -> {:reply, {:ok, with_user_ids(response, metas)}, socket}
+        {:error, reason} -> sfu_failed(socket, "sfu_pull", reason)
+      end
+    end
+  end
+
+  defp sfu("sfu_renegotiate", %{"session_description" => sdp}, socket) do
+    case Sfu.renegotiate(socket.assigns.sfu_session, %{sessionDescription: sdp}) do
+      {:ok, response} -> {:reply, {:ok, response}, socket}
+      {:error, reason} -> sfu_failed(socket, "sfu_renegotiate", reason)
+    end
+  end
+
+  # Closes transceivers by mid (with the browser's offer), and stops
+  # announcing the local track names in `unpublish` (e.g. "screen").
+  defp sfu("sfu_close", %{"mids" => mids, "session_description" => sdp} = payload, socket)
+       when is_list(mids) and mids != [] do
+    unpublish = List.wrap(payload["unpublish"])
+
+    body = %{
+      tracks: Enum.map(mids, &%{mid: &1}),
+      force: false,
+      sessionDescription: sdp
+    }
+
+    case Sfu.close_tracks(socket.assigns.sfu_session, body) do
+      {:ok, response} ->
+        update_meta(socket, fn meta ->
+          %{meta | sfu_tracks: Map.get(meta, :sfu_tracks, []) -- unpublish}
+        end)
+
+        {:reply, {:ok, response}, socket}
+
+      {:error, reason} ->
+        sfu_failed(socket, "sfu_close", reason)
+    end
+  end
+
+  defp sfu(_event, _payload, socket), do: {:reply, {:error, %{reason: "invalid_request"}}, socket}
+
+  defp publish(socket, sdp, tracks, names) do
+    body = %{
+      sessionDescription: sdp,
+      tracks: Enum.map(tracks, &%{location: "local", mid: &1["mid"], trackName: &1["trackName"]})
+    }
+
+    case Sfu.tracks_new(socket.assigns.sfu_session, body) do
+      {:ok, response} ->
+        update_meta(socket, fn meta ->
+          %{meta | sfu_tracks: Enum.uniq(Map.get(meta, :sfu_tracks, []) ++ names)}
+        end)
+
+        {:reply, {:ok, response}, socket}
+
+      {:error, reason} ->
+        sfu_failed(socket, "sfu_publish", reason)
+    end
+  end
+
+  # Someone else in this room's published track, as the SFU API names it —
+  # nil if they aren't here, haven't published it, or it's ourselves.
+  defp remote_track(%{"user_id" => user_id, "trackName" => name}, metas, me) when user_id != me do
+    case metas[user_id] do
+      %{sfu_session: session} = meta when is_binary(session) ->
+        if name in Map.get(meta, :sfu_tracks, []),
+          do: %{location: "remote", sessionId: session, trackName: name}
+
+      _ ->
+        nil
+    end
+  end
+
+  defp remote_track(_track, _metas, _me), do: nil
+
+  # Tells the puller whose each pulled track is (the API answers with
+  # session ids, which the client has no other use for).
+  defp with_user_ids(%{"tracks" => tracks} = response, metas) when is_list(tracks) do
+    owner_of = Map.new(metas, fn {id, meta} -> {Map.get(meta, :sfu_session), id} end)
+
+    %{
+      response
+      | "tracks" => Enum.map(tracks, &Map.put(&1, "user_id", owner_of[&1["sessionId"]]))
+    }
+  end
+
+  defp with_user_ids(response, _metas), do: response
+
+  defp update_meta(socket, fun) do
+    {:ok, _} = Presence.update(socket, socket.assigns.user_id, fun)
+    :ok
+  end
+
+  defp sfu_failed(socket, event, reason) do
+    Logger.warning(
+      "Cloudflare SFU isteği başarısız event=#{event} user_id=#{socket.assigns.user_id} " <>
+        "reason=#{inspect(reason)}"
+    )
+
+    {:reply, {:error, %{reason: "sfu_error"}}, socket}
   end
 end
