@@ -1,0 +1,430 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: tr\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+#: lib/backend_web/controllers/account_controller.ex:69
+#, elixir-autogen, elixir-format
+msgid "A confirmation link was sent to the new address"
+msgstr "Onay bağlantısı yeni adrese gönderildi"
+
+#: lib/backend_web/controllers/ban_controller.ex:44
+#, elixir-autogen, elixir-format
+msgid "Ban not found"
+msgstr "Yasak bulunamadı"
+
+#: lib/backend_web/controllers/server_controller.ex:210
+#, elixir-autogen, elixir-format
+msgid "Cannot kick the server owner"
+msgstr "Sunucu sahibi sunucudan atılamaz"
+
+#: lib/backend_web/controllers/channel_controller.ex:27
+#: lib/backend_web/controllers/channel_controller.ex:45
+#: lib/backend_web/controllers/channel_controller.ex:64
+#, elixir-autogen, elixir-format
+msgid "Channel not found"
+msgstr "Kanal bulunamadı"
+
+#: lib/backend/accounts/user_notifier.ex:74
+#, elixir-autogen, elixir-format
+msgid "Confirm this address"
+msgstr "Bu adresi onayla"
+
+#: lib/backend_web/controllers/preview_controller.ex:24
+#, elixir-autogen, elixir-format
+msgid "Could not fetch preview"
+msgstr "Önizleme alınamadı"
+
+#: lib/backend_web/controllers/invite_controller.ex:28
+#, elixir-autogen, elixir-format
+msgid "Could not generate a unique invite code, please try again"
+msgstr "Davet kodu oluşturulamadı, lütfen tekrar deneyin"
+
+#: lib/backend_web/controllers/account_controller.ex:46
+#: lib/backend_web/controllers/account_controller.ex:77
+#: lib/backend_web/controllers/account_controller.ex:104
+#: lib/backend_web/controllers/account_controller.ex:181
+#, elixir-autogen, elixir-format
+msgid "Current password is incorrect"
+msgstr "Mevcut şifre yanlış"
+
+#: lib/backend_web/controllers/dm_controller.ex:30
+#: lib/backend_web/controllers/dm_controller.ex:34
+#: lib/backend_web/controllers/dm_controller.ex:52
+#: lib/backend_web/controllers/dm_controller.ex:56
+#, elixir-autogen, elixir-format
+msgid "DM room not found"
+msgstr "Sohbet bulunamadı"
+
+#: lib/backend_web/controllers/verification_controller.ex:42
+#, elixir-autogen, elixir-format
+msgid "Email verified"
+msgstr "E-posta doğrulandı"
+
+#: lib/backend_web/controllers/upload_controller.ex:46
+#, elixir-autogen, elixir-format
+msgid "File is too large (images up to %{image_mb} MB, other files up to %{file_mb} MB)"
+msgstr "Dosya çok büyük (resimler en fazla %{image_mb} MB, diğer dosyalar en fazla %{file_mb} MB)"
+
+#: lib/backend_web/controllers/ban_controller.ex:83
+#: lib/backend_web/controllers/report_controller.ex:84
+#, elixir-autogen, elixir-format
+msgid "Forbidden"
+msgstr "Bu işlem için yetkin yok"
+
+#: lib/backend/accounts/user_notifier.ex:100
+#, elixir-autogen, elixir-format
+msgid "Hi %{name},"
+msgstr "Merhaba %{name},"
+
+#: lib/backend/accounts/user_notifier.ex:39
+#: lib/backend/accounts/user_notifier.ex:76
+#, elixir-autogen, elixir-format
+msgid "If you didn't ask for this, you can ignore this email."
+msgstr "Bu bağlantıyı siz istemediyseniz bu e-postayı yok sayabilirsiniz."
+
+#: lib/backend/accounts/user_notifier.ex:57
+#, elixir-autogen, elixir-format
+msgid "If you didn't make this request, you can ignore this email; your password won't change."
+msgstr "Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez."
+
+#: lib/backend/accounts/user_notifier.ex:93
+#, elixir-autogen, elixir-format
+msgid "If you didn't make this request, your account may be at risk: change your password right away and sign out of all devices."
+msgstr "Bu talebi siz yapmadıysanız hesabınız tehlikede olabilir: hemen şifrenizi değiştirin ve tüm cihazlardan çıkış yapın."
+
+#: lib/backend_web/controllers/password_reset_controller.ex:64
+#, elixir-autogen, elixir-format
+msgid "If your email address is registered, a password reset link has been sent"
+msgstr "E-posta adresiniz sistemde kayıtlıysa, şifre sıfırlama bağlantısı gönderildi"
+
+#: lib/backend_web/controllers/verification_controller.ex:77
+#, elixir-autogen, elixir-format
+msgid "If your email address is registered, a verification link has been sent"
+msgstr "E-posta adresiniz sistemde kayıtlıysa, doğrulama bağlantısı gönderildi"
+
+#: lib/backend_web/controllers/preview_controller.ex:21
+#, elixir-autogen, elixir-format
+msgid "Invalid URL"
+msgstr "Geçersiz bağlantı"
+
+#: lib/backend_web/controllers/user_controller.ex:61
+#, elixir-autogen, elixir-format
+msgid "Invalid email or password"
+msgstr "E-posta veya şifre hatalı"
+
+#: lib/backend_web/controllers/account_controller.ex:135
+#: lib/backend_web/controllers/server_controller.ex:140
+#, elixir-autogen, elixir-format
+msgid "Invalid image. Upload an image first."
+msgstr "Geçersiz resim. Önce bir resim yükleyin."
+
+#: lib/backend_web/controllers/server_controller.ex:198
+#, elixir-autogen, elixir-format
+msgid "Invalid role"
+msgstr "Geçersiz rol"
+
+#: lib/backend_web/controllers/report_controller.ex:49
+#, elixir-autogen, elixir-format
+msgid "Invalid status"
+msgstr "Geçersiz durum"
+
+#: lib/backend_web/controllers/invite_controller.ex:103
+#, elixir-autogen, elixir-format
+msgid "Invite has expired"
+msgstr "Davetin süresi dolmuş"
+
+#: lib/backend_web/controllers/invite_controller.ex:111
+#, elixir-autogen, elixir-format
+msgid "Invite has reached its maximum number of uses"
+msgstr "Davet kullanım sınırına ulaşmış"
+
+#: lib/backend_web/controllers/invite_controller.ex:73
+#: lib/backend_web/controllers/invite_controller.ex:100
+#, elixir-autogen, elixir-format
+msgid "Invite not found"
+msgstr "Davet bulunamadı"
+
+#: lib/backend_web/controllers/server_controller.ex:190
+#: lib/backend_web/controllers/server_controller.ex:219
+#, elixir-autogen, elixir-format
+msgid "Member not found"
+msgstr "Üye bulunamadı"
+
+#: lib/backend_web/controllers/report_controller.ex:60
+#, elixir-autogen, elixir-format
+msgid "Message not found"
+msgstr "Mesaj bulunamadı"
+
+#: lib/backend_web/controllers/upload_controller.ex:62
+#, elixir-autogen, elixir-format
+msgid "No file to upload"
+msgstr "Yüklenecek dosya bulunamadı"
+
+#: lib/backend_web/controllers/server_controller.ex:90
+#, elixir-autogen, elixir-format
+msgid "One or more channels not found"
+msgstr "Bir veya daha fazla kanal bulunamadı"
+
+#: lib/backend_web/controllers/channel_controller.ex:59
+#: lib/backend_web/controllers/invite_controller.ex:84
+#, elixir-autogen, elixir-format
+msgid "Only the server owner can perform this action"
+msgstr "Bu işlemi yalnızca sunucu sahibi yapabilir"
+
+#: lib/backend_web/controllers/friend_controller.ex:103
+#, elixir-autogen, elixir-format
+msgid "Record not found"
+msgstr "Kayıt bulunamadı"
+
+#: lib/backend_web/controllers/user_controller.ex:31
+#, elixir-autogen, elixir-format
+msgid "Registration successful, please check your email to verify your account"
+msgstr "Kayıt başarılı, lütfen e-postanızı kontrol edip hesabınızı doğrulayın"
+
+#: lib/backend_web/controllers/report_controller.ex:46
+#, elixir-autogen, elixir-format
+msgid "Report not found"
+msgstr "Rapor bulunamadı"
+
+#: lib/backend_web/controllers/friend_controller.ex:82
+#, elixir-autogen, elixir-format
+msgid "Request not found"
+msgstr "İstek bulunamadı"
+
+#: lib/backend_web/controllers/ban_controller.ex:77
+#: lib/backend_web/controllers/invite_controller.ex:49
+#: lib/backend_web/controllers/invite_controller.ex:90
+#: lib/backend_web/controllers/report_controller.ex:78
+#: lib/backend_web/controllers/server_controller.ex:36
+#: lib/backend_web/controllers/server_controller.ex:48
+#: lib/backend_web/controllers/server_controller.ex:249
+#, elixir-autogen, elixir-format
+msgid "Server not found"
+msgstr "Sunucu bulunamadı"
+
+#: lib/backend_web/controllers/server_controller.ex:233
+#, elixir-autogen, elixir-format
+msgid "Server owner cannot leave — delete the server instead"
+msgstr "Sunucu sahibi sunucudan ayrılamaz; bunun yerine sunucuyu silebilirsin"
+
+#: lib/backend/accounts/user_notifier.ex:55
+#, elixir-autogen, elixir-format
+msgid "Set a new password"
+msgstr "Yeni şifre belirle"
+
+#: lib/backend_web/controllers/upload_controller.ex:55
+#, elixir-autogen, elixir-format
+msgid "The file couldn't be uploaded"
+msgstr "Dosya yüklenemedi"
+
+#: lib/backend_web/controllers/upload_controller.ex:39
+#, elixir-autogen, elixir-format
+msgid "The file's content doesn't match its extension"
+msgstr "Dosya içeriği uzantısıyla uyuşmuyor"
+
+#: lib/backend/accounts/user_notifier.ex:75
+#, elixir-autogen, elixir-format
+msgid "The link is valid for 24 hours. Your old address stays in use until you confirm."
+msgstr "Bağlantı 24 saat geçerlidir. Onaylayana kadar eski adresiniz geçerli kalır."
+
+#: lib/backend_web/controllers/ban_controller.ex:67
+#, elixir-autogen, elixir-format
+msgid "The server owner can't be banned"
+msgstr "Sunucu sahibi yasaklanamaz"
+
+#: lib/backend_web/controllers/server_controller.ex:195
+#, elixir-autogen, elixir-format
+msgid "The server owner's role can't change"
+msgstr "Sunucu sahibinin rolü değiştirilemez"
+
+#: lib/backend/accounts/user_notifier.ex:56
+#, elixir-autogen, elixir-format
+msgid "This link is valid for 1 hour and can only be used once."
+msgstr "Bu bağlantı 1 saat geçerlidir ve yalnızca bir kez kullanılabilir."
+
+#: lib/backend_web/controllers/friend_controller.ex:60
+#, elixir-autogen, elixir-format
+msgid "This request couldn't be sent"
+msgstr "Bu istek gönderilemedi"
+
+#: lib/backend_web/controllers/friend_controller.ex:88
+#, elixir-autogen, elixir-format
+msgid "This request has already been handled"
+msgstr "Bu istek zaten işlenmiş"
+
+#: lib/backend_web/controllers/friend_controller.ex:66
+#, elixir-autogen, elixir-format
+msgid "This user isn't accepting friend requests"
+msgstr "Bu kullanıcı arkadaşlık isteklerini kapatmış"
+
+#: lib/backend_web/plugs/rate_limiter_plug.ex:67
+#, elixir-autogen, elixir-format
+msgid "Too many requests. Please try again later."
+msgstr "Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin."
+
+#: lib/backend_web/plugs/auth_plug.ex:24
+#, elixir-autogen, elixir-format
+msgid "Unauthorized"
+msgstr "Oturumun geçersiz, lütfen tekrar giriş yap."
+
+#: lib/backend_web/controllers/upload_controller.ex:31
+#, elixir-autogen, elixir-format
+msgid "Unsupported file type. Allowed: %{types}"
+msgstr "Desteklenmeyen dosya türü. İzin verilenler: %{types}"
+
+#: lib/backend_web/controllers/ban_controller.ex:31
+#: lib/backend_web/controllers/block_controller.ex:24
+#: lib/backend_web/controllers/dm_controller.ex:71
+#: lib/backend_web/controllers/friend_controller.ex:36
+#, elixir-autogen, elixir-format
+msgid "User not found"
+msgstr "Kullanıcı bulunamadı"
+
+#: lib/backend/accounts/user_notifier.ex:38
+#, elixir-autogen, elixir-format
+msgid "Verify my email address"
+msgstr "E-posta adresimi doğrula"
+
+#: lib/backend/accounts/user_notifier.ex:88
+#, elixir-autogen, elixir-format
+msgid "We received a request to change your Zircle account's email address to %{email}. The change takes effect once the link sent to the new address is confirmed."
+msgstr "Zircle hesabınızın e-posta adresini %{email} olarak değiştirmek için bir talep aldık. Değişiklik, yeni adrese gönderilen bağlantı onaylanınca uygulanacak."
+
+#: lib/backend/accounts/user_notifier.ex:54
+#, elixir-autogen, elixir-format
+msgid "We received a request to reset the password for your Zircle account."
+msgstr "Zircle hesabınız için şifre sıfırlama talebi aldık."
+
+#: lib/backend_web/controllers/friend_controller.ex:48
+#, elixir-autogen, elixir-format
+msgid "You already have a pending request"
+msgstr "Zaten bekleyen bir isteğiniz var"
+
+#: lib/backend/accounts/user_notifier.ex:73
+#, elixir-autogen, elixir-format
+msgid "You asked to change your Zircle account's email address to this one."
+msgstr "Zircle hesabınızın e-posta adresini bu adresle değiştirmek istediniz."
+
+#: lib/backend_web/controllers/dm_controller.ex:81
+#, elixir-autogen, elixir-format
+msgid "You can only message your friends"
+msgstr "Sadece arkadaşlarınıza mesaj gönderebilirsiniz"
+
+#: lib/backend_web/controllers/friend_controller.ex:85
+#, elixir-autogen, elixir-format
+msgid "You can't accept this request"
+msgstr "Bu isteği kabul edemezsiniz"
+
+#: lib/backend_web/controllers/ban_controller.ex:55
+#, elixir-autogen, elixir-format
+msgid "You can't ban this user"
+msgstr "Bu kullanıcıyı yasaklayamazsın"
+
+#: lib/backend_web/controllers/block_controller.ex:21
+#, elixir-autogen, elixir-format
+msgid "You can't block yourself"
+msgstr "Kendinizi engelleyemezsiniz"
+
+#: lib/backend_web/controllers/friend_controller.ex:106
+#, elixir-autogen, elixir-format
+msgid "You can't do that"
+msgstr "Bu işlemi yapamazsınız"
+
+#: lib/backend_web/controllers/dm_controller.ex:84
+#, elixir-autogen, elixir-format
+msgid "You can't message this user"
+msgstr "Bu kullanıcıyla mesajlaşamazsınız"
+
+#: lib/backend_web/controllers/dm_controller.ex:76
+#, elixir-autogen, elixir-format
+msgid "You can't message yourself"
+msgstr "Kendinize mesaj gönderemezsiniz"
+
+#: lib/backend_web/controllers/report_controller.ex:65
+#, elixir-autogen, elixir-format
+msgid "You can't report your own message"
+msgstr "Kendi mesajını raporlayamazsın"
+
+#: lib/backend_web/controllers/friend_controller.ex:42
+#, elixir-autogen, elixir-format
+msgid "You can't send a friend request to yourself"
+msgstr "Kendinize arkadaşlık isteği gönderemezsiniz"
+
+#: lib/backend_web/controllers/server_controller.ex:243
+#, elixir-autogen, elixir-format
+msgid "You don't have permission to perform this action"
+msgstr "Bu işlem için yetkin yok"
+
+#: lib/backend_web/controllers/block_controller.ex:38
+#, elixir-autogen, elixir-format
+msgid "You haven't blocked this user"
+msgstr "Bu kullanıcıyı engellemediniz"
+
+#: lib/backend/accounts/user_notifier.ex:37
+#, elixir-autogen, elixir-format
+msgid "You need to verify your email address to start using your Zircle account."
+msgstr "Zircle hesabınızı kullanmaya başlamak için e-posta adresinizi doğrulamanız gerekiyor."
+
+#: lib/backend_web/controllers/friend_controller.ex:52
+#, elixir-autogen, elixir-format
+msgid "You're already friends"
+msgstr "Zaten arkadaşsınız"
+
+#: lib/backend_web/controllers/invite_controller.ex:106
+#, elixir-autogen, elixir-format
+msgid "You're banned from this server"
+msgstr "Bu sunucudan yasaklandınız"
+
+#: lib/backend_web/controllers/report_controller.ex:68
+#, elixir-autogen, elixir-format
+msgid "You've already reported this message"
+msgstr "Bu mesajı zaten raporladın"
+
+#: lib/backend_web/controllers/friend_controller.ex:56
+#, elixir-autogen, elixir-format
+msgid "You've blocked this user"
+msgstr "Bu kullanıcıyı engellediniz"
+
+#: lib/backend_web/controllers/account_controller.ex:186
+#, elixir-autogen, elixir-format
+msgid "Your account couldn't be deleted, please try again"
+msgstr "Hesap silinemedi, lütfen tekrar deneyin"
+
+#: lib/backend_web/controllers/email_change_controller.ex:20
+#, elixir-autogen, elixir-format
+msgid "Your email address was updated"
+msgstr "E-posta adresiniz güncellendi"
+
+#: lib/backend_web/controllers/password_reset_controller.ex:37
+#, elixir-autogen, elixir-format
+msgid "Your password was updated, you can sign in with your new password"
+msgstr "Şifreniz güncellendi, yeni şifrenizle giriş yapabilirsiniz"
+
+#: lib/backend/accounts/user_notifier.ex:71
+#, elixir-autogen, elixir-format
+msgid "Zircle - Confirm Your New Email Address"
+msgstr "Zircle - Yeni E-posta Adresini Onayla"
+
+#: lib/backend/accounts/user_notifier.ex:86
+#, elixir-autogen, elixir-format
+msgid "Zircle - Email Change Request"
+msgstr "Zircle - E-posta Değişikliği Talebi"
+
+#: lib/backend/accounts/user_notifier.ex:52
+#, elixir-autogen, elixir-format
+msgid "Zircle - Password Reset"
+msgstr "Zircle - Şifre Sıfırlama"
+
+#: lib/backend/accounts/user_notifier.ex:35
+#, elixir-autogen, elixir-format
+msgid "Zircle - Verify Your Email Address"
+msgstr "Zircle - E-posta Adresini Doğrula"

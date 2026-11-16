@@ -28,7 +28,7 @@ defmodule BackendWeb.BanController do
            %{} <- Accounts.get_user(user_id) do
         ban(conn, server, user_id, params["reason"])
       else
-        _ -> conn |> put_status(:not_found) |> json(%{error: "Kullanıcı bulunamadı"})
+        _ -> conn |> put_status(:not_found) |> json(%{error: gettext("User not found")})
       end
     end)
   end
@@ -41,7 +41,7 @@ defmodule BackendWeb.BanController do
     with_moderated_server(conn, server_id, fn server ->
       case Servers.unban_user(server.id, user_id) do
         {:ok, _} -> send_resp(conn, :no_content, "")
-        {:error, _} -> conn |> put_status(:not_found) |> json(%{error: "Yasak bulunamadı"})
+        {:error, _} -> conn |> put_status(:not_found) |> json(%{error: gettext("Ban not found")})
       end
     end)
   end
@@ -52,7 +52,7 @@ defmodule BackendWeb.BanController do
     if user_id == server.owner_id or Servers.can_moderate?(server.id, actor_id, user_id) do
       do_ban(conn, server, user_id, reason)
     else
-      conn |> put_status(:forbidden) |> json(%{error: "Bu kullanıcıyı yasaklayamazsın"})
+      conn |> put_status(:forbidden) |> json(%{error: gettext("You can't ban this user")})
     end
   end
 
@@ -64,7 +64,9 @@ defmodule BackendWeb.BanController do
         |> json(%{user_id: ban.user_id, reason: ban.reason, banned_at: ban.inserted_at})
 
       {:error, :owner} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{error: "Sunucu sahibi yasaklanamaz"})
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: gettext("The server owner can't be banned")})
 
       {:error, %Ecto.Changeset{} = changeset} ->
         conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
@@ -74,13 +76,13 @@ defmodule BackendWeb.BanController do
   defp with_moderated_server(conn, server_id, fun) do
     case Servers.get_server(server_id) do
       nil ->
-        conn |> put_status(:not_found) |> json(%{error: "Server not found"})
+        conn |> put_status(:not_found) |> json(%{error: gettext("Server not found")})
 
       %Server{} = server ->
         if Servers.moderator?(server.id, conn.assigns.current_user.id) do
           fun.(server)
         else
-          conn |> put_status(:forbidden) |> json(%{error: "Forbidden"})
+          conn |> put_status(:forbidden) |> json(%{error: gettext("Forbidden")})
         end
     end
   end

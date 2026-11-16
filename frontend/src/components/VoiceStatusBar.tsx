@@ -1,4 +1,5 @@
 import { Hash, Headphones, Mic, MicOff, PhoneOff, VolumeX } from 'lucide-react';
+import { useT } from '../i18n';
 import './VoiceStatusBar.css';
 
 interface Props {
@@ -39,6 +40,7 @@ export default function VoiceStatusBar({
   onToggleDeafen,
   onLeave,
 }: Props) {
+  const t = useT();
   return (
     <div className={`voice-status-bar voice-status-bar-${variant}`}>
       {roomName && (
@@ -56,16 +58,16 @@ export default function VoiceStatusBar({
           <button
             className={`voice-control-btn${isMuted ? ' active' : ''}`}
             onClick={onToggleMute}
-            title={isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
-            aria-label={isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
+            title={isMuted ? t('Mikrofonu Aç') : t('Mikrofonu Kapat')}
+            aria-label={isMuted ? t('Mikrofonu Aç') : t('Mikrofonu Kapat')}
           >
             {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
           </button>
           <button
             className="voice-control-btn voice-leave-btn"
             onClick={onLeave}
-            title="Kanaldan Ayrıl"
-            aria-label="Kanaldan Ayrıl"
+            title={t('Kanaldan Ayrıl')}
+            aria-label={t('Kanaldan Ayrıl')}
           >
             <PhoneOff size={16} />
           </button>
@@ -73,8 +75,8 @@ export default function VoiceStatusBar({
         <button
           className={`voice-control-btn${isDeafened ? ' active' : ''}`}
           onClick={onToggleDeafen}
-          title={isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
-          aria-label={isDeafened ? 'Sağırlaştırmayı Kaldır' : 'Sağırlaştır'}
+          title={isDeafened ? t('Sağırlaştırmayı Kaldır') : t('Sağırlaştır')}
+          aria-label={isDeafened ? t('Sağırlaştırmayı Kaldır') : t('Sağırlaştır')}
         >
           {isDeafened ? <VolumeX size={16} /> : <Headphones size={16} />}
         </button>

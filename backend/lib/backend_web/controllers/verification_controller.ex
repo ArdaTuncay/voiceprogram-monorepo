@@ -11,8 +11,6 @@ defmodule BackendWeb.VerificationController do
   # separate value (an email link's lifetime, not a signed auth token's).
   @token_ttl_seconds 60 * 60 * 24
 
-  @generic_resend_message "E-posta adresiniz sistemde kayıtlıysa, doğrulama bağlantısı gönderildi"
-
   # Same brute-force guard as UserController's register/login (see its own
   # comment) — resend-verification is just as attractive a target for an
   # email-enumeration or mail-bombing attempt, so it gets the identical
@@ -40,7 +38,7 @@ defmodule BackendWeb.VerificationController do
             |> Ecto.Changeset.change(email_verified: true, email_verification_token: nil)
             |> Repo.update()
 
-          json(conn, %{message: "E-posta doğrulandı"})
+          json(conn, %{message: gettext("Email verified")})
         end
     end
   end
@@ -60,7 +58,7 @@ defmodule BackendWeb.VerificationController do
       _ -> :ok
     end
 
-    json(conn, %{message: @generic_resend_message})
+    json(conn, %{message: generic_resend_message()})
   end
 
   def resend(conn, _params) do
@@ -72,4 +70,8 @@ defmodule BackendWeb.VerificationController do
   defp token_expired?(%User{email_verification_sent_at: sent_at}) do
     DateTime.diff(DateTime.utc_now(), sent_at, :second) > @token_ttl_seconds
   end
+
+  # A function, not a module attribute: it's translated per request.
+  defp generic_resend_message,
+    do: gettext("If your email address is registered, a verification link has been sent")
 end

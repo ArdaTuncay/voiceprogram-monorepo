@@ -25,7 +25,7 @@ defmodule BackendWeb.InviteController do
         {:error, :code_generation_failed} ->
           conn
           |> put_status(:internal_server_error)
-          |> json(%{error: "Could not generate a unique invite code, please try again"})
+          |> json(%{error: gettext("Could not generate a unique invite code, please try again")})
 
         {:error, changeset} ->
           conn
@@ -46,7 +46,7 @@ defmodule BackendWeb.InviteController do
       _ ->
         conn
         |> put_status(:not_found)
-        |> json(%{error: "Server not found"})
+        |> json(%{error: gettext("Server not found")})
     end
   end
 
@@ -70,7 +70,7 @@ defmodule BackendWeb.InviteController do
           send_resp(conn, :no_content, "")
 
         {:error, :not_found} ->
-          conn |> put_status(:not_found) |> json(%{error: "Invite not found"})
+          conn |> put_status(:not_found) |> json(%{error: gettext("Invite not found")})
       end
     else
       false -> forbidden(conn)
@@ -81,13 +81,13 @@ defmodule BackendWeb.InviteController do
   defp forbidden(conn) do
     conn
     |> put_status(:forbidden)
-    |> json(%{error: "Only the server owner can perform this action"})
+    |> json(%{error: gettext("Only the server owner can perform this action")})
   end
 
   defp not_found(conn) do
     conn
     |> put_status(:not_found)
-    |> json(%{error: "Server not found"})
+    |> json(%{error: gettext("Server not found")})
   end
 
   @doc "POST /api/invites/:code/accept — redeems an invite code for the current user."
@@ -97,18 +97,20 @@ defmodule BackendWeb.InviteController do
         json(conn, %{id: server.id, name: server.name, owner_id: server.owner_id})
 
       {:error, :not_found} ->
-        conn |> put_status(:not_found) |> json(%{error: "Invite not found"})
+        conn |> put_status(:not_found) |> json(%{error: gettext("Invite not found")})
 
       {:error, :expired} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{error: "Invite has expired"})
+        conn |> put_status(:unprocessable_entity) |> json(%{error: gettext("Invite has expired")})
 
       {:error, :banned} ->
-        conn |> put_status(:forbidden) |> json(%{error: "Bu sunucudan yasaklandınız"})
+        conn
+        |> put_status(:forbidden)
+        |> json(%{error: gettext("You're banned from this server")})
 
       {:error, :max_uses_reached} ->
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{error: "Invite has reached its maximum number of uses"})
+        |> json(%{error: gettext("Invite has reached its maximum number of uses")})
 
       {:error, changeset} ->
         conn

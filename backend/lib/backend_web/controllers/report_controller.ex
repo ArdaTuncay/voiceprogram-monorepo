@@ -43,10 +43,10 @@ defmodule BackendWeb.ReportController do
           json(conn, %{id: report.id, status: report.status})
 
         {:error, :not_found} ->
-          conn |> put_status(:not_found) |> json(%{error: "Rapor bulunamadı"})
+          conn |> put_status(:not_found) |> json(%{error: gettext("Report not found")})
 
         {:error, _} ->
-          conn |> put_status(:unprocessable_entity) |> json(%{error: "Geçersiz durum"})
+          conn |> put_status(:unprocessable_entity) |> json(%{error: gettext("Invalid status")})
       end
     end)
   end
@@ -57,15 +57,17 @@ defmodule BackendWeb.ReportController do
         conn |> put_status(:created) |> json(%{id: report.id})
 
       {:error, :not_found} ->
-        conn |> put_status(:not_found) |> json(%{error: "Mesaj bulunamadı"})
+        conn |> put_status(:not_found) |> json(%{error: gettext("Message not found")})
 
       {:error, :own_message} ->
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{error: "Kendi mesajını raporlayamazsın"})
+        |> json(%{error: gettext("You can't report your own message")})
 
       {:error, :duplicate} ->
-        conn |> put_status(:conflict) |> json(%{error: "Bu mesajı zaten raporladın"})
+        conn
+        |> put_status(:conflict)
+        |> json(%{error: gettext("You've already reported this message")})
 
       {:error, %Ecto.Changeset{} = changeset} ->
         conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
@@ -75,13 +77,13 @@ defmodule BackendWeb.ReportController do
   defp with_staff(conn, server_id, fun) do
     case Servers.get_server(server_id) do
       nil ->
-        conn |> put_status(:not_found) |> json(%{error: "Server not found"})
+        conn |> put_status(:not_found) |> json(%{error: gettext("Server not found")})
 
       %Server{} = server ->
         if Servers.moderator?(server.id, conn.assigns.current_user.id) do
           fun.(server)
         else
-          conn |> put_status(:forbidden) |> json(%{error: "Forbidden"})
+          conn |> put_status(:forbidden) |> json(%{error: gettext("Forbidden")})
         end
     end
   end

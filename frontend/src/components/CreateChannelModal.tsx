@@ -4,6 +4,7 @@ import { Hash, Volume2, Folder, AlertTriangle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { ChannelType } from '../types';
 import { useServerStore } from '../stores/useServerStore';
+import { useT, type MessageKey } from '../i18n';
 import Modal from './Modal';
 import './CreateChannelModal.css';
 
@@ -15,20 +16,21 @@ interface Props {
   onClose: () => void;
 }
 
-const TITLES: Record<ChannelType, string> = {
+const TITLES: Record<ChannelType, MessageKey> = {
   text: 'Metin Kanalı Oluştur',
   voice: 'Ses Kanalı Oluştur',
   category: 'Kategori Oluştur',
 };
 
 const ICONS: Record<ChannelType, LucideIcon> = { text: Hash, voice: Volume2, category: Folder };
-const PLACEHOLDERS: Record<ChannelType, string> = {
+const PLACEHOLDERS: Record<ChannelType, MessageKey> = {
   text: 'yeni-kanal',
   voice: 'yeni-ses-kanalı',
   category: 'YENİ KATEGORİ',
 };
 
 export default function CreateChannelModal({ type, parentId, onClose }: Props) {
+  const t = useT();
   const Icon = ICONS[type];
   const createChannel = useServerStore((s) => s.createChannel);
   const [name, setName] = useState('');
@@ -56,10 +58,10 @@ export default function CreateChannelModal({ type, parentId, onClose }: Props) {
   }
 
   return (
-    <Modal title={TITLES[type]} onClose={onClose}>
+    <Modal title={t(TITLES[type])} onClose={onClose}>
       <form className="create-channel-form" onSubmit={handleSubmit}>
         <label className="create-channel-label" htmlFor="create-channel-name">
-          {type === 'category' ? 'Kategori Adı' : 'Kanal Adı'}
+          {type === 'category' ? t('Kategori Adı') : t('Kanal Adı')}
         </label>
         <div className="create-channel-input-row">
           <span className="create-channel-input-icon"><Icon size={16} /></span>
@@ -69,7 +71,7 @@ export default function CreateChannelModal({ type, parentId, onClose }: Props) {
             className="create-channel-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={PLACEHOLDERS[type]}
+            placeholder={t(PLACEHOLDERS[type])}
             maxLength={50}
             disabled={submitting}
           />
@@ -80,7 +82,7 @@ export default function CreateChannelModal({ type, parentId, onClose }: Props) {
           type="submit"
           disabled={submitting || !name.trim()}
         >
-          {submitting ? 'Oluşturuluyor…' : type === 'category' ? 'Kategori Oluştur' : 'Kanal Oluştur'}
+          {submitting ? t('Oluşturuluyor…') : type === 'category' ? t('Kategori Oluştur') : t('Kanal Oluştur')}
         </button>
       </form>
     </Modal>

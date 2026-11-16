@@ -36,6 +36,8 @@ defmodule BackendWeb.RateLimiterPlug do
         [scale: :timer.minutes(1), limit: 15] when action in [:show]
   """
 
+  use Gettext, backend: BackendWeb.Gettext
+
   import Plug.Conn
   import Phoenix.Controller, only: [action_name: 1, controller_module: 1, json: 2]
 
@@ -62,7 +64,7 @@ defmodule BackendWeb.RateLimiterPlug do
     if limited? do
       conn
       |> put_status(:too_many_requests)
-      |> json(%{error: "Too many requests. Please try again later."})
+      |> json(%{error: gettext("Too many requests. Please try again later.")})
       |> halt()
     else
       conn

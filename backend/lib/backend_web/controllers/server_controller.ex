@@ -33,7 +33,7 @@ defmodule BackendWeb.ServerController do
       _ ->
         conn
         |> put_status(:not_found)
-        |> json(%{error: "Server not found"})
+        |> json(%{error: gettext("Server not found")})
     end
   end
 
@@ -45,7 +45,7 @@ defmodule BackendWeb.ServerController do
       _ ->
         conn
         |> put_status(:not_found)
-        |> json(%{error: "Server not found"})
+        |> json(%{error: gettext("Server not found")})
     end
   end
 
@@ -87,7 +87,7 @@ defmodule BackendWeb.ServerController do
         {:error, :not_found} ->
           conn
           |> put_status(:unprocessable_entity)
-          |> json(%{error: "One or more channels not found"})
+          |> json(%{error: gettext("One or more channels not found")})
 
         {:error, %Ecto.Changeset{} = changeset} ->
           conn
@@ -137,7 +137,7 @@ defmodule BackendWeb.ServerController do
         {:error, _changeset} ->
           conn
           |> put_status(:unprocessable_entity)
-          |> json(%{error: "Geçersiz resim. Önce bir resim yükleyin."})
+          |> json(%{error: gettext("Invalid image. Upload an image first.")})
       end
     else
       false -> forbidden(conn)
@@ -187,15 +187,15 @@ defmodule BackendWeb.ServerController do
           json(conn, %{user_id: member.user_id, role: member.role})
 
         {:error, :not_found} ->
-          conn |> put_status(:not_found) |> json(%{error: "Member not found"})
+          conn |> put_status(:not_found) |> json(%{error: gettext("Member not found")})
 
         {:error, :owner} ->
           conn
           |> put_status(:unprocessable_entity)
-          |> json(%{error: "The server owner's role can't change"})
+          |> json(%{error: gettext("The server owner's role can't change")})
 
         {:error, _} ->
-          conn |> put_status(:unprocessable_entity) |> json(%{error: "Invalid role"})
+          conn |> put_status(:unprocessable_entity) |> json(%{error: gettext("Invalid role")})
       end
     else
       false -> forbidden(conn)
@@ -207,7 +207,7 @@ defmodule BackendWeb.ServerController do
     if user_id == server.owner_id do
       conn
       |> put_status(:unprocessable_entity)
-      |> json(%{error: "Cannot kick the server owner"})
+      |> json(%{error: gettext("Cannot kick the server owner")})
     else
       case Servers.kick_member(server.id, user_id) do
         {:ok, _} ->
@@ -216,7 +216,7 @@ defmodule BackendWeb.ServerController do
         {:error, :not_found} ->
           conn
           |> put_status(:not_found)
-          |> json(%{error: "Member not found"})
+          |> json(%{error: gettext("Member not found")})
       end
     end
   end
@@ -230,7 +230,7 @@ defmodule BackendWeb.ServerController do
       {:error, :owner_cannot_leave} ->
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{error: "Server owner cannot leave — delete the server instead"})
+        |> json(%{error: gettext("Server owner cannot leave — delete the server instead")})
 
       {:error, :not_found} ->
         not_found(conn)
@@ -240,13 +240,13 @@ defmodule BackendWeb.ServerController do
   defp forbidden(conn) do
     conn
     |> put_status(:forbidden)
-    |> json(%{error: "You don't have permission to perform this action"})
+    |> json(%{error: gettext("You don't have permission to perform this action")})
   end
 
   defp not_found(conn) do
     conn
     |> put_status(:not_found)
-    |> json(%{error: "Server not found"})
+    |> json(%{error: gettext("Server not found")})
   end
 
   # `my_role` is only known when the server came from

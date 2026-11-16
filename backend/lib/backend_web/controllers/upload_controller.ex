@@ -28,35 +28,39 @@ defmodule BackendWeb.UploadController do
         |> put_status(:unprocessable_entity)
         |> json(%{
           error:
-            "Desteklenmeyen dosya türü. İzin verilenler: PNG, JPEG, GIF, WEBP, " <>
-              "PDF, TXT, ZIP, 7Z, RAR, DOCX, XLSX, PPTX"
+            gettext("Unsupported file type. Allowed: %{types}",
+              types: "PNG, JPEG, GIF, WEBP, PDF, TXT, ZIP, 7Z, RAR, DOCX, XLSX, PPTX"
+            )
         })
 
       {:error, :invalid_file_signature} ->
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{error: "Dosya içeriği uzantısıyla uyuşmuyor"})
+        |> json(%{error: gettext("The file's content doesn't match its extension")})
 
       {:error, :too_large} ->
         conn
         |> put_status(:unprocessable_entity)
         |> json(%{
           error:
-            "Dosya çok büyük (resimler en fazla #{mb(:image)} MB, " <>
-              "diğer dosyalar en fazla #{mb(:file)} MB)"
+            gettext(
+              "File is too large (images up to %{image_mb} MB, other files up to %{file_mb} MB)",
+              image_mb: mb(:image),
+              file_mb: mb(:file)
+            )
         })
 
       {:error, :invalid_file} ->
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{error: "Dosya yüklenemedi"})
+        |> json(%{error: gettext("The file couldn't be uploaded")})
     end
   end
 
   def create(conn, _params) do
     conn
     |> put_status(:bad_request)
-    |> json(%{error: "Yüklenecek dosya bulunamadı"})
+    |> json(%{error: gettext("No file to upload")})
   end
 
   defp mb(kind), do: div(Uploads.max_bytes(kind), 1024 * 1024)

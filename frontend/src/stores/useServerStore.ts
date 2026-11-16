@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { create } from 'zustand';
 import { useDMStore } from './useDMStore';
 import type {
@@ -240,7 +241,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
     if (get().activeServerId !== serverId) return;
 
     if (error || !data) {
-      set({ channelError: error ?? 'No channels available' });
+      set({ channelError: error ?? t('Kanallar alınamadı') });
       return;
     }
 
@@ -318,7 +319,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
 
   createServer: async (name) => {
     const { data, error } = await apiCreateServer(name);
-    if (error || !data) return error ?? 'Failed to create server';
+    if (error || !data) return error ?? t('Sunucu oluşturulamadı');
 
     set((state) => ({ servers: [...state.servers, data] }));
     get().setActiveServerId(data.id);
@@ -327,7 +328,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
 
   joinServerByInvite: async (code) => {
     const { data, error } = await acceptInvite(code);
-    if (error || !data) return error ?? 'Failed to join server';
+    if (error || !data) return error ?? t('Sunucuya katılınamadı');
 
     set((state) => (state.servers.some((s) => s.id === data.id) ? state : { servers: [...state.servers, data] }));
     get().setActiveServerId(data.id);
@@ -336,7 +337,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
 
   createChannel: async (name, type, parentId) => {
     const serverId = get().activeServerId;
-    if (!serverId) return 'No active server';
+    if (!serverId) return t('Seçili bir sunucu yok');
 
     const { error } = await apiCreateChannel(serverId, name, type, parentId);
     // On success the new channel appears once the "channel_created" broadcast
@@ -346,7 +347,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
 
   updateChannelPositions: async (updates) => {
     const serverId = get().activeServerId;
-    if (!serverId) return 'No active server';
+    if (!serverId) return t('Seçili bir sunucu yok');
 
     const { error } = await apiUpdateChannelPositions(serverId, updates);
     // On success the reordered list appears once the
@@ -358,7 +359,7 @@ export const useServerStore = create<ServerStoreState>((set, get) => ({
 
   leaveServer: async () => {
     const serverId = get().activeServerId;
-    if (!serverId) return 'No active server';
+    if (!serverId) return t('Seçili bir sunucu yok');
 
     const { error } = await apiLeaveServer(serverId);
     if (error) return error;

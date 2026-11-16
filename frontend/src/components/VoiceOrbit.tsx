@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { MicOff, VolumeX, RefreshCw } from 'lucide-react';
 import { circularLayout } from '../utils/circularLayout';
+import { t, useT } from '../i18n';
 import './VoiceOrbit.css';
 
 export interface OrbitParticipant {
@@ -111,7 +112,7 @@ function AvatarWithVolumePopover({
         onClick={() => (open ? setOpen(false) : openPopover())}
         aria-haspopup="true"
         aria-expanded={open}
-        title="Ses seviyesini ayarla"
+        title={t('Ses seviyesini ayarla')}
       >
         {children}
       </button>
@@ -128,7 +129,7 @@ function AvatarWithVolumePopover({
             value={percent}
             onChange={(e) => onVolumeChange(peerId, Number(e.target.value) / 100)}
             className="voice-orbit-volume-slider"
-            aria-label="Ses seviyesi"
+            aria-label={t('Ses seviyesi')}
           />
           <span className="voice-orbit-volume-value">{percent}%</span>
         </div>
@@ -146,12 +147,12 @@ function ParticipantAvatar({ p, size }: { p: OrbitParticipant; size: number }) {
     >
       {p.initials}
       {p.isMuted && (
-        <span className="voice-orbit-badge voice-orbit-badge-mute" title="Mikrofon Kapalı">
+        <span className="voice-orbit-badge voice-orbit-badge-mute" title={t('Mikrofon Kapalı')}>
           <MicOff size={9} />
         </span>
       )}
       {p.isDeafened && (
-        <span className="voice-orbit-badge voice-orbit-badge-deafen" title="Sağırlaştırıldı">
+        <span className="voice-orbit-badge voice-orbit-badge-deafen" title={t('Sağırlaştırıldı')}>
           <VolumeX size={9} />
         </span>
       )}
@@ -172,6 +173,9 @@ function ParticipantAvatar({ p, size }: { p: OrbitParticipant; size: number }) {
 export default function VoiceOrbit({ participants, maxOrbitSize = 8, currentUserId, onVolumeChange }: Props) {
   const n = participants.length;
 
+  // Subscribes to the UI language; the small components below use the plain
+  // t() and re-render along with this one.
+  useT();
   const positions = useMemo(() => {
     const center = ORBIT_CONTAINER_SIZE / 2;
     return circularLayout({ count: n, radius: ORBIT_RADIUS }).map(({ x, y }) => ({
@@ -232,12 +236,12 @@ export default function VoiceOrbit({ participants, maxOrbitSize = 8, currentUser
                 <span className="voice-participant-name">
                   {p.displayName}
                   {p.isMuted && (
-                    <span className="voice-status-icon mute-icon" title="Mikrofon Kapalı">
+                    <span className="voice-status-icon mute-icon" title={t('Mikrofon Kapalı')}>
                       <MicOff size={10} />
                     </span>
                   )}
                   {p.isDeafened && (
-                    <span className="voice-status-icon deafen-icon" title="Sağırlaştırıldı">
+                    <span className="voice-status-icon deafen-icon" title={t('Sağırlaştırıldı')}>
                       <VolumeX size={10} />
                     </span>
                   )}

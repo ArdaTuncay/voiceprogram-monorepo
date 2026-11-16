@@ -1,4 +1,4 @@
-const LOCALE = 'tr-TR';
+import { currentLocale, t } from '../i18n';
 
 function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -16,38 +16,35 @@ function daysBetween(from: Date, to: Date): number {
 /**
  * Discord-style relative timestamp for a message's `inserted_at`:
  *  - today: just the time ("14:32")
- *  - yesterday: "Dün 14:32"
+ *  - yesterday: "Dün 14:32" / "Yesterday 14:32"
  *  - within the last 7 days (excluding today/yesterday): weekday + time
  *    ("Salı 14:32")
  *  - older: numeric date + time ("15.03.2026 14:32")
  *
- * Locale is pinned to 'tr-TR' throughout (rather than `[]`/the runtime's
- * default, which the older per-component `formatTime` this replaces used)
- * so the weekday name and "DD.MM.YYYY" ordering stay deterministic
- * regardless of the environment's default ICU locale — this app has no
- * i18n and every other UI string is already hardcoded Turkish, so a
- * locale-dependent date format would just be an inconsistency, not
- * flexibility.
+ * The locale is the UI language's (tr-TR or en-US — see ../i18n) rather
+ * than the runtime's default, so the weekday name and date ordering always
+ * match the rest of the UI regardless of the environment's ICU locale.
  *
  * Elixir sends `inserted_at` as UTC without a trailing "Z", so one is
  * appended when missing — otherwise `Date` parses the string as local
  * time instead of UTC.
  */
 export function formatMessageTime(raw: string): string {
+  const locale = currentLocale();
   const date = new Date(raw.includes('Z') ? raw : `${raw}Z`);
   const now = new Date();
-  const time = date.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
+  const time = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
   const dayDiff = daysBetween(now, date);
 
   if (dayDiff === 0) return time;
-  if (dayDiff === 1) return `Dün ${time}`;
+  if (dayDiff === 1) return t('Dün {time}', { time });
   if (dayDiff > 1 && dayDiff <= 7) {
-    const weekday = date.toLocaleDateString(LOCALE, { weekday: 'long' });
+    const weekday = date.toLocaleDateString(locale, { weekday: 'long' });
     return `${weekday} ${time}`;
   }
 
-  const numericDate = date.toLocaleDateString(LOCALE, {
+  const numericDate = date.toLocaleDateString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

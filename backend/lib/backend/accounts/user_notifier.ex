@@ -1,7 +1,16 @@
 defmodule Backend.Accounts.UserNotifier do
   @moduledoc """
   Sends account-related transactional emails via `Backend.Mailer`.
+
+  Each email is written in the language of the request that triggered it —
+  every one of these is sent synchronously from a request's own process,
+  where `BackendWeb.LocalePlug` has set the gettext locale. Both bodies come
+  from one list of blocks (see `deliver/3`), so the HTML and plain-text
+  versions can't drift apart, and every value is HTML-escaped in the HTML
+  one.
   """
+
+  use Gettext, backend: BackendWeb.Gettext
 
   import Swoosh.Email
 
@@ -21,29 +30,14 @@ defmodule Backend.Accounts.UserNotifier do
   `{:error, term}` otherwise (see `Swoosh.Mailer.deliver/2`).
   """
   def deliver_verification_email(%User{} = user, token) when is_binary(token) do
-    frontend_url = Application.fetch_env!(:backend, :frontend_url)
-    verification_url = frontend_url <> "/verify-email/" <> token
+    url = frontend_url("/verify-email/" <> token)
 
-    new()
-    |> from(Application.fetch_env!(:backend, :mailer_from))
-    |> to(user.email)
-    |> subject("Zircle - E-posta Adresini Doğrula")
-    |> html_body("""
-    <p>Merhaba #{user.username},</p>
-    <p>Zircle hesabınızı kullanmaya başlamak için e-posta adresinizi doğrulamanız gerekiyor.</p>
-    <p><a href="#{verification_url}">E-posta adresimi doğrula</a></p>
-    <p>Bu bağlantıyı siz istemediyseniz bu e-postayı yok sayabilirsiniz.</p>
-    """)
-    |> text_body("""
-    Merhaba #{user.username},
-
-    Zircle hesabınızı kullanmaya başlamak için e-posta adresinizi doğrulamanız gerekiyor. Aşağıdaki bağlantıya tıklayın:
-
-    #{verification_url}
-
-    Bu bağlantıyı siz istemediyseniz bu e-postayı yok sayabilirsiniz.
-    """)
-    |> Backend.Mailer.deliver()
+    deliver(user.email, gettext("Zircle - Verify Your Email Address"), [
+      greeting(user),
+      gettext("You need to verify your email address to start using your Zircle account."),
+      {:link, gettext("Verify my email address"), url},
+      gettext("If you didn't ask for this, you can ignore this email.")
+    ])
   end
 
   @doc """
@@ -53,29 +47,17 @@ defmodule Backend.Accounts.UserNotifier do
   password and calls `POST /api/password-reset/confirm`.
   """
   def deliver_password_reset_email(%User{} = user, token) when is_binary(token) do
-    reset_url = Application.fetch_env!(:backend, :frontend_url) <> "/reset-password/" <> token
+    url = frontend_url("/reset-password/" <> token)
 
-    new()
-    |> from(Application.fetch_env!(:backend, :mailer_from))
-    |> to(user.email)
-    |> subject("Zircle - Şifre Sıfırlama")
-    |> html_body("""
-    <p>Merhaba #{user.username},</p>
-    <p>Zircle hesabınız için şifre sıfırlama talebi aldık.</p>
-    <p><a href="#{reset_url}">Yeni şifre belirle</a></p>
-    <p>Bu bağlantı 1 saat geçerlidir ve yalnızca bir kez kullanılabilir.</p>
-    <p>Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.</p>
-    """)
-    |> text_body("""
-    Merhaba #{user.username},
-
-    Zircle hesabınız için şifre sıfırlama talebi aldık. Yeni şifre belirlemek için:
-    #{reset_url}
-
-    Bu bağlantı 1 saat geçerlidir ve yalnızca bir kez kullanılabilir.
-    Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.
-    """)
-    |> Backend.Mailer.deliver()
+    deliver(user.email, gettext("Zircle - Password Reset"), [
+      greeting(user),
+      gettext("We received a request to reset the password for your Zircle account."),
+      {:link, gettext("Set a new password"), url},
+      gettext("This link is valid for 1 hour and can only be used once."),
+      gettext(
+        "If you didn't make this request, you can ignore this email; your password won't change."
+      )
+    ])
   end
 
   @doc """
@@ -86,29 +68,15 @@ defmodule Backend.Accounts.UserNotifier do
   """
   def deliver_email_change_confirmation(%User{pending_email: new_email} = user, token)
       when is_binary(new_email) and is_binary(token) do
-    confirm_url = Application.fetch_env!(:backend, :frontend_url) <> "/confirm-email/" <> token
+    url = frontend_url("/confirm-email/" <> token)
 
-    new()
-    |> from(Application.fetch_env!(:backend, :mailer_from))
-    |> to(new_email)
-    |> subject("Zircle - Yeni E-posta Adresini Onayla")
-    |> html_body("""
-    <p>Merhaba #{user.username},</p>
-    <p>Zircle hesabınızın e-posta adresini bu adresle değiştirmek istediniz.</p>
-    <p><a href="#{confirm_url}">Bu adresi onayla</a></p>
-    <p>Bağlantı 24 saat geçerlidir. Onaylayana kadar eski adresiniz geçerli kalır.</p>
-    <p>Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>
-    """)
-    |> text_body("""
-    Merhaba #{user.username},
-
-    Zircle hesabınızın e-posta adresini bu adresle değiştirmek istediniz. Onaylamak için:
-    #{confirm_url}
-
-    Bağlantı 24 saat geçerlidir. Onaylayana kadar eski adresiniz geçerli kalır.
-    Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz.
-    """)
-    |> Backend.Mailer.deliver()
+    deliver(new_email, gettext("Zircle - Confirm Your New Email Address"), [
+      greeting(user),
+      gettext("You asked to change your Zircle account's email address to this one."),
+      {:link, gettext("Confirm this address"), url},
+      gettext("The link is valid for 24 hours. Your old address stays in use until you confirm."),
+      gettext("If you didn't ask for this, you can ignore this email.")
+    ])
   end
 
   @doc """
@@ -117,22 +85,42 @@ defmodule Backend.Accounts.UserNotifier do
   """
   def deliver_email_change_notice(%User{pending_email: new_email} = user)
       when is_binary(new_email) do
+    deliver(user.email, gettext("Zircle - Email Change Request"), [
+      greeting(user),
+      gettext(
+        "We received a request to change your Zircle account's email address to %{email}. " <>
+          "The change takes effect once the link sent to the new address is confirmed.",
+        email: new_email
+      ),
+      gettext(
+        "If you didn't make this request, your account may be at risk: change your password " <>
+          "right away and sign out of all devices."
+      )
+    ])
+  end
+
+  defp greeting(%User{username: username}), do: gettext("Hi %{name},", name: username)
+
+  defp frontend_url(path), do: Application.fetch_env!(:backend, :frontend_url) <> path
+
+  # Blocks are paragraphs (strings) or `{:link, label, url}`.
+  defp deliver(to, subject, blocks) do
     new()
     |> from(Application.fetch_env!(:backend, :mailer_from))
-    |> to(user.email)
-    |> subject("Zircle - E-posta Değişikliği Talebi")
-    |> html_body("""
-    <p>Merhaba #{user.username},</p>
-    <p>Zircle hesabınızın e-posta adresini <strong>#{new_email}</strong> olarak değiştirmek için bir talep aldık. Değişiklik, yeni adrese gönderilen bağlantı onaylanınca uygulanacak.</p>
-    <p>Bu talebi siz yapmadıysanız hesabınız tehlikede olabilir: hemen şifrenizi değiştirin ve tüm cihazlardan çıkış yapın.</p>
-    """)
-    |> text_body("""
-    Merhaba #{user.username},
-
-    Zircle hesabınızın e-posta adresini #{new_email} olarak değiştirmek için bir talep aldık. Değişiklik, yeni adrese gönderilen bağlantı onaylanınca uygulanacak.
-
-    Bu talebi siz yapmadıysanız hesabınız tehlikede olabilir: hemen şifrenizi değiştirin ve tüm cihazlardan çıkış yapın.
-    """)
+    |> to(to)
+    |> subject(subject)
+    |> html_body(Enum.map_join(blocks, "\n", &html_block/1))
+    |> text_body(Enum.map_join(blocks, "\n\n", &text_block/1) <> "\n")
     |> Backend.Mailer.deliver()
   end
+
+  defp html_block({:link, label, url}),
+    do: ~s(<p><a href="#{escape(url)}">#{escape(label)}</a></p>)
+
+  defp html_block(text), do: "<p>#{escape(text)}</p>"
+
+  defp text_block({:link, label, url}), do: "#{label}:\n#{url}"
+  defp text_block(text), do: text
+
+  defp escape(text), do: Plug.HTML.html_escape(text)
 end

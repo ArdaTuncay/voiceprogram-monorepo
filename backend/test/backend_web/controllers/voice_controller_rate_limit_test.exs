@@ -26,7 +26,7 @@ defmodule BackendWeb.VoiceControllerRateLimitTest do
     assert limited.status == 429
 
     assert json_response(limited, 429) == %{
-             "error" => "Too many requests. Please try again later."
+             "error" => "Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin."
            }
   end
 end

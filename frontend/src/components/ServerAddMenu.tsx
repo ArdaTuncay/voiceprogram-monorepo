@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, LogIn } from 'lucide-react';
+import { useT } from '../i18n';
 import './ServerAddMenu.css';
 
 interface Props {
@@ -33,6 +34,7 @@ const MENU_MARGIN = 8;
  * entirely, same as how RadialServerSwitcher's own overlay/panel (also
  * nested inside `.server-sidebar`) never has this problem. */
 export default function ServerAddMenu({ onCreateServer, onJoinServer }: Props) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState({ left: 0, bottom: 0 });
   const rootRef = useRef<HTMLDivElement>(null);
@@ -79,8 +81,8 @@ export default function ServerAddMenu({ onCreateServer, onJoinServer }: Props) {
         type="button"
         className="server-icon server-icon-create"
         onClick={() => (open ? setOpen(false) : openMenu())}
-        title="Sunucu Ekle"
-        aria-label="Sunucu Ekle"
+        title={t('Sunucu Ekle')}
+        aria-label={t('Sunucu Ekle')}
         aria-haspopup="menu"
         aria-expanded={open}
       >
@@ -99,7 +101,7 @@ export default function ServerAddMenu({ onCreateServer, onJoinServer }: Props) {
             onClick={() => pick(onCreateServer)}
           >
             <Plus size={14} />
-            Sunucu Oluştur
+            {t('Sunucu Oluştur')}
           </button>
           <button
             type="button"
@@ -108,7 +110,7 @@ export default function ServerAddMenu({ onCreateServer, onJoinServer }: Props) {
             onClick={() => pick(onJoinServer)}
           >
             <LogIn size={14} />
-            Bir Sunucuya Katıl
+            {t('Bir Sunucuya Katıl')}
           </button>
         </div>
       )}

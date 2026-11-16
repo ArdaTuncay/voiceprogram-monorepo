@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Pencil, Trash2, Smile, Flag, CornerUpLeft } from 'lucide-react';
+import { useT } from '../i18n';
 import './MessageContextMenu.css';
 
 interface Props {
@@ -39,6 +40,7 @@ export default function MessageContextMenu({
   onReact,
   onClose,
 }: Props) {
+  const t = useT();
   useEffect(() => {
     function handleEscape(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -63,29 +65,29 @@ export default function MessageContextMenu({
         {onReply && (
           <button type="button" role="menuitem" className="message-context-menu-item" onClick={() => pick(onReply)}>
             <CornerUpLeft size={14} />
-            Yanıtla
+            {t('Yanıtla')}
           </button>
         )}
         {canEdit && (
           <button type="button" role="menuitem" className="message-context-menu-item" onClick={() => pick(onEdit)}>
             <Pencil size={14} />
-            Düzenle
+            {t('Düzenle')}
           </button>
         )}
         {canDelete && (
           <button type="button" role="menuitem" className="message-context-menu-item" onClick={() => pick(onDelete)}>
             <Trash2 size={14} />
-            Sil
+            {t('Sil')}
           </button>
         )}
         <button type="button" role="menuitem" className="message-context-menu-item" onClick={() => pick(onReact)}>
           <Smile size={14} />
-          İfade Bırak
+          {t('İfade Bırak')}
         </button>
         {onReport && (
           <button type="button" role="menuitem" className="message-context-menu-item" onClick={() => pick(onReport)}>
             <Flag size={14} />
-            Raporla
+            {t('Raporla')}
           </button>
         )}
       </div>

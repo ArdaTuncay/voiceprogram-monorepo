@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { verifyEmail } from '../services/api';
+import { useT } from '../i18n';
 import mascot from '../assets/zircle-mascot.svg';
 import './VerifyEmailPage.css';
 
@@ -14,27 +15,27 @@ interface StatusCopy {
   body: string;
 }
 
-function copyFor(status: Status, networkErrorDetail: string): StatusCopy {
+function copyFor(status: Status, networkErrorDetail: string, t: ReturnType<typeof useT>): StatusCopy {
   switch (status) {
     case 'success':
       return {
-        title: 'E-postanız doğrulandı!',
-        body: 'Artık Zircle hesabınıza giriş yapabilirsiniz.',
+        title: t('E-postanız doğrulandı!'),
+        body: t('Artık Zircle hesabınıza giriş yapabilirsiniz.'),
       };
     case 'invalid_token':
       return {
-        title: 'Bağlantı geçersiz',
-        body: 'Bu doğrulama bağlantısı geçersiz — daha önce kullanılmış ya da hiç var olmamış olabilir.',
+        title: t('Bağlantı geçersiz'),
+        body: t('Bu doğrulama bağlantısı geçersiz — daha önce kullanılmış ya da hiç var olmamış olabilir.'),
       };
     case 'token_expired':
       return {
-        title: 'Bağlantının süresi dolmuş',
-        body: 'Bu doğrulama bağlantısının süresi doldu. Giriş ekranından yeniden bir bağlantı talep edebilirsiniz.',
+        title: t('Bağlantının süresi dolmuş'),
+        body: t('Bu doğrulama bağlantısının süresi doldu. Giriş ekranından yeniden bir bağlantı talep edebilirsiniz.'),
       };
     case 'error':
       return {
-        title: 'Bir şeyler ters gitti',
-        body: networkErrorDetail || 'Doğrulama sırasında beklenmeyen bir hata oluştu, lütfen tekrar deneyin.',
+        title: t('Bir şeyler ters gitti'),
+        body: networkErrorDetail || t('Doğrulama sırasında beklenmeyen bir hata oluştu, lütfen tekrar deneyin.'),
       };
     case 'loading':
       return { title: '', body: '' };
@@ -48,6 +49,7 @@ function copyFor(status: Status, networkErrorDetail: string): StatusCopy {
  * read or written here, since the link is opened from an email client, not
  * from within a logged-in (or logged-out) app session. */
 export default function VerifyEmailPage({ token }: Props) {
+  const t = useT();
   const [status, setStatus] = useState<Status>('loading');
   const [networkErrorDetail, setNetworkErrorDetail] = useState('');
 
@@ -72,15 +74,15 @@ export default function VerifyEmailPage({ token }: Props) {
     };
   }, [token]);
 
-  const { title, body } = copyFor(status, networkErrorDetail);
+  const { title, body } = copyFor(status, networkErrorDetail, t);
 
   return (
     <div className="verify-email-page">
       <div className="verify-email-card">
-        <img src={mascot} alt="Zircle maskotu" className="verify-email-mascot" />
+        <img src={mascot} alt={t('Zircle maskotu')} className="verify-email-mascot" />
 
         {status === 'loading' ? (
-          <p className="verify-email-loading">Doğrulanıyor…</p>
+          <p className="verify-email-loading">{t('Doğrulanıyor…')}</p>
         ) : (
           <>
             <h1>{title}</h1>
@@ -94,7 +96,7 @@ export default function VerifyEmailPage({ token }: Props) {
                   window.location.href = '/';
                 }}
               >
-                Giriş yap
+                {t('Giriş yap')}
               </button>
             )}
           </>

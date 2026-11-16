@@ -1,0 +1,28 @@
+.language-select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  color: var(--text-muted);
+}
+
+.language-select select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-normal, inherit);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* The sign-in cards: top-right corner, out of the centered column's way. */
+.auth-card {
+  position: relative;
+}
+
+.language-select-corner {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+}

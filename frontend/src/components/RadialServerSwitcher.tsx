@@ -3,6 +3,7 @@ import type { KeyboardEvent, RefObject } from 'react';
 import type { Server } from '../types';
 import { circularLayout } from '../utils/circularLayout';
 import { serverInitials } from '../utils';
+import { useT } from '../i18n';
 import './RadialServerSwitcher.css';
 
 interface Props {
@@ -135,6 +136,7 @@ export default function RadialServerSwitcher({
   const n = servers.length;
   const useGrid = n > maxRadialSize;
 
+  const t = useT();
   const positions = useMemo(() => {
     if (useGrid) return [];
     const center = PANEL_SIZE / 2;
@@ -181,7 +183,7 @@ export default function RadialServerSwitcher({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleContainerKeyDown}
         role="menu"
-        aria-label="Sunucu hızlı geçiş"
+        aria-label={t('Sunucu hızlı geçiş')}
       >
         {useGrid ? (
           <div className="radial-switcher-grid">

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { uploadFile } from '../services/api';
+import { useT } from '../i18n';
 import AvatarFace from './AvatarFace';
 import './AvatarFace.css';
 
@@ -23,6 +24,7 @@ interface Props {
 /** Choose, upload and save a profile picture or server icon, or remove it.
  * Uploads through the normal POST /api/upload, then hands the URL to onSave. */
 export default function ImagePicker({ label, currentUrl, fallback, color, onSave }: Props) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -39,18 +41,18 @@ export default function ImagePicker({ label, currentUrl, fallback, color, onSave
 
     setError('');
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setError('Sadece PNG, JPEG, GIF veya WEBP resimleri yüklenebilir.');
+      setError(t('Sadece PNG, JPEG, GIF veya WEBP resimleri yüklenebilir.'));
       return;
     }
     if (file.size > MAX_BYTES) {
-      setError('Resim çok büyük (en fazla 8MB).');
+      setError(t('Resim çok büyük (en fazla 8MB).'));
       return;
     }
 
     setBusy(true);
     const { data, error: uploadError } = await uploadFile(file);
     if (uploadError || !data) {
-      setError(uploadError ?? 'Resim yüklenemedi.');
+      setError(uploadError ?? t('Resim yüklenemedi.'));
     } else {
       await save(data.file_url);
     }
@@ -73,11 +75,11 @@ export default function ImagePicker({ label, currentUrl, fallback, color, onSave
         <span className="image-picker-label">{label}</span>
         <div className="image-picker-actions">
           <button type="button" className="image-picker-btn" onClick={() => inputRef.current?.click()} disabled={busy}>
-            {busy ? 'Yükleniyor…' : currentUrl ? 'Değiştir' : 'Resim yükle'}
+            {busy ? t('Yükleniyor…') : currentUrl ? t('Değiştir') : t('Resim yükle')}
           </button>
           {currentUrl && (
             <button type="button" className="image-picker-btn" onClick={handleRemove} disabled={busy}>
-              Kaldır
+              {t('Kaldır')}
             </button>
           )}
         </div>
@@ -85,14 +87,14 @@ export default function ImagePicker({ label, currentUrl, fallback, color, onSave
           ref={inputRef}
           type="file"
           accept={ALLOWED_TYPES.join(',')}
-          aria-label="Resim seç"
+          aria-label={t('Resim seç')}
           hidden
           onChange={handleFile}
         />
         {error ? (
           <span className="image-picker-error">{error}</span>
         ) : (
-          <span className="image-picker-hint">PNG, JPEG, GIF veya WEBP, en fazla 8MB.</span>
+          <span className="image-picker-hint">{t('PNG, JPEG, GIF veya WEBP, en fazla 8MB.')}</span>
         )}
       </div>
     </div>

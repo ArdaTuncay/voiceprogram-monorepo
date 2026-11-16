@@ -3,8 +3,6 @@ defmodule BackendWeb.PasswordResetController do
 
   alias Backend.Accounts
 
-  @generic_message "E-posta adresiniz sistemde kayıtlıysa, şifre sıfırlama bağlantısı gönderildi"
-
   # Requesting a reset sends mail — guarded like register/login/resend
   # (5/minute, per IP and per "email"), against mail-bombing and probing.
   plug BackendWeb.RateLimiterPlug, [scale: :timer.minutes(1), limit: 5] when action in [:create]
@@ -20,7 +18,7 @@ defmodule BackendWeb.PasswordResetController do
   """
   def create(conn, %{"email" => email}) when is_binary(email) do
     :ok = Accounts.request_password_reset(email)
-    json(conn, %{message: @generic_message})
+    json(conn, %{message: generic_message()})
   end
 
   def create(conn, _params) do
@@ -35,7 +33,9 @@ defmodule BackendWeb.PasswordResetController do
       when is_binary(token) and is_binary(password) do
     case Accounts.reset_password(token, password) do
       {:ok, _user} ->
-        json(conn, %{message: "Şifreniz güncellendi, yeni şifrenizle giriş yapabilirsiniz"})
+        json(conn, %{
+          message: gettext("Your password was updated, you can sign in with your new password")
+        })
 
       {:error, :invalid_token} ->
         conn |> put_status(:not_found) |> json(%{error: "invalid_token"})
@@ -59,4 +59,8 @@ defmodule BackendWeb.PasswordResetController do
       end)
     end)
   end
+
+  # A function, not a module attribute: it's translated per request.
+  defp generic_message,
+    do: gettext("If your email address is registered, a password reset link has been sent")
 end

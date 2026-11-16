@@ -1,3 +1,4 @@
+import { currentLanguage, t } from '../i18n';
 import type {
   AuthResponse,
   Channel,
@@ -57,6 +58,12 @@ class RequestTimeoutError extends Error {}
  * actually cancels the request, but the race is what guarantees this
  * function's own await settles on time no matter how the request behaves.
  */
+/** Asks the backend to answer in the UI language (see BackendWeb.LocalePlug):
+ * its error/info messages and the account emails a request triggers. */
+function languageHeader(): Record<string, string> {
+  return { 'Accept-Language': currentLanguage() };
+}
+
 async function post<T>(path: string, body: Record<string, string>): Promise<ApiResult<T>> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -86,7 +93,7 @@ async function sendPost<T>(
 ): Promise<ApiResult<T>> {
   const resp = await fetch(`${API_BASE_URL}/api${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...languageHeader() },
     body: JSON.stringify(body),
     signal,
   });
@@ -102,13 +109,13 @@ async function sendPost<T>(
   }
 
   if (!resp.ok) {
-    // Checked before reading the body's own `error`: RateLimiterPlug's 429
-    // body is English, and this is the one status where the user's next
-    // step (wait, then retry) is known without reading it.
+    // Checked before reading the body's own `error`: this is the one status
+    // where the user's next step (wait, then retry) is known without reading
+    // it, so it gets the same wording as the client-side rate-limit copy.
     if (resp.status === 429) return { error: AUTH_REQUEST_ERRORS.rateLimited };
     const err = json as ApiError;
     if (err.errors) return { error: changesetErrorsMessage(err.errors) };
-    return { error: err.error ?? 'Bir hata oluştu' };
+    return { error: err.error ?? t('Bir hata oluştu') };
   }
   return { data: json as T };
 }
@@ -118,15 +125,15 @@ async function sendPost<T>(
  * scope: healthz, register, login, and this one, verify-email). */
 async function get<T>(path: string): Promise<ApiResult<T>> {
   try {
-    const resp = await fetch(`${API_BASE_URL}/api${path}`);
+    const resp = await fetch(`${API_BASE_URL}/api${path}`, { headers: languageHeader() });
     const json = await resp.json();
     if (!resp.ok) {
       const err = json as ApiError;
-      return { error: err.error ?? 'Bir hata oluştu' };
+      return { error: err.error ?? t('Bir hata oluştu') };
     }
     return { data: json as T };
   } catch {
-    return { error: 'Network error — is the backend running on port 4000?' };
+    return { error: AUTH_REQUEST_ERRORS.network };
   }
 }
 
@@ -134,7 +141,11 @@ async function authedFetch<T>(path: string, init?: RequestInit): Promise<ApiResu
   try {
     const resp = await fetch(`${API_BASE_URL}/api${path}`, {
       ...init,
-      headers: { ...init?.headers, Authorization: `Bearer ${getStoredToken() ?? ''}` },
+      headers: {
+        ...init?.headers,
+        ...languageHeader(),
+        Authorization: `Bearer ${getStoredToken() ?? ''}`,
+      },
     });
 
     // Every call through here hits an :authenticated-pipeline route (see
@@ -148,7 +159,7 @@ async function authedFetch<T>(path: string, init?: RequestInit): Promise<ApiResu
     if (resp.status === 401) {
       disconnectSocket();
       forceLogout();
-      return { error: 'Oturum süresi doldu, lütfen tekrar giriş yapın.' };
+      return { error: t('Oturum süresi doldu, lütfen tekrar giriş yapın.') };
     }
 
     // No body to parse on a 204 (e.g. the delete/kick endpoints below).
@@ -164,11 +175,11 @@ async function authedFetch<T>(path: string, init?: RequestInit): Promise<ApiResu
         );
         return { error: messages.join(', ') };
       }
-      return { error: err.error ?? 'Bir hata oluştu' };
+      return { error: err.error ?? t('Bir hata oluştu') };
     }
     return { data: json as T };
   } catch {
-    return { error: 'Network error — is the backend running on port 4000?' };
+    return { error: AUTH_REQUEST_ERRORS.network };
   }
 }
 

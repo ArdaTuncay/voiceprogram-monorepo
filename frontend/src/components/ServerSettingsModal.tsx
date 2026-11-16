@@ -19,7 +19,8 @@ import {
   fetchServerReports,
   reviewReport,
 } from '../services/api';
-import { REPORT_REASON_LABELS } from '../utils/reports';
+import { reportReasonLabel } from '../utils/reports';
+import { currentLocale, t, useT } from '../i18n';
 import { serverInitials } from '../utils';
 import ImagePicker from './ImagePicker';
 import { canModerate } from '../utils/permissions';
@@ -34,6 +35,9 @@ interface Props {
 }
 
 export default function ServerSettingsModal({ onClose }: Props) {
+  // Subscribes to the UI language; the tabs below use the plain t() and
+  // re-render along with this one.
+  useT();
   const activeServerId = useServerStore((s) => s.activeServerId);
   const servers = useServerStore((s) => s.servers);
   const channels = useServerStore((s) => s.channels);
@@ -47,7 +51,7 @@ export default function ServerSettingsModal({ onClose }: Props) {
   if (!server) return null;
 
   return (
-    <Modal title={`Sunucu Ayarları — ${server.name}`} onClose={onClose}>
+    <Modal title={t('Sunucu Ayarları — {name}', { name: server.name })} onClose={onClose}>
       <div className="settings-tabs">
         {isOwner && (
           <>
@@ -55,13 +59,13 @@ export default function ServerSettingsModal({ onClose }: Props) {
               className={`settings-tab${tab === 'general' ? ' active' : ''}`}
               onClick={() => setTab('general')}
             >
-              Genel Ayarlar
+              {t('Genel Ayarlar')}
             </button>
             <button
               className={`settings-tab${tab === 'channels' ? ' active' : ''}`}
               onClick={() => setTab('channels')}
             >
-              Kanalları Yönet
+              {t('Kanalları Yönet')}
             </button>
           </>
         )}
@@ -69,26 +73,26 @@ export default function ServerSettingsModal({ onClose }: Props) {
           className={`settings-tab${tab === 'members' ? ' active' : ''}`}
           onClick={() => setTab('members')}
         >
-          Üyeler
+          {t('Üyeler')}
         </button>
         <button
           className={`settings-tab${tab === 'bans' ? ' active' : ''}`}
           onClick={() => setTab('bans')}
         >
-          Yasaklılar
+          {t('Yasaklılar')}
         </button>
         <button
           className={`settings-tab${tab === 'reports' ? ' active' : ''}`}
           onClick={() => setTab('reports')}
         >
-          Raporlar
+          {t('Raporlar')}
         </button>
         {isOwner && (
           <button
             className={`settings-tab${tab === 'invites' ? ' active' : ''}`}
             onClick={() => setTab('invites')}
           >
-            Davet Linkleri
+            {t('Davet Linkleri')}
           </button>
         )}
       </div>
@@ -148,7 +152,7 @@ function GeneralTab({ server, onClose }: { server: Server; onClose: () => void }
 
   async function handleIconSave(url: string | null) {
     const { data, error } = await updateServerIcon(server.id, url);
-    if (error || !data) return error ?? 'İkon kaydedilemedi';
+    if (error || !data) return error ?? t('İkon kaydedilemedi');
     useServerStore.getState().handleServerUpdated({
       server_id: data.id,
       name: data.name,
@@ -160,13 +164,13 @@ function GeneralTab({ server, onClose }: { server: Server; onClose: () => void }
   return (
     <div className="settings-section">
       <ImagePicker
-        label="Sunucu İkonu"
+        label={t('Sunucu İkonu')}
         currentUrl={server.icon_url}
         fallback={serverInitials(server.name)}
         onSave={handleIconSave}
       />
       <label className="settings-label" htmlFor="server-name-input">
-        Sunucu Adı
+        {t('Sunucu Adı')}
       </label>
       <div className="settings-row">
         <input
@@ -182,17 +186,16 @@ function GeneralTab({ server, onClose }: { server: Server; onClose: () => void }
           onClick={handleSave}
           disabled={saving || !trimmedName || trimmedName === server.name}
         >
-          {saved ? 'Kaydedildi!' : 'Kaydet'}
+          {saved ? t('Kaydedildi!') : t('Kaydet')}
         </button>
       </div>
 
       {error && <div className="settings-error"><AlertTriangle size={14} /> {error}</div>}
 
       <div className="settings-danger-zone">
-        <h4 className="settings-danger-title">Tehlikeli Bölge</h4>
+        <h4 className="settings-danger-title">{t('Tehlikeli Bölge')}</h4>
         <p className="settings-danger-description">
-          Sunucuyu silmek geri alınamaz; tüm kanallar, mesajlar ve üyelikler kalıcı olarak
-          silinir.
+          {t('Sunucuyu silmek geri alınamaz; tüm kanallar, mesajlar ve üyelikler kalıcı olarak silinir.')}
         </p>
         {confirmingDelete ? (
           <div className="settings-row">
@@ -201,19 +204,19 @@ function GeneralTab({ server, onClose }: { server: Server; onClose: () => void }
               onClick={handleDelete}
               disabled={deleting}
             >
-              {deleting ? 'Siliniyor…' : 'Evet, Sunucuyu Sil'}
+              {deleting ? t('Siliniyor…') : t('Evet, Sunucuyu Sil')}
             </button>
             <button
               className="settings-cancel-btn"
               onClick={() => setConfirmingDelete(false)}
               disabled={deleting}
             >
-              Vazgeç
+              {t('Vazgeç')}
             </button>
           </div>
         ) : (
           <button className="settings-delete-btn" onClick={() => setConfirmingDelete(true)}>
-            Sunucuyu Sil
+            {t('Sunucuyu Sil')}
           </button>
         )}
       </div>
@@ -248,14 +251,14 @@ function ChannelsTab({ channels }: { channels: Channel[] }) {
               className="settings-icon-btn"
               onClick={() => handleDelete(channel.id)}
               disabled={deletingId === channel.id}
-              title="Kanalı Sil"
-              aria-label={`${channel.name} kanalını sil`}
+              title={t('Kanalı Sil')}
+              aria-label={t('{name} kanalını sil', { name: channel.name })}
             >
               <Trash2 size={14} />
             </button>
           </li>
         ))}
-        {channels.length === 0 && <li className="list-empty-hint">Henüz kanal yok.</li>}
+        {channels.length === 0 && <li className="list-empty-hint">{t('Henüz kanal yok.')}</li>}
       </ul>
     </div>
   );
@@ -283,7 +286,7 @@ function MembersTab({ serverId, myRole }: { serverId: string; myRole: MemberRole
     fetchServerMembers(serverId).then(({ data, error }) => {
       if (cancelled) return;
       if (error || !data) {
-        setError(error ?? 'Üye listesi alınamadı');
+        setError(error ?? t('Üye listesi alınamadı'));
       } else {
         setMembers(data);
       }
@@ -336,7 +339,7 @@ function MembersTab({ serverId, myRole }: { serverId: string; myRole: MemberRole
   }
 
   if (loading) {
-    return <div className="settings-section">Yükleniyor…</div>;
+    return <div className="settings-section">{t('Yükleniyor…')}</div>;
   }
 
   return (
@@ -353,9 +356,9 @@ function MembersTab({ serverId, myRole }: { serverId: string; myRole: MemberRole
                   size={8}
                   className="member-status-dot"
                 />
-                {member.username ?? 'Bilinmeyen'}
-                {member.role === 'owner' && <span className="settings-owner-badge">Sahip</span>}
-                {member.role === 'moderator' && <span className="settings-owner-badge">Moderatör</span>}
+                {member.username ?? t('Bilinmeyen')}
+                {member.role === 'owner' && <span className="settings-owner-badge">{t('Sahip')}</span>}
+                {member.role === 'moderator' && <span className="settings-owner-badge">{t('Moderatör')}</span>}
               </span>
               {canModerate(myRole, member.role) && (
                 <span className="settings-member-actions">
@@ -366,11 +369,11 @@ function MembersTab({ serverId, myRole }: { serverId: string; myRole: MemberRole
                         handleRoleChange(member.user_id, member.role === 'moderator' ? 'member' : 'moderator')
                       }
                       disabled={roleChangingId === member.user_id}
-                      title={member.role === 'moderator' ? 'Moderatörlüğünü Al' : 'Moderatör Yap'}
+                      title={member.role === 'moderator' ? t('Moderatörlüğünü Al') : t('Moderatör Yap')}
                       aria-label={
                         member.role === 'moderator'
-                          ? `${member.username ?? 'kullanıcının'} moderatörlüğünü al`
-                          : `${member.username ?? 'kullanıcıyı'} moderatör yap`
+                          ? t('{name} moderatörlüğünü al', { name: member.username ?? t('kullanıcının') })
+                          : t('{name} moderatör yap', { name: member.username ?? t('kullanıcıyı') })
                       }
                     >
                       {member.role === 'moderator' ? <ShieldOff size={14} /> : <Shield size={14} />}
@@ -380,8 +383,8 @@ function MembersTab({ serverId, myRole }: { serverId: string; myRole: MemberRole
                     className="settings-icon-btn"
                     onClick={() => handleKick(member.user_id)}
                     disabled={kickingId === member.user_id}
-                    title="Sunucudan At"
-                    aria-label={`${member.username ?? 'kullanıcıyı'} sunucudan at`}
+                    title={t('Sunucudan At')}
+                    aria-label={t('{name} sunucudan at', { name: member.username ?? t('kullanıcıyı') })}
                   >
                     <UserX size={14} />
                   </button>
@@ -391,8 +394,8 @@ function MembersTab({ serverId, myRole }: { serverId: string; myRole: MemberRole
                       setBanTargetId(member.user_id);
                       setBanReason('');
                     }}
-                    title="Sunucudan Yasakla"
-                    aria-label={`${member.username ?? 'kullanıcıyı'} sunucudan yasakla`}
+                    title={t('Sunucudan Yasakla')}
+                    aria-label={t('{name} sunucudan yasakla', { name: member.username ?? t('kullanıcıyı') })}
                   >
                     <Ban size={14} />
                   </button>
@@ -402,8 +405,8 @@ function MembersTab({ serverId, myRole }: { serverId: string; myRole: MemberRole
                 <div className="settings-ban-confirm">
                   <input
                     className="settings-input"
-                    placeholder="Sebep (isteğe bağlı)"
-                    aria-label="Yasaklama sebebi"
+                    placeholder={t('Sebep (isteğe bağlı)')}
+                    aria-label={t('Yasaklama sebebi')}
                     value={banReason}
                     maxLength={200}
                     onChange={(e) => setBanReason(e.target.value)}
@@ -413,10 +416,10 @@ function MembersTab({ serverId, myRole }: { serverId: string; myRole: MemberRole
                     onClick={() => handleBan(member.user_id)}
                     disabled={banning}
                   >
-                    {banning ? 'Yasaklanıyor…' : 'Yasakla'}
+                    {banning ? t('Yasaklanıyor…') : t('Yasakla')}
                   </button>
                   <button className="settings-cancel-btn" onClick={() => setBanTargetId(null)}>
-                    Vazgeç
+                    {t('Vazgeç')}
                   </button>
                 </div>
               )}
@@ -439,7 +442,7 @@ function BansTab({ serverId }: { serverId: string }) {
     setLoading(true);
     fetchServerBans(serverId).then(({ data, error }) => {
       if (cancelled) return;
-      if (error || !data) setError(error ?? 'Yasak listesi alınamadı');
+      if (error || !data) setError(error ?? t('Yasak listesi alınamadı'));
       else setBans(data);
       setLoading(false);
     });
@@ -461,7 +464,7 @@ function BansTab({ serverId }: { serverId: string }) {
   }
 
   if (loading) {
-    return <div className="settings-section">Yükleniyor…</div>;
+    return <div className="settings-section">{t('Yükleniyor…')}</div>;
   }
 
   return (
@@ -471,7 +474,7 @@ function BansTab({ serverId }: { serverId: string }) {
         {bans.map((ban) => (
           <li key={ban.user_id} className="settings-list-item">
             <span>
-              {ban.username ?? 'Bilinmeyen'}
+              {ban.username ?? t('Bilinmeyen')}
               {ban.reason && <span className="settings-ban-reason"> — {ban.reason}</span>}
             </span>
             <button
@@ -479,11 +482,11 @@ function BansTab({ serverId }: { serverId: string }) {
               onClick={() => handleUnban(ban.user_id)}
               disabled={liftingId === ban.user_id}
             >
-              Yasağı kaldır
+              {t('Yasağı kaldır')}
             </button>
           </li>
         ))}
-        {bans.length === 0 && <li className="list-empty-hint">Yasaklı kullanıcı yok.</li>}
+        {bans.length === 0 && <li className="list-empty-hint">{t('Yasaklı kullanıcı yok.')}</li>}
       </ul>
     </div>
   );
@@ -502,7 +505,7 @@ function ReportsTab({ serverId }: { serverId: string }) {
     clearReportMarker(serverId);
     fetchServerReports(serverId).then(({ data, error }) => {
       if (cancelled) return;
-      if (error || !data) setError(error ?? 'Raporlar alınamadı');
+      if (error || !data) setError(error ?? t('Raporlar alınamadı'));
       else setReports(data);
       setLoading(false);
     });
@@ -524,7 +527,7 @@ function ReportsTab({ serverId }: { serverId: string }) {
   }
 
   if (loading) {
-    return <div className="settings-section">Yükleniyor…</div>;
+    return <div className="settings-section">{t('Yükleniyor…')}</div>;
   }
 
   return (
@@ -535,15 +538,16 @@ function ReportsTab({ serverId }: { serverId: string }) {
           <li key={report.id} className="settings-list-item settings-report-item">
             <div className="settings-report-head">
               <span>
-                <strong>{report.reported_user.username ?? 'Bilinmeyen'}</strong>
-                <span className="settings-owner-badge">{REPORT_REASON_LABELS[report.reason]}</span>
+                <strong>{report.reported_user.username ?? t('Bilinmeyen')}</strong>
+                <span className="settings-owner-badge">{reportReasonLabel(report.reason)}</span>
               </span>
               <span className="settings-report-meta">
-                Raporlayan: {report.reporter.username ?? 'Bilinmeyen'} · {formatExpiresAt(report.created_at)}
+                {t('Raporlayan: {name}', { name: report.reporter.username ?? t('Bilinmeyen') })} ·{' '}
+                {formatExpiresAt(report.created_at)}
               </span>
             </div>
             <div className="settings-report-content">
-              {report.content || (report.file_url ? 'Dosya eki' : '(boş mesaj)')}
+              {report.content || (report.file_url ? t('Dosya eki') : t('(boş mesaj)'))}
             </div>
             {report.details && <div className="settings-report-meta">{report.details}</div>}
             <div className="settings-report-actions">
@@ -552,28 +556,28 @@ function ReportsTab({ serverId }: { serverId: string }) {
                 onClick={() => handleReview(report.id, 'dismissed')}
                 disabled={reviewingId === report.id}
               >
-                Yoksay
+                {t('Yoksay')}
               </button>
               <button
                 className="settings-confirm-delete-btn"
                 onClick={() => handleReview(report.id, 'resolved')}
                 disabled={reviewingId === report.id}
               >
-                Çözüldü
+                {t('Çözüldü')}
               </button>
             </div>
           </li>
         ))}
-        {reports.length === 0 && <li className="list-empty-hint">Açık rapor yok.</li>}
+        {reports.length === 0 && <li className="list-empty-hint">{t('Açık rapor yok.')}</li>}
       </ul>
     </div>
   );
 }
 
 function formatExpiresAt(expiresAt: string | null): string {
-  if (!expiresAt) return 'Süresiz';
+  if (!expiresAt) return t('Süresiz');
   const date = new Date(expiresAt.includes('Z') ? expiresAt : expiresAt + 'Z');
-  return date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+  return date.toLocaleString(currentLocale(), { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 function isInviteExpired(invite: Invite): boolean {
@@ -598,7 +602,7 @@ function InvitesTab({ serverId }: { serverId: string }) {
     fetchServerInvites(serverId).then(({ data, error }) => {
       if (cancelled) return;
       if (error || !data) {
-        setError(error ?? 'Davet listesi alınamadı');
+        setError(error ?? t('Davet listesi alınamadı'));
       } else {
         setInvites(data);
       }
@@ -623,7 +627,7 @@ function InvitesTab({ serverId }: { serverId: string }) {
   }
 
   if (loading) {
-    return <div className="settings-section">Yükleniyor…</div>;
+    return <div className="settings-section">{t('Yükleniyor…')}</div>;
   }
 
   return (
@@ -642,28 +646,29 @@ function InvitesTab({ serverId }: { serverId: string }) {
                 </code>
                 <span className="invite-meta">
                   {expired
-                    ? 'Süresi doldu'
+                    ? t('Süresi doldu')
                     : maxedOut
-                      ? 'Kullanım limiti doldu'
+                      ? t('Kullanım limiti doldu')
                       : formatExpiresAt(invite.expires_at)}
                   {' · '}
-                  {invite.uses_count}
-                  {invite.max_uses !== null ? `/${invite.max_uses}` : ''} kullanım
+                  {t('{uses} kullanım', {
+                    uses: invite.max_uses !== null ? `${invite.uses_count}/${invite.max_uses}` : invite.uses_count,
+                  })}
                 </span>
               </span>
               <button
                 className="settings-icon-btn"
                 onClick={() => handleRevoke(invite.id)}
                 disabled={revokingId === invite.id}
-                title="Daveti İptal Et"
-                aria-label={`${invite.code} kodlu daveti iptal et`}
+                title={t('Daveti İptal Et')}
+                aria-label={t('{code} kodlu daveti iptal et', { code: invite.code })}
               >
                 <Trash2 size={14} />
               </button>
             </li>
           );
         })}
-        {invites.length === 0 && <li className="list-empty-hint">Henüz davet linki yok.</li>}
+        {invites.length === 0 && <li className="list-empty-hint">{t('Henüz davet linki yok.')}</li>}
       </ul>
     </div>
   );

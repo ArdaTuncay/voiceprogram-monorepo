@@ -28,7 +28,8 @@ defmodule BackendWeb.UserController do
         conn
         |> put_status(:created)
         |> json(%{
-          message: "Kayıt başarılı, lütfen e-postanızı kontrol edip hesabınızı doğrulayın",
+          message:
+            gettext("Registration successful, please check your email to verify your account"),
           email_verification_required: true
         })
 
@@ -58,7 +59,7 @@ defmodule BackendWeb.UserController do
       {:error, _} ->
         conn
         |> put_status(:unauthorized)
-        |> json(%{error: "Invalid email or password"})
+        |> json(%{error: gettext("Invalid email or password")})
     end
   end
 

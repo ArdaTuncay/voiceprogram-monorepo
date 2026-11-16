@@ -33,37 +33,41 @@ defmodule BackendWeb.FriendController do
   # down — each clause here is a trivial one-liner, request/2 itself is
   # just the ok/error split.
   defp render_request_error(conn, :user_not_found) do
-    conn |> put_status(:not_found) |> json(%{error: "Kullanıcı bulunamadı"})
+    conn |> put_status(:not_found) |> json(%{error: gettext("User not found")})
   end
 
   defp render_request_error(conn, :cannot_friend_self) do
     conn
     |> put_status(:unprocessable_entity)
-    |> json(%{error: "Kendinize arkadaşlık isteği gönderemezsiniz"})
+    |> json(%{error: gettext("You can't send a friend request to yourself")})
   end
 
   defp render_request_error(conn, :already_pending) do
     conn
     |> put_status(:unprocessable_entity)
-    |> json(%{error: "Zaten bekleyen bir isteğiniz var"})
+    |> json(%{error: gettext("You already have a pending request")})
   end
 
   defp render_request_error(conn, :already_friends) do
-    conn |> put_status(:unprocessable_entity) |> json(%{error: "Zaten arkadaşsınız"})
+    conn |> put_status(:unprocessable_entity) |> json(%{error: gettext("You're already friends")})
   end
 
   defp render_request_error(conn, :blocked_by_you) do
-    conn |> put_status(:unprocessable_entity) |> json(%{error: "Bu kullanıcıyı engellediniz"})
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{error: gettext("You've blocked this user")})
   end
 
   defp render_request_error(conn, :blocked_by_them) do
-    conn |> put_status(:unprocessable_entity) |> json(%{error: "Bu istek gönderilemedi"})
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{error: gettext("This request couldn't be sent")})
   end
 
   defp render_request_error(conn, :requests_disabled) do
     conn
     |> put_status(:forbidden)
-    |> json(%{error: "Bu kullanıcı arkadaşlık isteklerini kapatmış"})
+    |> json(%{error: gettext("This user isn't accepting friend requests")})
   end
 
   defp render_request_error(conn, %Ecto.Changeset{} = changeset) do
@@ -79,13 +83,15 @@ defmodule BackendWeb.FriendController do
         json(conn, Friends.to_view(friendship, user_id))
 
       {:error, :not_found} ->
-        conn |> put_status(:not_found) |> json(%{error: "İstek bulunamadı"})
+        conn |> put_status(:not_found) |> json(%{error: gettext("Request not found")})
 
       {:error, :not_authorized} ->
-        conn |> put_status(:forbidden) |> json(%{error: "Bu isteği kabul edemezsiniz"})
+        conn |> put_status(:forbidden) |> json(%{error: gettext("You can't accept this request")})
 
       {:error, :invalid_state} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{error: "Bu istek zaten işlenmiş"})
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: gettext("This request has already been handled")})
     end
   end
 
@@ -100,10 +106,10 @@ defmodule BackendWeb.FriendController do
         send_resp(conn, :no_content, "")
 
       {:error, :not_found} ->
-        conn |> put_status(:not_found) |> json(%{error: "Kayıt bulunamadı"})
+        conn |> put_status(:not_found) |> json(%{error: gettext("Record not found")})
 
       {:error, :not_authorized} ->
-        conn |> put_status(:forbidden) |> json(%{error: "Bu işlemi yapamazsınız"})
+        conn |> put_status(:forbidden) |> json(%{error: gettext("You can't do that")})
     end
   end
 

@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useEffect } from 'react';
 import type { User } from '../types';
 import { useServerStore } from './useServerStore';
@@ -144,7 +145,7 @@ export function useSocketSync(currentUser: User): void {
 
         if (prefs.desktop && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           const notification = new Notification(
-            `#${payload.channel_name} — ${payload.username ?? 'Bilinmeyen'}`,
+            `#${payload.channel_name} — ${payload.username ?? t('Bilinmeyen')}`,
             { body: payload.content, tag: payload.channel_id, renotify: true }
           );
           notification.onclick = () => {
@@ -177,7 +178,7 @@ export function useSocketSync(currentUser: User): void {
         if (prefs.sound) playNotificationSound();
 
         if (prefs.desktop && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          const notification = new Notification(payload.username ?? 'Bilinmeyen', {
+          const notification = new Notification(payload.username ?? t('Bilinmeyen'), {
             body: payload.content,
             tag: payload.dm_room_id,
             renotify: true,

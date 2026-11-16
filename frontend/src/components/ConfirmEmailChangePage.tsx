@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { confirmEmailChange } from '../services/api';
+import { useT, type MessageKey } from '../i18n';
 import mascot from '../assets/zircle-mascot.svg';
 import './VerifyEmailPage.css';
 
@@ -9,7 +10,7 @@ interface Props {
 
 type Status = 'loading' | 'success' | 'invalid_token' | 'token_expired' | 'taken' | 'error';
 
-const COPY: Record<Exclude<Status, 'loading'>, { title: string; body: string }> = {
+const COPY: Record<Exclude<Status, 'loading'>, { title: MessageKey; body: MessageKey }> = {
   success: {
     title: 'E-posta adresin güncellendi',
     body: 'Bundan sonra bu adresle giriş yapabilirsin.',
@@ -43,6 +44,7 @@ const COPY: Record<Exclude<Status, 'loading'>, { title: string; body: string }> 
  * twice in development: the token is single-use, so a second call would
  * come back `invalid_token` and overwrite the real result. */
 export default function ConfirmEmailChangePage({ token }: Props) {
+  const t = useT();
   const [status, setStatus] = useState<Status>('loading');
   const started = useRef(false);
 
@@ -61,14 +63,14 @@ export default function ConfirmEmailChangePage({ token }: Props) {
   return (
     <div className="verify-email-page">
       <div className="verify-email-card">
-        <img src={mascot} alt="Zircle maskotu" className="verify-email-mascot" />
+        <img src={mascot} alt={t('Zircle maskotu')} className="verify-email-mascot" />
 
         {status === 'loading' ? (
-          <p className="verify-email-loading">Onaylanıyor…</p>
+          <p className="verify-email-loading">{t('Onaylanıyor…')}</p>
         ) : (
           <>
-            <h1>{COPY[status].title}</h1>
-            <p className="subtitle">{COPY[status].body}</p>
+            <h1>{t(COPY[status].title)}</h1>
+            <p className="subtitle">{t(COPY[status].body)}</p>
             <button
               type="button"
               className="verify-email-submit"
@@ -76,7 +78,7 @@ export default function ConfirmEmailChangePage({ token }: Props) {
                 window.location.href = '/';
               }}
             >
-              Zircle'a dön
+              {t("Zircle'a dön")}
             </button>
           </>
         )}

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
+import { useT } from '../i18n';
+import { rich } from '../i18n/rich';
 import Modal from './Modal';
 import './LeaveServerModal.css';
 
@@ -9,6 +11,7 @@ interface Props {
 }
 
 export default function LeaveServerModal({ onClose }: Props) {
+  const t = useT();
   const servers = useServerStore((s) => s.servers);
   const activeServerId = useServerStore((s) => s.activeServerId);
   const leaveServer = useServerStore((s) => s.leaveServer);
@@ -32,18 +35,22 @@ export default function LeaveServerModal({ onClose }: Props) {
   }
 
   return (
-    <Modal title="Sunucudan Ayrıl" onClose={onClose}>
+    <Modal title={t('Sunucudan Ayrıl')} onClose={onClose}>
       <p className="leave-server-description">
-        <strong>{server.name}</strong> sunucusundan ayrılmak istediğine emin misin? Tekrar
-        katılmak için yeni bir davet linkine ihtiyacın olacak.
+        {rich(
+          t(
+            '{server} sunucusundan ayrılmak istediğine emin misin? Tekrar katılmak için yeni bir davet linkine ihtiyacın olacak.'
+          ),
+          { server: <strong>{server.name}</strong> }
+        )}
       </p>
       {error && <div className="leave-server-error"><AlertTriangle size={14} /> {error}</div>}
       <div className="leave-server-actions">
         <button className="leave-server-cancel-btn" onClick={onClose} disabled={leaving}>
-          Vazgeç
+          {t('Vazgeç')}
         </button>
         <button className="leave-server-confirm-btn" onClick={handleLeave} disabled={leaving}>
-          {leaving ? 'Ayrılınıyor…' : 'Sunucudan Ayrıl'}
+          {leaving ? t('Ayrılınıyor…') : t('Sunucudan Ayrıl')}
         </button>
       </div>
     </Modal>

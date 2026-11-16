@@ -7,6 +7,7 @@ import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
 import { userColor, initials } from '../utils';
 import { formatMessageTime } from '../utils/formatMessageTime';
 import { isMentioned } from '../services/notificationPreferences';
+import { useT } from '../i18n';
 import AvatarFace from './AvatarFace';
 import FileAttachment from './FileAttachment';
 import MessageContent from './MessageContent';
@@ -66,6 +67,7 @@ export default function MessageItem({
   isHighlighted,
   isGrouped,
 }: Props) {
+  const t = useT();
   const [isEditing, setIsEditing] = useState(false);
   // KORUMA: Eğer message.content null ise state'e boş dize ('') veriyoruz
   const [editDraft, setEditDraft] = useState(message.content || '');
@@ -82,7 +84,7 @@ export default function MessageItem({
   const [reactionPickerForced, setReactionPickerForced] = useState(false);
 
   const color = userColor(message.user_id);
-  const name = message.username ?? 'Unknown';
+  const name = message.username ?? t('Bilinmeyen');
   const isOwnMessage = message.user_id === currentUserId;
   const grouped = !!isGrouped && !message.reply_to;
   const mentionsMe =
@@ -119,7 +121,7 @@ export default function MessageItem({
   }
 
   function handleDeleteClick() {
-    if (window.confirm('Bu mesajı silmek istediğine emin misin?')) {
+    if (window.confirm(t('Bu mesajı silmek istediğine emin misin?'))) {
       onDeleteMessage();
     }
   }
@@ -149,11 +151,11 @@ export default function MessageItem({
             onClick={() => onJumpToMessage?.(message.reply_to!.id)}
           >
             <CornerUpLeft size={12} />
-            <span className="message-reply-author">@{message.reply_to.username ?? 'Bilinmeyen'}</span>
+            <span className="message-reply-author">@{message.reply_to.username ?? t('Bilinmeyen')}</span>
             <span className="message-reply-text">
               {message.reply_to.is_deleted
-                ? 'Orijinal mesaj silindi'
-                : message.reply_to.content || (message.reply_to.has_file ? 'Ek' : '')}
+                ? t('Orijinal mesaj silindi')
+                : message.reply_to.content || (message.reply_to.has_file ? t('Ek') : '')}
             </span>
           </button>
         )}
@@ -164,13 +166,13 @@ export default function MessageItem({
             </span>
             <span className="message-timestamp">{formatMessageTime(message.inserted_at)}</span>
             {!message.is_deleted && message.is_edited && (
-              <span className="message-edited-tag">(düzenlendi)</span>
+              <span className="message-edited-tag">{t('(düzenlendi)')}</span>
             )}
           </div>
         )}
 
         {message.is_deleted ? (
-          <p className="message-deleted-placeholder">Bu mesaj silindi</p>
+          <p className="message-deleted-placeholder">{t('Bu mesaj silindi')}</p>
         ) : isEditing ? (
           <div className="message-edit-box">
             <textarea
@@ -185,10 +187,10 @@ export default function MessageItem({
             />
             <div className="message-edit-actions">
               <button type="button" className="message-edit-save-btn" onClick={saveEdit} disabled={!canSave}>
-                Kaydet
+                {t('Kaydet')}
               </button>
               <button type="button" className="message-edit-cancel-btn" onClick={cancelEditing}>
-                İptal
+                {t('İptal')}
               </button>
             </div>
           </div>
@@ -199,7 +201,7 @@ export default function MessageItem({
               (message.file_type?.startsWith('image/') ? (
                 <img
                   src={resolveFileUrl(message.file_url)}
-                  alt="ek"
+                  alt={t('ek')}
                   className="message-attachment-image"
                   onClick={() => onImageClick(message.file_url!)}
                 />

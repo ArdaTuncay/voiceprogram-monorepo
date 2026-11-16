@@ -18,10 +18,12 @@ defmodule BackendWeb.PreviewController do
         json(conn, preview)
 
       {:error, :invalid_url} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{error: "Invalid URL"})
+        conn |> put_status(:unprocessable_entity) |> json(%{error: gettext("Invalid URL")})
 
       {:error, :fetch_failed} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{error: "Could not fetch preview"})
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: gettext("Could not fetch preview")})
     end
   end
 

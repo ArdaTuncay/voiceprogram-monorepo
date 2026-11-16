@@ -5,6 +5,8 @@ defmodule BackendWeb.AuthPlug do
   success or halting with 401 on failure.
   """
 
+  use Gettext, backend: BackendWeb.Gettext
+
   import Plug.Conn
 
   alias Backend.Accounts
@@ -19,7 +21,7 @@ defmodule BackendWeb.AuthPlug do
       _ ->
         conn
         |> put_status(:unauthorized)
-        |> Phoenix.Controller.json(%{error: "Unauthorized"})
+        |> Phoenix.Controller.json(%{error: gettext("Unauthorized")})
         |> halt()
     end
   end

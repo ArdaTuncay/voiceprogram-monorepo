@@ -1,4 +1,13 @@
 import '@testing-library/jest-dom/vitest';
+import { beforeEach } from 'vitest';
+import { useLanguageStore } from '../i18n';
+
+// The UI language follows the browser (jsdom says en-US); the existing
+// tests assert the Turkish source text, so they run in Turkish. Tests for
+// English set the language themselves.
+beforeEach(() => {
+  useLanguageStore.setState({ language: 'tr' });
+});
 
 // jsdom doesn't implement scrollIntoView — Chat.tsx/DMChatView.tsx call it
 // unconditionally (auto-scroll-to-bottom on new messages) via a layout

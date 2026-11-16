@@ -1,4 +1,5 @@
 import type { Reaction } from '../types';
+import { useT } from '../i18n';
 
 const QUICK_EMOJIS = ['👍', '❤️', '🔥', '😂', '😮'];
 
@@ -26,6 +27,7 @@ interface Props {
  * through the "reaction_toggled" broadcast, so there's nothing optimistic
  * to reconcile here. */
 export default function MessageReactions({ reactions, currentUserId, onToggle, onPickerMouseLeave }: Props) {
+  const t = useT();
   return (
     <>
       <div className="message-reaction-picker" onMouseLeave={onPickerMouseLeave}>
@@ -35,8 +37,8 @@ export default function MessageReactions({ reactions, currentUserId, onToggle, o
             type="button"
             className="message-reaction-picker-btn"
             onClick={() => onToggle(emoji)}
-            title={`${emoji} ile tepki ver`}
-            aria-label={`${emoji} ile tepki ver`}
+            title={t('{emoji} ile tepki ver', { emoji })}
+            aria-label={t('{emoji} ile tepki ver', { emoji })}
           >
             {emoji}
           </button>
@@ -53,7 +55,7 @@ export default function MessageReactions({ reactions, currentUserId, onToggle, o
                 type="button"
                 className={`message-reaction-pill${mine ? ' mine' : ''}`}
                 onClick={() => onToggle(r.emoji)}
-                title={mine ? 'Tepkini kaldır' : 'Tepki ver'}
+                title={mine ? t('Tepkini kaldır') : t('Tepki ver')}
               >
                 <span className="message-reaction-emoji">{r.emoji}</span>
                 <span className="message-reaction-count">{r.count}</span>
