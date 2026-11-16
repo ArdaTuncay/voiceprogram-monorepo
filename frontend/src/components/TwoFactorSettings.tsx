@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
 import type { TwoFactorSetup, TwoFactorStatus } from '../types';
-import { disableTwoFactor, enableTwoFactor, fetchTwoFactorStatus, startTwoFactorSetup } from '../services/api';
+import {
+  disableTwoFactor,
+  enableTwoFactor,
+  fetchTwoFactorStatus,
+  regenerateRecoveryCodes,
+  startTwoFactorSetup,
+} from '../services/api';
 import { useT } from '../i18n';
 import './TwoFactorSettings.css';
 
@@ -11,12 +17,13 @@ type Step =
   | { kind: 'password' }
   | { kind: 'scan'; setup: TwoFactorSetup }
   | { kind: 'codes'; codes: string[] }
-  | { kind: 'disable' };
+  | { kind: 'confirm'; action: 'disable' | 'regenerate' };
 
 /** Settings → Privacy & Safety: two-factor sign-in (see
  * Backend.Accounts.TwoFactor). Turning it on: current password → scan the
  * QR code (or type the key) → a code from the app → ten recovery codes,
- * shown this once. Turning it off takes the password and a code. */
+ * shown this once. Turning it off, or replacing the recovery codes, takes
+ * the password and a code. */
 export default function TwoFactorSettings() {
   const t = useT();
   const [status, setStatus] = useState<TwoFactorStatus | null>(null);
@@ -68,12 +75,20 @@ export default function TwoFactorSettings() {
     });
   }
 
-  function submitDisable(e: FormEvent) {
+  function submitConfirm(e: FormEvent, action: 'disable' | 'regenerate') {
     e.preventDefault();
-    void run(disableTwoFactor(password, code.replace(/\s/g, '')), () => {
-      go({ kind: 'idle' });
-      setStatus({ enabled: false, recovery_codes_left: 0 });
-    });
+    const cleanCode = code.replace(/\s/g, '');
+    if (action === 'disable') {
+      void run(disableTwoFactor(password, cleanCode), () => {
+        go({ kind: 'idle' });
+        setStatus({ enabled: false, recovery_codes_left: 0 });
+      });
+    } else {
+      void run(regenerateRecoveryCodes(password, cleanCode), ({ recovery_codes }) => {
+        go({ kind: 'codes', codes: recovery_codes });
+        setStatus({ enabled: true, recovery_codes_left: recovery_codes.length });
+      });
+    }
   }
 
   async function copyCodes(codes: string[]) {
@@ -113,9 +128,22 @@ export default function TwoFactorSettings() {
         <>
           {errorLine}
           {status.enabled ? (
-            <button type="button" className="account-form-submit-btn" onClick={() => go({ kind: 'disable' })}>
-              {t('Devre dışı bırak')}
-            </button>
+            <div className="two-factor-actions">
+              <button
+                type="button"
+                className="account-form-submit-btn"
+                onClick={() => go({ kind: 'confirm', action: 'regenerate' })}
+              >
+                {t('Yeni kurtarma kodları')}
+              </button>
+              <button
+                type="button"
+                className="two-factor-cancel"
+                onClick={() => go({ kind: 'confirm', action: 'disable' })}
+              >
+                {t('Devre dışı bırak')}
+              </button>
+            </div>
           ) : (
             <button type="button" className="account-form-submit-btn" onClick={() => go({ kind: 'password' })}>
               {t('Etkinleştir')}
@@ -211,8 +239,11 @@ export default function TwoFactorSettings() {
         </div>
       )}
 
-      {step.kind === 'disable' && (
-        <form className="account-form" onSubmit={submitDisable}>
+      {step.kind === 'confirm' && (
+        <form className="account-form" onSubmit={(e) => submitConfirm(e, step.action)}>
+          {step.action === 'regenerate' && (
+            <p>{t('Yeni kodlar oluşturulunca eski kurtarma kodlarının hepsi geçersiz olur.')}</p>
+          )}
           <label className="user-settings-label" htmlFor="two-factor-disable-password">
             {t('Mevcut şifre')}
           </label>
@@ -239,11 +270,11 @@ export default function TwoFactorSettings() {
           />
           <div className="two-factor-actions">
             <button
-              className="account-form-submit-btn account-delete-submit-btn"
+              className={`account-form-submit-btn${step.action === 'disable' ? ' account-delete-submit-btn' : ''}`}
               type="submit"
               disabled={busy || !password || !code.trim()}
             >
-              {t('Kapat')}
+              {step.action === 'disable' ? t('Kapat') : t('Kodları yenile')}
             </button>
             <button type="button" className="two-factor-cancel" onClick={() => go({ kind: 'idle' })}>
               {t('Vazgeç')}

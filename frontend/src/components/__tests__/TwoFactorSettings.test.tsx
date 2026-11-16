@@ -8,12 +8,14 @@ vi.mock('../../services/api', () => ({
   startTwoFactorSetup: vi.fn(),
   enableTwoFactor: vi.fn(),
   disableTwoFactor: vi.fn(),
+  regenerateRecoveryCodes: vi.fn(),
 }));
 
 import {
   disableTwoFactor,
   enableTwoFactor,
   fetchTwoFactorStatus,
+  regenerateRecoveryCodes,
   startTwoFactorSetup,
 } from '../../services/api';
 
@@ -101,5 +103,26 @@ describe('TwoFactorSettings', () => {
 
     expect(disableTwoFactor).toHaveBeenCalledWith('password123', '123456');
     expect(screen.getByText('Kapalı')).toBeInTheDocument();
+  });
+
+  it('replaces the recovery codes with the password and a code, and shows the new ones once', async () => {
+    vi.mocked(fetchTwoFactorStatus).mockResolvedValue({ data: { enabled: true, recovery_codes_left: 2 } });
+    vi.mocked(regenerateRecoveryCodes).mockResolvedValue({ data: { recovery_codes: CODES } });
+    render(<TwoFactorSettings />);
+
+    expect(await screen.findByText(/2 kurtarma kodu kaldı/)).toBeInTheDocument();
+    await click('Yeni kurtarma kodları');
+
+    fireEvent.change(screen.getByLabelText('Mevcut şifre'), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText('Doğrulama kodu ya da kurtarma kodu'), {
+      target: { value: '123 456' },
+    });
+    await click('Kodları yenile');
+
+    expect(regenerateRecoveryCodes).toHaveBeenCalledWith('password123', '123456');
+    expect(screen.getByText(CODES[0])).toBeInTheDocument();
+    await click('Kodları kaydettim');
+    expect(screen.getByText(/10 kurtarma kodu kaldı/)).toBeInTheDocument();
+    expect(screen.getByText('Açık')).toBeInTheDocument();
   });
 });

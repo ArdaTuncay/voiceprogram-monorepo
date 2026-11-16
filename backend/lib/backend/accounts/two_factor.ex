@@ -126,6 +126,27 @@ defmodule Backend.Accounts.TwoFactor do
     end
   end
 
+  @doc """
+  Replaces all of `user`'s recovery codes with ten new ones, given a
+  current code or a recovery code (the controller has already checked the
+  password). Returns `{:ok, recovery_codes}` (plain text, shown once) or
+  `{:error, :invalid_code}`, also when two-factor is off.
+  """
+  def regenerate_recovery_codes(%User{} = user, code) do
+    with true <- enabled?(user),
+         :ok <- consume(user, code) do
+      codes = new_recovery_codes()
+
+      user
+      |> Ecto.Changeset.change(totp_recovery_hashes: Enum.map(codes, &hash/1))
+      |> Repo.update!()
+
+      {:ok, codes}
+    else
+      _ -> {:error, :invalid_code}
+    end
+  end
+
   @doc "A 5-minute token standing for \"`user` got their password right\"."
   def challenge(%User{} = user) do
     Phoenix.Token.sign(BackendWeb.Endpoint, @challenge_salt, %{

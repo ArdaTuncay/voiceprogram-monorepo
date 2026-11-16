@@ -2,8 +2,9 @@ defmodule BackendWeb.TwoFactorController do
   @moduledoc """
   Two-factor sign-in settings for the signed-in user (see
   `Backend.Accounts.TwoFactor`): status, set up, turn on with a code, turn
-  off with the password and a code. Setting up and turning off take the
-  current password, like every other sensitive account change.
+  off with the password and a code, and new recovery codes. Everything but
+  turning it on takes the current password, like every other sensitive
+  account change.
   """
   use BackendWeb, :controller
 
@@ -12,7 +13,7 @@ defmodule BackendWeb.TwoFactorController do
 
   plug BackendWeb.RateLimiterPlug,
        [scale: :timer.minutes(1), limit: 10, key: :current_user]
-       when action in [:setup, :enable, :disable]
+       when action in [:setup, :enable, :disable, :regenerate_recovery_codes]
 
   @doc "GET /api/account/2fa"
   def show(conn, _params), do: json(conn, TwoFactor.status(conn.assigns.current_user))
@@ -53,6 +54,22 @@ defmodule BackendWeb.TwoFactorController do
   end
 
   def disable(conn, _params), do: missing(conn, "current_password ve code gerekli")
+
+  @doc """
+  POST /api/account/2fa/recovery-codes — `current_password` and a `code`;
+  returns ten new recovery codes, and the old ones stop working.
+  """
+  def regenerate_recovery_codes(conn, %{"current_password" => password, "code" => code}) do
+    with_password(conn, password, fn user ->
+      case TwoFactor.regenerate_recovery_codes(user, code) do
+        {:ok, codes} -> json(conn, %{recovery_codes: codes})
+        {:error, :invalid_code} -> invalid_code(conn)
+      end
+    end)
+  end
+
+  def regenerate_recovery_codes(conn, _params),
+    do: missing(conn, "current_password ve code gerekli")
 
   defp with_password(conn, password, fun) do
     user = conn.assigns.current_user
