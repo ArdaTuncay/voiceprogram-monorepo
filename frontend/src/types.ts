@@ -114,6 +114,17 @@ export interface ReactionToggledPayload {
  * rejoin, even after its timeout has fired. */
 export type PushFailure = { kind: 'error'; reason?: string } | { kind: 'timeout' };
 
+/** A signed-in device, from `GET /api/account/sessions` (see
+ * Backend.Accounts.Session). `current` is the session this app is using. */
+export interface ActiveSession {
+  id: string;
+  user_agent: string | null;
+  ip: string | null;
+  created_at: string;
+  last_seen_at: string;
+  current: boolean;
+}
+
 /** `POST /api/upload`'s reply — also exactly what a message push carries as
  * its attachment (see services/socket.ts's shout/sendDmMessage). */
 export interface UploadResult {

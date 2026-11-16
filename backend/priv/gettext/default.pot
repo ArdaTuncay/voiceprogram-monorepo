@@ -11,7 +11,7 @@
 msgid ""
 msgstr ""
 
-#: lib/backend_web/controllers/account_controller.ex:69
+#: lib/backend_web/controllers/account_controller.ex:71
 #, elixir-autogen, elixir-format
 msgid "A confirmation link was sent to the new address"
 msgstr ""
@@ -33,12 +33,12 @@ msgstr ""
 msgid "Channel not found"
 msgstr ""
 
-#: lib/backend/accounts/user_notifier.ex:74
+#: lib/backend/accounts/user_notifier.ex:76
 #, elixir-autogen, elixir-format
 msgid "Confirm this address"
 msgstr ""
 
-#: lib/backend_web/controllers/preview_controller.ex:24
+#: lib/backend_web/controllers/preview_controller.ex:26
 #, elixir-autogen, elixir-format
 msgid "Could not fetch preview"
 msgstr ""
@@ -48,10 +48,10 @@ msgstr ""
 msgid "Could not generate a unique invite code, please try again"
 msgstr ""
 
-#: lib/backend_web/controllers/account_controller.ex:46
-#: lib/backend_web/controllers/account_controller.ex:77
-#: lib/backend_web/controllers/account_controller.ex:104
-#: lib/backend_web/controllers/account_controller.ex:181
+#: lib/backend_web/controllers/account_controller.ex:48
+#: lib/backend_web/controllers/account_controller.ex:81
+#: lib/backend_web/controllers/account_controller.ex:110
+#: lib/backend_web/controllers/account_controller.ex:189
 #, elixir-autogen, elixir-format
 msgid "Current password is incorrect"
 msgstr ""
@@ -64,29 +64,29 @@ msgstr ""
 msgid "DM room not found"
 msgstr ""
 
-#: lib/backend_web/controllers/verification_controller.ex:42
+#: lib/backend_web/controllers/verification_controller.ex:41
 #, elixir-autogen, elixir-format
 msgid "Email verified"
 msgstr ""
 
-#: lib/backend_web/controllers/upload_controller.ex:46
+#: lib/backend_web/controllers/upload_controller.ex:51
 #, elixir-autogen, elixir-format
 msgid "File is too large (images up to %{image_mb} MB, other files up to %{file_mb} MB)"
 msgstr ""
 
-#: lib/backend_web/controllers/ban_controller.ex:83
-#: lib/backend_web/controllers/report_controller.ex:84
+#: lib/backend_web/controllers/ban_controller.ex:85
+#: lib/backend_web/controllers/report_controller.ex:86
 #, elixir-autogen, elixir-format
 msgid "Forbidden"
 msgstr ""
 
-#: lib/backend/accounts/user_notifier.ex:100
+#: lib/backend/accounts/user_notifier.ex:102
 #, elixir-autogen, elixir-format
 msgid "Hi %{name},"
 msgstr ""
 
 #: lib/backend/accounts/user_notifier.ex:39
-#: lib/backend/accounts/user_notifier.ex:76
+#: lib/backend/accounts/user_notifier.ex:78
 #, elixir-autogen, elixir-format
 msgid "If you didn't ask for this, you can ignore this email."
 msgstr ""
@@ -96,17 +96,17 @@ msgstr ""
 msgid "If you didn't make this request, you can ignore this email; your password won't change."
 msgstr ""
 
-#: lib/backend/accounts/user_notifier.ex:93
+#: lib/backend/accounts/user_notifier.ex:95
 #, elixir-autogen, elixir-format
 msgid "If you didn't make this request, your account may be at risk: change your password right away and sign out of all devices."
 msgstr ""
 
-#: lib/backend_web/controllers/password_reset_controller.ex:64
+#: lib/backend_web/controllers/password_reset_controller.ex:65
 #, elixir-autogen, elixir-format
 msgid "If your email address is registered, a password reset link has been sent"
 msgstr ""
 
-#: lib/backend_web/controllers/verification_controller.ex:77
+#: lib/backend_web/controllers/verification_controller.ex:76
 #, elixir-autogen, elixir-format
 msgid "If your email address is registered, a verification link has been sent"
 msgstr ""
@@ -116,12 +116,12 @@ msgstr ""
 msgid "Invalid URL"
 msgstr ""
 
-#: lib/backend_web/controllers/user_controller.ex:61
+#: lib/backend_web/controllers/user_controller.ex:62
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password"
 msgstr ""
 
-#: lib/backend_web/controllers/account_controller.ex:135
+#: lib/backend_web/controllers/account_controller.ex:141
 #: lib/backend_web/controllers/server_controller.ex:140
 #, elixir-autogen, elixir-format
 msgid "Invalid image. Upload an image first."
@@ -142,7 +142,7 @@ msgstr ""
 msgid "Invite has expired"
 msgstr ""
 
-#: lib/backend_web/controllers/invite_controller.ex:111
+#: lib/backend_web/controllers/invite_controller.ex:113
 #, elixir-autogen, elixir-format
 msgid "Invite has reached its maximum number of uses"
 msgstr ""
@@ -164,7 +164,7 @@ msgstr ""
 msgid "Message not found"
 msgstr ""
 
-#: lib/backend_web/controllers/upload_controller.ex:62
+#: lib/backend_web/controllers/upload_controller.ex:68
 #, elixir-autogen, elixir-format
 msgid "No file to upload"
 msgstr ""
@@ -180,12 +180,12 @@ msgstr ""
 msgid "Only the server owner can perform this action"
 msgstr ""
 
-#: lib/backend_web/controllers/friend_controller.ex:103
+#: lib/backend_web/controllers/friend_controller.ex:109
 #, elixir-autogen, elixir-format
 msgid "Record not found"
 msgstr ""
 
-#: lib/backend_web/controllers/user_controller.ex:31
+#: lib/backend_web/controllers/user_controller.ex:32
 #, elixir-autogen, elixir-format
 msgid "Registration successful, please check your email to verify your account"
 msgstr ""
@@ -195,15 +195,15 @@ msgstr ""
 msgid "Report not found"
 msgstr ""
 
-#: lib/backend_web/controllers/friend_controller.ex:82
+#: lib/backend_web/controllers/friend_controller.ex:86
 #, elixir-autogen, elixir-format
 msgid "Request not found"
 msgstr ""
 
-#: lib/backend_web/controllers/ban_controller.ex:77
+#: lib/backend_web/controllers/ban_controller.ex:79
 #: lib/backend_web/controllers/invite_controller.ex:49
 #: lib/backend_web/controllers/invite_controller.ex:90
-#: lib/backend_web/controllers/report_controller.ex:78
+#: lib/backend_web/controllers/report_controller.ex:80
 #: lib/backend_web/controllers/server_controller.ex:36
 #: lib/backend_web/controllers/server_controller.ex:48
 #: lib/backend_web/controllers/server_controller.ex:249
@@ -221,22 +221,22 @@ msgstr ""
 msgid "Set a new password"
 msgstr ""
 
-#: lib/backend_web/controllers/upload_controller.ex:55
+#: lib/backend_web/controllers/upload_controller.ex:61
 #, elixir-autogen, elixir-format
 msgid "The file couldn't be uploaded"
 msgstr ""
 
-#: lib/backend_web/controllers/upload_controller.ex:39
+#: lib/backend_web/controllers/upload_controller.ex:44
 #, elixir-autogen, elixir-format
 msgid "The file's content doesn't match its extension"
 msgstr ""
 
-#: lib/backend/accounts/user_notifier.ex:75
+#: lib/backend/accounts/user_notifier.ex:77
 #, elixir-autogen, elixir-format
 msgid "The link is valid for 24 hours. Your old address stays in use until you confirm."
 msgstr ""
 
-#: lib/backend_web/controllers/ban_controller.ex:67
+#: lib/backend_web/controllers/ban_controller.ex:69
 #, elixir-autogen, elixir-format
 msgid "The server owner can't be banned"
 msgstr ""
@@ -251,17 +251,17 @@ msgstr ""
 msgid "This link is valid for 1 hour and can only be used once."
 msgstr ""
 
-#: lib/backend_web/controllers/friend_controller.ex:60
+#: lib/backend_web/controllers/friend_controller.ex:64
 #, elixir-autogen, elixir-format
 msgid "This request couldn't be sent"
 msgstr ""
 
-#: lib/backend_web/controllers/friend_controller.ex:88
+#: lib/backend_web/controllers/friend_controller.ex:94
 #, elixir-autogen, elixir-format
 msgid "This request has already been handled"
 msgstr ""
 
-#: lib/backend_web/controllers/friend_controller.ex:66
+#: lib/backend_web/controllers/friend_controller.ex:70
 #, elixir-autogen, elixir-format
 msgid "This user isn't accepting friend requests"
 msgstr ""
@@ -271,18 +271,18 @@ msgstr ""
 msgid "Too many requests. Please try again later."
 msgstr ""
 
-#: lib/backend_web/plugs/auth_plug.ex:24
+#: lib/backend_web/plugs/auth_plug.ex:27
 #, elixir-autogen, elixir-format
 msgid "Unauthorized"
 msgstr ""
 
-#: lib/backend_web/controllers/upload_controller.ex:31
+#: lib/backend_web/controllers/upload_controller.ex:36
 #, elixir-autogen, elixir-format
 msgid "Unsupported file type. Allowed: %{types}"
 msgstr ""
 
 #: lib/backend_web/controllers/ban_controller.ex:31
-#: lib/backend_web/controllers/block_controller.ex:24
+#: lib/backend_web/controllers/block_controller.ex:26
 #: lib/backend_web/controllers/dm_controller.ex:71
 #: lib/backend_web/controllers/friend_controller.ex:36
 #, elixir-autogen, elixir-format
@@ -294,7 +294,7 @@ msgstr ""
 msgid "Verify my email address"
 msgstr ""
 
-#: lib/backend/accounts/user_notifier.ex:88
+#: lib/backend/accounts/user_notifier.ex:90
 #, elixir-autogen, elixir-format
 msgid "We received a request to change your Zircle account's email address to %{email}. The change takes effect once the link sent to the new address is confirmed."
 msgstr ""
@@ -309,7 +309,7 @@ msgstr ""
 msgid "You already have a pending request"
 msgstr ""
 
-#: lib/backend/accounts/user_notifier.ex:73
+#: lib/backend/accounts/user_notifier.ex:75
 #, elixir-autogen, elixir-format
 msgid "You asked to change your Zircle account's email address to this one."
 msgstr ""
@@ -319,7 +319,7 @@ msgstr ""
 msgid "You can only message your friends"
 msgstr ""
 
-#: lib/backend_web/controllers/friend_controller.ex:85
+#: lib/backend_web/controllers/friend_controller.ex:89
 #, elixir-autogen, elixir-format
 msgid "You can't accept this request"
 msgstr ""
@@ -329,12 +329,12 @@ msgstr ""
 msgid "You can't ban this user"
 msgstr ""
 
-#: lib/backend_web/controllers/block_controller.ex:21
+#: lib/backend_web/controllers/block_controller.ex:23
 #, elixir-autogen, elixir-format
 msgid "You can't block yourself"
 msgstr ""
 
-#: lib/backend_web/controllers/friend_controller.ex:106
+#: lib/backend_web/controllers/friend_controller.ex:112
 #, elixir-autogen, elixir-format
 msgid "You can't do that"
 msgstr ""
@@ -364,7 +364,7 @@ msgstr ""
 msgid "You don't have permission to perform this action"
 msgstr ""
 
-#: lib/backend_web/controllers/block_controller.ex:38
+#: lib/backend_web/controllers/block_controller.ex:40
 #, elixir-autogen, elixir-format
 msgid "You haven't blocked this user"
 msgstr ""
@@ -379,22 +379,22 @@ msgstr ""
 msgid "You're already friends"
 msgstr ""
 
-#: lib/backend_web/controllers/invite_controller.ex:106
+#: lib/backend_web/controllers/invite_controller.ex:108
 #, elixir-autogen, elixir-format
 msgid "You're banned from this server"
 msgstr ""
 
-#: lib/backend_web/controllers/report_controller.ex:68
+#: lib/backend_web/controllers/report_controller.ex:70
 #, elixir-autogen, elixir-format
 msgid "You've already reported this message"
 msgstr ""
 
-#: lib/backend_web/controllers/friend_controller.ex:56
+#: lib/backend_web/controllers/friend_controller.ex:58
 #, elixir-autogen, elixir-format
 msgid "You've blocked this user"
 msgstr ""
 
-#: lib/backend_web/controllers/account_controller.ex:186
+#: lib/backend_web/controllers/account_controller.ex:194
 #, elixir-autogen, elixir-format
 msgid "Your account couldn't be deleted, please try again"
 msgstr ""
@@ -409,12 +409,12 @@ msgstr ""
 msgid "Your password was updated, you can sign in with your new password"
 msgstr ""
 
-#: lib/backend/accounts/user_notifier.ex:71
+#: lib/backend/accounts/user_notifier.ex:73
 #, elixir-autogen, elixir-format
 msgid "Zircle - Confirm Your New Email Address"
 msgstr ""
 
-#: lib/backend/accounts/user_notifier.ex:86
+#: lib/backend/accounts/user_notifier.ex:88
 #, elixir-autogen, elixir-format
 msgid "Zircle - Email Change Request"
 msgstr ""
@@ -427,4 +427,9 @@ msgstr ""
 #: lib/backend/accounts/user_notifier.ex:35
 #, elixir-autogen, elixir-format
 msgid "Zircle - Verify Your Email Address"
+msgstr ""
+
+#: lib/backend_web/controllers/session_controller.ex:38
+#, elixir-autogen, elixir-format
+msgid "Session not found"
 msgstr ""

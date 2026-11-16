@@ -1,5 +1,6 @@
 import { currentLanguage, t } from '../i18n';
 import type {
+  ActiveSession,
   AuthResponse,
   Channel,
   ChannelType,
@@ -636,4 +637,20 @@ export async function renewSessionToken(): Promise<ApiResult<{ token: string }>>
   const result = await authedFetch<{ token: string }>('/users/renew-token', { method: 'POST' });
   if (result.data?.token) storeToken(result.data.token);
   return result;
+}
+
+/** This account's signed-in devices, most recently active first. */
+export function fetchSessions(): Promise<ApiResult<ActiveSession[]>> {
+  return authedGet<ActiveSession[]>('/account/sessions');
+}
+
+/** Signs one of this account's sessions out; its token stops working at once. */
+export function revokeSession(sessionId: string): Promise<ApiResult<void>> {
+  return authedFetch<void>(`/account/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
+}
+
+/** Ends this session on the server (POST /api/users/logout) — called just
+ * before the app forgets its token, so a copied token stops working too. */
+export function logoutCurrentSession(): Promise<ApiResult<void>> {
+  return authedFetch<void>('/users/logout', { method: 'POST' });
 }
