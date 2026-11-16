@@ -10,7 +10,10 @@ defmodule Backend.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      # lib/mix/tasks (`mix push.gen.vapid`) uses Mix, which isn't a runtime
+      # dependency and so isn't in the PLT by default.
+      dialyzer: [plt_add_apps: [:mix]]
     ]
   end
 

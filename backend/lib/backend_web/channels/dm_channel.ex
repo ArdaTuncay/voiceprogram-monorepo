@@ -11,6 +11,7 @@ defmodule BackendWeb.DmChannel do
   alias Backend.DirectMessages
   alias Backend.Friends
   alias Backend.Presence
+  alias Backend.Push
   alias BackendWeb.ChannelRateLimiter
   alias BackendWeb.PresenceMeta
 
@@ -253,6 +254,15 @@ defmodule BackendWeb.DmChannel do
       "new_dm_message",
       payload
     )
+
+    # And a Web Push if they don't have Zircle open (see Backend.Push).
+    Push.notify(socket.assigns.other_user_id, %{
+      kind: :dm,
+      dm_room_id: socket.assigns.room_id,
+      sender: serialized.username,
+      content: serialized.content,
+      file?: not is_nil(serialized.file_url)
+    })
   end
 
   defp serialize_message(message) do

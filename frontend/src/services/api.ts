@@ -277,6 +277,27 @@ export function disableTwoFactor(currentPassword: string, code: string): Promise
   return authedPost<void>('/account/2fa/disable', { current_password: currentPassword, code });
 }
 
+/** GET /api/push — whether the server can send Web Push (VAPID keys set),
+ * and the public key to subscribe with. */
+export function fetchPushConfig(): Promise<ApiResult<{ enabled: boolean; public_key: string | null }>> {
+  return authedGet<{ enabled: boolean; public_key: string | null }>('/push');
+}
+
+/** POST /api/push/subscriptions — this browser's `PushSubscription.toJSON()`,
+ * tied server-side to the current session (see Backend.Push). */
+export function savePushSubscription(subscription: PushSubscriptionJSON): Promise<ApiResult<void>> {
+  return authedFetch<void>('/push/subscriptions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(subscription),
+  });
+}
+
+/** DELETE /api/push/subscriptions — stop pushing to this browser. */
+export function deletePushSubscription(endpoint: string): Promise<ApiResult<void>> {
+  return authedDelete<void>('/push/subscriptions', { endpoint });
+}
+
 /** POST /api/account/2fa/recovery-codes — ten new recovery codes (shown
  * once); the old ones stop working. */
 export function regenerateRecoveryCodes(

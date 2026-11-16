@@ -48,3 +48,14 @@ config :phoenix,
 config :backend, Backend.Turn, refresh: :inline
 config :backend, Backend.Turn.Metered, req_options: [plug: {Req.Test, Backend.Turn.Metered}]
 config :backend, Backend.Uploads.S3, req_options: [plug: {Req.Test, Backend.Uploads.S3}]
+
+# Backend.Push: a fixed VAPID key pair (made with `mix push.gen.vapid`, for
+# tests only), delivery inline so tests can see it, and push services
+# stubbed through Req.Test.
+config :backend, Backend.Push,
+  vapid_public_key:
+    "BAd7h27EktTP7jXTGrAbcIDgacO50bdS909mv1w75dfs7oSYBmpWVaPFZAGy29Jzg0m-S1MLFjUX39WAT21xK00",
+  vapid_private_key: "4i5khwKjINGKNTZ6XOYv6cjgi-RlHNFQ_x0NVfZufxY",
+  vapid_subject: "mailto:test@zircle.test",
+  delivery: :inline,
+  req_options: [plug: {Req.Test, Backend.Push}]

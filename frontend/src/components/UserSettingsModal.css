@@ -87,6 +87,16 @@
   margin: 0 0 var(--space-5);
 }
 
+/* A labelled group inside a section (e.g. Bildirimler → Uygulama kapalıyken). */
+.user-settings-subheading {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: var(--space-5) 0 var(--space-2-5);
+}
+
 .user-settings-placeholder {
   color: var(--text-muted);
   font-size: 14px;

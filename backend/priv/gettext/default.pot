@@ -52,7 +52,7 @@ msgstr ""
 #: lib/backend_web/controllers/account_controller.ex:81
 #: lib/backend_web/controllers/account_controller.ex:110
 #: lib/backend_web/controllers/account_controller.ex:189
-#: lib/backend_web/controllers/two_factor_controller.ex:63
+#: lib/backend_web/controllers/two_factor_controller.ex:82
 #, elixir-autogen, elixir-format
 msgid "Current password is incorrect"
 msgstr ""
@@ -435,13 +435,13 @@ msgstr ""
 msgid "Session not found"
 msgstr ""
 
-#: lib/backend_web/controllers/two_factor_controller.ex:68
+#: lib/backend_web/controllers/two_factor_controller.ex:89
 #: lib/backend_web/controllers/user_controller.ex:88
 #, elixir-autogen, elixir-format
 msgid "Invalid or expired code"
 msgstr ""
 
-#: lib/backend_web/controllers/two_factor_controller.ex:36
+#: lib/backend_web/controllers/two_factor_controller.ex:37
 #, elixir-autogen, elixir-format
 msgid "The setup has expired, please start again"
 msgstr ""
@@ -449,4 +449,19 @@ msgstr ""
 #: lib/backend_web/controllers/user_controller.ex:83
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please try again later."
+msgstr ""
+
+#: lib/backend/push.ex:145
+#, elixir-autogen, elixir-format
+msgid "%{name} in #%{channel}"
+msgstr ""
+
+#: lib/backend/push.ex:158
+#, elixir-autogen, elixir-format
+msgid "Sent a file"
+msgstr ""
+
+#: lib/backend/push.ex:167
+#, elixir-autogen, elixir-format
+msgid "Someone"
 msgstr ""

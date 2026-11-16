@@ -52,6 +52,37 @@ defmodule Backend.Chat do
     |> Repo.all()
   end
 
+  @mention_pattern ~r/(?:^|[^A-Za-z0-9_])@([A-Za-z0-9_]{3,30})(?![A-Za-z0-9_])/
+  @max_mentions 20
+
+  @doc """
+  The members of `server_id` that `content` @mentions by username (case
+  doesn't matter, as in the frontend's isMentioned), other than
+  `author_id`. At most #{@max_mentions} distinct names are looked at.
+  """
+  def mentioned_member_ids(server_id, content, author_id) when is_binary(content) do
+    names =
+      @mention_pattern
+      |> Regex.scan(content, capture: :all_but_first)
+      |> Enum.map(fn [name] -> String.downcase(name) end)
+      |> Enum.uniq()
+      |> Enum.take(@max_mentions)
+
+    if names == [] do
+      []
+    else
+      Repo.all(
+        from u in Backend.Accounts.User,
+          join: m in Backend.Servers.ServerMember,
+          on: m.user_id == u.id and m.server_id == ^server_id,
+          where: fragment("lower(?)", u.username) in ^names and u.id != ^author_id,
+          select: u.id
+      )
+    end
+  end
+
+  def mentioned_member_ids(_server_id, _content, _author_id), do: []
+
   @doc """
   Who's currently connected to voice room `room_id`, as a plain
   `[%{user_id: ..., username: ..., avatar_url: ...}]` list — every other bit of Presence

@@ -10,6 +10,7 @@ defmodule BackendWeb.ChatChannel do
 
   alias Backend.Chat
   alias Backend.Presence
+  alias Backend.Push
   alias Backend.Servers
   alias BackendWeb.ChannelRateLimiter
   alias BackendWeb.PresenceMeta
@@ -243,6 +244,28 @@ defmodule BackendWeb.ChatChannel do
     |> Enum.each(fn member_id ->
       BackendWeb.Endpoint.broadcast("user:#{member_id}", "new_message", payload)
     end)
+
+    push_to_mentioned(socket, message, serialized)
+  end
+
+  # Members @mentioned here who don't have Zircle open get a Web Push (see
+  # Backend.Push) — the "new_message" broadcast above only reaches open tabs.
+  defp push_to_mentioned(socket, message, serialized) do
+    case Chat.mentioned_member_ids(socket.assigns.server_id, message.content, message.user_id) do
+      [] ->
+        :ok
+
+      user_ids ->
+        Push.notify(user_ids, %{
+          kind: :mention,
+          server_id: socket.assigns.server_id,
+          channel_id: socket.assigns.channel_id,
+          channel_name: socket.assigns.channel_name,
+          sender: serialized.username,
+          content: message.content,
+          file?: not is_nil(message.file_url)
+        })
+    end
   end
 
   defp serialize_message(message) do
