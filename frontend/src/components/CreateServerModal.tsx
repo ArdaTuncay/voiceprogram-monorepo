@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
+import { useT } from '../i18n';
 import Modal from './Modal';
 import './CreateServerModal.css';
 
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function CreateServerModal({ onClose }: Props) {
+  const t = useT();
   const createServer = useServerStore((s) => s.createServer);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
@@ -33,13 +35,13 @@ export default function CreateServerModal({ onClose }: Props) {
   }
 
   return (
-    <Modal title="Sunucu Oluştur" onClose={onClose}>
+    <Modal title={t('Sunucu Oluştur')} onClose={onClose}>
       <p className="create-server-description">
-        Sunucun senin ve arkadaşlarının bir araya geldiği yer. Bir isim ver, hemen oluştur.
+        {t('Sunucun senin ve arkadaşlarının bir araya geldiği yer. Bir isim ver, hemen oluştur.')}
       </p>
       <form className="create-server-form" onSubmit={handleSubmit}>
         <label className="create-server-label" htmlFor="create-server-name">
-          Sunucu Adı
+          {t('Sunucu Adı')}
         </label>
         <input
           id="create-server-name"
@@ -47,7 +49,7 @@ export default function CreateServerModal({ onClose }: Props) {
           className="create-server-input"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="örn. Arkadaş Grubu"
+          placeholder={t('örn. Arkadaş Grubu')}
           maxLength={50}
           disabled={submitting}
         />
@@ -57,7 +59,7 @@ export default function CreateServerModal({ onClose }: Props) {
           type="submit"
           disabled={submitting || !name.trim()}
         >
-          {submitting ? 'Oluşturuluyor…' : 'Oluştur'}
+          {submitting ? t('Oluşturuluyor…') : t('Oluştur')}
         </button>
       </form>
     </Modal>

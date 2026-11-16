@@ -2,6 +2,7 @@ import { X, Paperclip } from 'lucide-react';
 import type { ChatMessage } from '../types';
 import { userColor, initials } from '../utils';
 import { formatMessageTime } from '../utils/formatMessageTime';
+import { useT } from '../i18n';
 import AvatarFace from './AvatarFace';
 
 interface Props {
@@ -16,28 +17,32 @@ interface Props {
  * Clicking a result asks the caller (via `onSelectMessage`) to jump to and
  * highlight that message back in the main message list. */
 export default function SearchResultsPanel({ results, isSearching, onSelectMessage, onClose }: Props) {
+  const t = useT();
   return (
     <aside className="search-results-panel">
       <div className="search-results-header">
-        <span>Arama Sonuçları{!isSearching && results.length > 0 ? ` — ${results.length}` : ''}</span>
+        <span>
+          {t('Arama Sonuçları')}
+          {!isSearching && results.length > 0 ? ` — ${results.length}` : ''}
+        </span>
         <button
           type="button"
           className="search-results-close-btn"
           onClick={onClose}
-          title="Kapat"
-          aria-label="Kapat"
+          title={t('Kapat')}
+          aria-label={t('Kapat')}
         >
           <X size={14} />
         </button>
       </div>
 
       <div className="search-results-list">
-        {isSearching && <div className="channel-status">Aranıyor…</div>}
-        {!isSearching && results.length === 0 && <div className="list-empty-hint">Sonuç bulunamadı</div>}
+        {isSearching && <div className="channel-status">{t('Aranıyor…')}</div>}
+        {!isSearching && results.length === 0 && <div className="list-empty-hint">{t('Sonuç bulunamadı')}</div>}
         {!isSearching &&
           results.map((msg) => {
             const color = userColor(msg.user_id);
-            const name = msg.username ?? 'Bilinmeyen';
+            const name = msg.username ?? t('Bilinmeyen');
             return (
               <div key={msg.id} className="search-result-item" onClick={() => onSelectMessage(msg.id)}>
                 <div className="search-result-avatar" style={{ background: color }} title={name}>
@@ -51,7 +56,7 @@ export default function SearchResultsPanel({ results, isSearching, onSelectMessa
                     <span className="search-result-time">{formatMessageTime(msg.inserted_at)}</span>
                   </div>
                   {msg.content && <div className="search-result-content">{msg.content}</div>}
-                  {msg.file_url && <div className="search-result-file-tag"><Paperclip size={12} /> Ek</div>}
+                  {msg.file_url && <div className="search-result-file-tag"><Paperclip size={12} /> {t('Ek')}</div>}
                 </div>
               </div>
             );

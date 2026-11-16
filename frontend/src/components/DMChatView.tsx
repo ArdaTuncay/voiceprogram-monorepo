@@ -7,6 +7,8 @@ import { useFriendStore } from '../stores/useFriendStore';
 import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
 import { shouldGroupMessages } from '../utils';
 import { ATTACHMENT_ACCEPT } from '../utils/attachments';
+import { useT } from '../i18n';
+import { rich } from '../i18n/rich';
 import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
@@ -21,6 +23,7 @@ interface Props {
  * inside Chat.tsx's shared `<main className="chat-main">` — reuses the
  * same CSS classes for visual consistency without sharing any JS state. */
 export default function DMChatView({ currentUserId }: Props) {
+  const t = useT();
   const rooms = useDMStore((s) => s.rooms);
   const activeRoomId = useDMStore((s) => s.activeRoomId);
   const messages = useDMStore((s) => s.messages);
@@ -97,7 +100,7 @@ export default function DMChatView({ currentUserId }: Props) {
   }, [highlightedMessageId, clearHighlight]);
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
-  const otherName = activeRoom?.username ?? 'Bilinmeyen';
+  const otherName = activeRoom?.username ?? t('Bilinmeyen');
   const otherUserId = activeRoom?.user_id;
 
   const [isSearchBarOpen, setIsSearchBarOpen] = useState(false);
@@ -185,8 +188,8 @@ export default function DMChatView({ currentUserId }: Props) {
         <button
           className={`chat-header-search-btn${isSearchBarOpen ? ' active' : ''}`}
           onClick={() => setIsSearchBarOpen((open) => !open)}
-          title="Mesajlarda ara"
-          aria-label="Mesajlarda ara"
+          title={t('Mesajlarda ara')}
+          aria-label={t('Mesajlarda ara')}
           aria-pressed={isSearchBarOpen}
         >
           <Search size={18} />
@@ -195,8 +198,8 @@ export default function DMChatView({ currentUserId }: Props) {
           <button
             className="invite-people-btn leave-server-btn"
             onClick={() => setConfirmingBlock(true)}
-            title={`${otherName} kullanıcısını engelle`}
-            aria-label={`${otherName} kullanıcısını engelle`}
+            title={t('{name} kullanıcısını engelle', { name: otherName })}
+            aria-label={t('{name} kullanıcısını engelle', { name: otherName })}
           >
             <Ban size={16} />
           </button>
@@ -205,20 +208,20 @@ export default function DMChatView({ currentUserId }: Props) {
 
       {confirmingBlock && (
         <div className="dm-block-confirm">
-          <span>{otherName} adlı kullanıcıyı engellemek istediğine emin misin?</span>
+          <span>{t('{name} adlı kullanıcıyı engellemek istediğine emin misin?', { name: otherName })}</span>
           <button
             className="dm-block-confirm-btn"
             onClick={() => void handleConfirmBlock()}
             disabled={blocking}
           >
-            {blocking ? 'Engelleniyor…' : 'Evet, Engelle'}
+            {blocking ? t('Engelleniyor…') : t('Evet, Engelle')}
           </button>
           <button
             className="dm-block-cancel-btn"
             onClick={() => setConfirmingBlock(false)}
             disabled={blocking}
           >
-            Vazgeç
+            {t('Vazgeç')}
           </button>
         </div>
       )}
@@ -235,18 +238,18 @@ export default function DMChatView({ currentUserId }: Props) {
 
       {isDraggingFile && (
         <div className="drag-drop-overlay">
-          <div className="drag-drop-message"><Paperclip size={18} /> Fotoğrafı buraya bırak</div>
+          <div className="drag-drop-message"><Paperclip size={18} /> {t('Dosyayı buraya bırak')}</div>
         </div>
       )}
 
       <div className="messages-wrapper" ref={messagesWrapperRef} onScroll={handleMessagesScroll}>
         <div className="messages-list">
           {isLoadingOlderMessages && (
-            <div className="channel-status">Eski mesajlar yükleniyor…</div>
+            <div className="channel-status">{t('Eski mesajlar yükleniyor…')}</div>
           )}
           <div className="channel-intro">
             <h2><AtSign size={28} /> {otherName}</h2>
-            <p>Bu, {otherName} ile olan özel sohbetinin başlangıcı. Merhaba de!</p>
+            <p>{t('Bu, {name} ile olan özel sohbetinin başlangıcı. Merhaba de!', { name: otherName })}</p>
           </div>
 
           {messages.map((msg, index) => (
@@ -276,10 +279,12 @@ export default function DMChatView({ currentUserId }: Props) {
         {replyingTo && (
           <div className="reply-banner">
             <span>
-              <CornerUpLeft size={14} /> <strong>{replyingTo.username ?? 'Bilinmeyen'}</strong> kişisine yanıt
-              veriliyor
+              <CornerUpLeft size={14} />{' '}
+              {rich(t('{name} kişisine yanıt veriliyor'), {
+                name: <strong>{replyingTo.username ?? t('Bilinmeyen')}</strong>,
+              })}
             </span>
-            <button type="button" onClick={() => setReplyingTo(null)} aria-label="Yanıtı iptal et">
+            <button type="button" onClick={() => setReplyingTo(null)} aria-label={t('Yanıtı iptal et')}>
               <X size={14} />
             </button>
           </div>
@@ -296,8 +301,8 @@ export default function DMChatView({ currentUserId }: Props) {
             className="attach-btn"
             onClick={handleAttachClick}
             disabled={isUploading}
-            title="Dosya Ekle"
-            aria-label="Dosya Ekle"
+            title={t('Dosya Ekle')}
+            aria-label={t('Dosya Ekle')}
           >
             <Paperclip size={18} />
           </button>
@@ -305,7 +310,7 @@ export default function DMChatView({ currentUserId }: Props) {
             ref={textareaRef}
             className="message-input"
             rows={1}
-            placeholder={`Message @${otherName}`}
+            placeholder={t('@{name} kişisine mesaj gönder', { name: otherName })}
             value={draft}
             onChange={handleDraftInputChange}
             onKeyDown={handleKeyDown}
@@ -315,14 +320,14 @@ export default function DMChatView({ currentUserId }: Props) {
             className="send-btn"
             onClick={sendMessage}
             disabled={!draft.trim()}
-            aria-label="Send message"
-            title="Send (Enter)"
+            aria-label={t('Mesajı gönder')}
+            title={t('Gönder (Enter)')}
           >
             <Send size={18} />
           </button>
         </div>
 
-        {isUploading && <div className="upload-status">Yükleniyor…</div>}
+        {isUploading && <div className="upload-status">{t('Yükleniyor…')}</div>}
         {uploadError && <div className="upload-status upload-status-error"><AlertTriangle size={14} /> {uploadError}</div>}
         {actionError && <div className="upload-status upload-status-error" role="alert"><AlertTriangle size={14} /> {actionError}</div>}
 
@@ -333,14 +338,14 @@ export default function DMChatView({ currentUserId }: Props) {
               <span />
               <span />
             </span>
-            {typingUsername} yazıyor...
+            {t('{name} yazıyor...', { name: typingUsername })}
           </div>
         )}
       </div>
 
       {lightboxUrl && (
         <div className="image-lightbox-overlay" onClick={() => setLightboxUrl(null)}>
-          <img src={resolveFileUrl(lightboxUrl)} alt="ek büyük önizleme" className="image-lightbox-img" />
+          <img src={resolveFileUrl(lightboxUrl)} alt={t('ek büyük önizleme')} className="image-lightbox-img" />
         </div>
       )}
       {reportTarget && <ReportModal target={reportTarget} onClose={() => setReportTarget(null)} />}

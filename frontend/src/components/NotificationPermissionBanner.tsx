@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Bell, X } from 'lucide-react';
 import { getNotificationPreferences } from '../services/notificationPreferences';
+import { useT } from '../i18n';
 import './NotificationPermissionBanner.css';
 
 export const BANNER_DISMISSED_KEY = 'zircle-notification-banner-dismissed';
@@ -40,6 +41,7 @@ function shouldShow(): boolean {
  * and `desktop` notifications stayed permanently unreachable. Requesting
  * from this banner's own onClick satisfies that requirement everywhere. */
 export default function NotificationPermissionBanner() {
+  const t = useT();
   const [visible, setVisible] = useState(shouldShow);
 
   async function handleEnable() {
@@ -59,19 +61,19 @@ export default function NotificationPermissionBanner() {
     <div className="notification-permission-banner" role="status">
       <Bell size={16} className="notification-permission-banner-icon" />
       <span className="notification-permission-banner-text">
-        Yeni mesajlardan haberdar olmak için masaüstü bildirimlerini etkinleştir.
+        {t('Yeni mesajlardan haberdar olmak için masaüstü bildirimlerini etkinleştir.')}
       </span>
       <button
         className="notification-permission-banner-enable-btn"
         onClick={() => void handleEnable()}
       >
-        Bildirimleri Etkinleştir
+        {t('Bildirimleri Etkinleştir')}
       </button>
       <button
         className="notification-permission-banner-close-btn"
         onClick={handleDismiss}
-        aria-label="Kapat"
-        title="Kapat"
+        aria-label={t('Kapat')}
+        title={t('Kapat')}
       >
         <X size={14} />
       </button>

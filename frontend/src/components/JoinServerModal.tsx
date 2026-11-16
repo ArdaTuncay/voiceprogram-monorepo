@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
+import { useT } from '../i18n';
 import Modal from './Modal';
 import './JoinServerModal.css';
 
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function JoinServerModal({ onClose }: Props) {
+  const t = useT();
   const joinServerByInvite = useServerStore((s) => s.joinServerByInvite);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -33,22 +35,20 @@ export default function JoinServerModal({ onClose }: Props) {
   }
 
   return (
-    <Modal title="Bir Sunucuya Katıl" onClose={onClose}>
-      <p className="join-description">
-        Bir arkadaşından aldığın davet kodunu aşağıya gir.
-      </p>
+    <Modal title={t('Bir Sunucuya Katıl')} onClose={onClose}>
+      <p className="join-description">{t('Bir arkadaşından aldığın davet kodunu aşağıya gir.')}</p>
       <form className="join-form" onSubmit={handleSubmit}>
         <input
           autoFocus
           className="join-code-input"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          placeholder="Davet kodu"
+          placeholder={t('Davet kodu')}
           disabled={submitting}
         />
         {error && <div className="join-error"><AlertTriangle size={14} /> {error}</div>}
         <button className="join-submit-btn" type="submit" disabled={submitting || !code.trim()}>
-          {submitting ? 'Katılınıyor…' : 'Katıl'}
+          {submitting ? t('Katılınıyor…') : t('Katıl')}
         </button>
       </form>
     </Modal>

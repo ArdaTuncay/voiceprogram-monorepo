@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { confirmPasswordReset } from '../services/api';
+import { useT } from '../i18n';
 import mascot from '../assets/zircle-mascot.svg';
 import './Auth.css';
 
@@ -18,6 +19,7 @@ const MIN_PASSWORD_LENGTH = 8;
  * session state; after success the user logs in normally with the new
  * password (every old session was signed out by the reset). */
 export default function ResetPasswordPage({ token }: Props) {
+  const t = useT();
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [error, setError] = useState('');
@@ -29,11 +31,11 @@ export default function ResetPasswordPage({ token }: Props) {
     setError('');
 
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`);
+      setError(t('Şifre en az {count} karakter olmalı.', { count: MIN_PASSWORD_LENGTH }));
       return;
     }
     if (password !== confirmation) {
-      setError('Şifreler eşleşmiyor.');
+      setError(t('Şifreler eşleşmiyor.'));
       return;
     }
 
@@ -45,7 +47,7 @@ export default function ResetPasswordPage({ token }: Props) {
       } else if (result.error === 'invalid_token' || result.error === 'token_expired') {
         setOutcome(result.error);
       } else {
-        setError('Şifre güncellenemedi, lütfen tekrar deneyin.');
+        setError(t('Şifre güncellenemedi, lütfen tekrar deneyin.'));
       }
     } finally {
       setSubmitting(false);
@@ -59,27 +61,27 @@ export default function ResetPasswordPage({ token }: Props) {
   if (outcome !== 'form') {
     const copy = {
       success: {
-        title: 'Şifreniz güncellendi',
-        body: 'Yeni şifrenizle giriş yapabilirsiniz. Güvenliğiniz için diğer tüm oturumlarınız kapatıldı.',
+        title: t('Şifreniz güncellendi'),
+        body: t('Yeni şifrenizle giriş yapabilirsiniz. Güvenliğiniz için diğer tüm oturumlarınız kapatıldı.'),
       },
       invalid_token: {
-        title: 'Bağlantı geçersiz',
-        body: 'Bu sıfırlama bağlantısı geçersiz — daha önce kullanılmış ya da yerine yenisi istenmiş olabilir. Giriş ekranından yeni bir bağlantı isteyebilirsiniz.',
+        title: t('Bağlantı geçersiz'),
+        body: t('Bu sıfırlama bağlantısı geçersiz — daha önce kullanılmış ya da yerine yenisi istenmiş olabilir. Giriş ekranından yeni bir bağlantı isteyebilirsiniz.'),
       },
       token_expired: {
-        title: 'Bağlantının süresi dolmuş',
-        body: 'Sıfırlama bağlantıları 1 saat geçerlidir. Giriş ekranından yeni bir bağlantı isteyebilirsiniz.',
+        title: t('Bağlantının süresi dolmuş'),
+        body: t('Sıfırlama bağlantıları 1 saat geçerlidir. Giriş ekranından yeni bir bağlantı isteyebilirsiniz.'),
       },
     }[outcome];
 
     return (
       <div className="auth-page">
         <div className="auth-card">
-          <img src={mascot} alt="Zircle maskotu" className="auth-mascot" />
+          <img src={mascot} alt={t('Zircle maskotu')} className="auth-mascot" />
           <h1>{copy.title}</h1>
           <p className="subtitle">{copy.body}</p>
           <button type="button" className="auth-submit" onClick={goToLogin}>
-            Giriş ekranına git
+            {t('Giriş ekranına git')}
           </button>
         </div>
       </div>
@@ -89,13 +91,13 @@ export default function ResetPasswordPage({ token }: Props) {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <img src={mascot} alt="Zircle maskotu" className="auth-mascot" />
-        <h1>Yeni şifre belirle</h1>
-        <p className="subtitle">Hesabınız için yeni bir şifre seçin.</p>
+        <img src={mascot} alt={t('Zircle maskotu')} className="auth-mascot" />
+        <h1>{t('Yeni şifre belirle')}</h1>
+        <p className="subtitle">{t('Hesabınız için yeni bir şifre seçin.')}</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="new-password">Yeni şifre</label>
+            <label htmlFor="new-password">{t('Yeni şifre')}</label>
             <input
               id="new-password"
               type="password"
@@ -108,7 +110,7 @@ export default function ResetPasswordPage({ token }: Props) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="new-password-confirmation">Yeni şifre (tekrar)</label>
+            <label htmlFor="new-password-confirmation">{t('Yeni şifre (tekrar)')}</label>
             <input
               id="new-password-confirmation"
               type="password"
@@ -127,7 +129,7 @@ export default function ResetPasswordPage({ token }: Props) {
           )}
 
           <button type="submit" className="auth-submit" disabled={submitting}>
-            {submitting ? 'Kaydediliyor…' : 'Şifreyi güncelle'}
+            {submitting ? t('Kaydediliyor…') : t('Şifreyi güncelle')}
           </button>
         </form>
       </div>

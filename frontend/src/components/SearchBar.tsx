@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Search, Paperclip } from 'lucide-react';
 import type { SearchFilters } from '../types';
+import { useT } from '../i18n';
 
 interface Props {
   isSearching: boolean;
@@ -13,6 +14,7 @@ interface Props {
  * filter is toggled. Each caller wires `onSearch` to its own store's search
  * action (useChatStore.searchChannelMessages / useDMStore.searchDmMessages). */
 export default function SearchBar({ isSearching, onSearch }: Props) {
+  const t = useT();
   const [query, setQuery] = useState('');
   const [hasFileOnly, setHasFileOnly] = useState(false);
 
@@ -38,7 +40,7 @@ export default function SearchBar({ isSearching, onSearch }: Props) {
       <input
         type="text"
         className="search-bar-input"
-        placeholder="Mesajlarda ara..."
+        placeholder={t('Mesajlarda ara...')}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -47,8 +49,8 @@ export default function SearchBar({ isSearching, onSearch }: Props) {
         type="button"
         className={`search-bar-filter-btn${hasFileOnly ? ' active' : ''}`}
         onClick={toggleHasFileOnly}
-        title="Sadece dosyalı mesajlar"
-        aria-label="Sadece dosyalı mesajlar"
+        title={t('Sadece dosyalı mesajlar')}
+        aria-label={t('Sadece dosyalı mesajlar')}
         aria-pressed={hasFileOnly}
       >
         <Paperclip size={13} />

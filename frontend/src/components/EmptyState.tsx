@@ -1,4 +1,5 @@
 import mascot from '../assets/zircle-mascot.svg';
+import { useT } from '../i18n';
 import './EmptyState.css';
 
 interface Props {
@@ -10,9 +11,10 @@ interface Props {
  * Kept as one component so both spots stay visually identical instead of
  * drifting apart over time. */
 export default function EmptyState({ message }: Props) {
+  const t = useT();
   return (
     <div className="empty-state">
-      <img src={mascot} alt="Zircle maskotu" className="empty-state-mascot" />
+      <img src={mascot} alt={t('Zircle maskotu')} className="empty-state-mascot" />
       <p className="empty-state-message">{message}</p>
     </div>
   );

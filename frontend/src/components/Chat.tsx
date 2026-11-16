@@ -15,6 +15,8 @@ import { useConnectionStore } from '../stores/useConnectionStore';
 import { userColor, initials, shouldGroupMessages } from '../utils';
 import { myRoleIn, isModerator, canModerate } from '../utils/permissions';
 import { ATTACHMENT_ACCEPT } from '../utils/attachments';
+import { t as translate, useT } from '../i18n';
+import { rich } from '../i18n/rich';
 import { getMediaPreferences, supportsOutputDeviceSelection } from '../services/mediaPreferences';
 import ServerSidebar from './ServerSidebar';
 import InviteModal from './InviteModal';
@@ -47,9 +49,13 @@ interface Props {
 }
 
 function typingIndicatorText(usernames: (string | null)[]): string {
-  const names = usernames.map((name) => name || 'Bilinmeyen');
-  if (names.length <= 2) return `${names.join(', ')} yazıyor...`;
-  return `${names.slice(0, 2).join(', ')} ve ${names.length - 2} kişi daha yazıyor...`;
+  const names = usernames.map((name) => name || translate('Bilinmeyen'));
+  if (names.length === 1) return translate('{name} yazıyor...', { name: names[0] });
+  if (names.length === 2) return translate('{names} yazıyor...', { names: names.join(', ') });
+  return translate('{names} ve {count} kişi daha yazıyor...', {
+    names: names.slice(0, 2).join(', '),
+    count: names.length - 2,
+  });
 }
 
 function formatUnreadBadge(count: number): string {
@@ -65,16 +71,16 @@ function buildOrbitParticipants(
   return participants.map((p) => {
     const speaking = speakingUserIds.has(p.user_id);
     const reconnecting = reconnectingPeerIds.has(p.user_id);
-    const name = p.username ?? 'Unknown';
+    const name = p.username ?? translate('Bilinmeyen');
     const statusText = reconnecting
-      ? 'Yeniden Bağlanıyor...'
+      ? translate('Yeniden Bağlanıyor...')
       : p.deafened
-        ? 'Sağırlaştırıldı'
+        ? translate('Sağırlaştırıldı')
         : p.muted
-          ? 'Mikrofon Kapalı'
+          ? translate('Mikrofon Kapalı')
           : speaking
-            ? 'Konuşuyor'
-            : 'Ses Bağlantısı Aktif';
+            ? translate('Konuşuyor')
+            : translate('Ses Bağlantısı Aktif');
     return {
       id: p.user_id,
       displayName: name,
@@ -91,6 +97,7 @@ function buildOrbitParticipants(
 }
 
 export default function Chat({ user, onLogout, onUserUpdated }: Props) {
+  const t = useT();
   const servers = useServerStore((s) => s.servers);
   const activeServerId = useServerStore((s) => s.activeServerId);
   const channels = useServerStore((s) => s.channels);
@@ -497,7 +504,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                 onClick={handleToggleScreenShare}
               >
                 {voice.isScreenSharing ? <ScreenShareOff size={14} /> : <ScreenShare size={14} />}{' '}
-                {voice.isScreenSharing ? 'Ekranı Durdur' : 'Ekranı Paylaş'}
+                {voice.isScreenSharing ? t('Ekranı Durdur') : t('Ekranı Paylaş')}
               </button>
             </div>
           )}
@@ -553,22 +560,22 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
       <div className="user-info">
         <div className="user-name-sm">{user.username}</div>
         <div className={`user-status-sm${isConnected ? '' : ' user-status-offline'}`}>
-          <Circle size={8} fill="currentColor" stroke="none" /> {isConnected ? 'Çevrimiçi' : 'Bağlantı Kesildi'}
+          <Circle size={8} fill="currentColor" stroke="none" /> {isConnected ? t('Çevrimiçi') : t('Bağlantı Kesildi')}
         </div>
       </div>
       <button
         className="user-settings-btn"
         onClick={() => setShowUserSettingsModal(true)}
-        title="Kullanıcı Ayarları"
-        aria-label="Kullanıcı Ayarları"
+        title={t('Kullanıcı Ayarları')}
+        aria-label={t('Kullanıcı Ayarları')}
       >
         <Settings size={20} strokeWidth={2} />
       </button>
       <button
         className="logout-btn"
         onClick={handleLogout}
-        title="Log out"
-        aria-label="Log out"
+        title={t('Çıkış yap')}
+        aria-label={t('Çıkış yap')}
       >
         <LogOut size={20} strokeWidth={2} />
       </button>
@@ -592,7 +599,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
         type="button"
         className="mobile-nav-toggle"
         onClick={() => setMobileNavOpen(true)}
-        aria-label="Sunucuları ve kanalları göster"
+        aria-label={t('Sunucuları ve kanalları göster')}
         aria-expanded={mobileNavOpen}
       >
         <Menu size={20} />
@@ -610,7 +617,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
       {!isConnected && hasConnectedBefore && (
         <div className="reconnect-banner" role="status">
           <span className="reconnect-banner-dot" />
-          Yeniden bağlanmaya çalışılıyor...
+          {t('Yeniden bağlanmaya çalışılıyor...')}
         </div>
       )}
 
@@ -653,8 +660,8 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
               <button
                 className="invite-people-btn"
                 onClick={() => setShowInviteModal(true)}
-                title="İnsanları Davet Et"
-                aria-label="İnsanları Davet Et"
+                title={t('İnsanları Davet Et')}
+                aria-label={t('İnsanları Davet Et')}
               >
                 <UserPlus size={16} />
               </button>
@@ -662,12 +669,12 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                 <button
                   className="invite-people-btn"
                   onClick={() => setShowSettingsModal(true)}
-                  title="Sunucu Ayarları"
-                  aria-label="Sunucu Ayarları"
+                  title={t('Sunucu Ayarları')}
+                  aria-label={t('Sunucu Ayarları')}
                 >
                   <Settings size={16} />
                   {activeServerId && reportServerIds.has(activeServerId) && (
-                    <span className="settings-report-dot" aria-label="Yeni rapor" />
+                    <span className="settings-report-dot" aria-label={t('Yeni rapor')} />
                   )}
                 </button>
               )}
@@ -675,8 +682,8 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                 <button
                   className="invite-people-btn leave-server-btn"
                   onClick={() => setShowLeaveModal(true)}
-                  title="Sunucudan Ayrıl"
-                  aria-label="Sunucudan Ayrıl"
+                  title={t('Sunucudan Ayrıl')}
+                  aria-label={t('Sunucudan Ayrıl')}
                 >
                   <DoorOpen size={16} />
                 </button>
@@ -688,9 +695,9 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
             <nav className="channel-list">
               {isServerOwner && (
                 <div className="channel-list-toolbar">
-                  <span className="channel-category-label">Kanallar</span>
+                  <span className="channel-category-label">{t('Kanallar')}</span>
                   <ChannelAddMenu
-                    label="Kanal Oluştur"
+                    label={t('Kanal Oluştur')}
                     onSelect={(type) => setCreateChannelRequest({ type, parentId: null })}
                   />
                 </div>
@@ -713,7 +720,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                         {isServerOwner && (
                           <div className="channel-category-add-actions">
                             <ChannelAddMenu
-                              label="Bu kategoriye kanal ekle"
+                              label={t('Bu kategoriye kanal ekle')}
                               includeCategory={false}
                               onSelect={(type) =>
                                 setCreateChannelRequest({ type, parentId: group.category!.id })
@@ -726,7 +733,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                       hasCategories &&
                       group.channels.length > 0 && (
                         <div className="channel-category-row">
-                          <span className="channel-category-label channel-category-label-plain">Kategorisiz</span>
+                          <span className="channel-category-label channel-category-label-plain">{t('Kategorisiz')}</span>
                         </div>
                       )
                     )}
@@ -740,7 +747,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
         ) : (
           <>
             <div className="server-header">
-              <span className="server-header-name">Direkt Mesajlar</span>
+              <span className="server-header-name">{t('Direkt Mesajlar')}</span>
             </div>
 
             {userPanel}
@@ -749,7 +756,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
               {dmRooms.map((room) => {
                 const unreadCount = unreadCounts[room.id] ?? 0;
                 const color = userColor(room.user_id);
-                const name = room.username ?? 'Bilinmeyen';
+                const name = room.username ?? t('Bilinmeyen');
                 return (
                   <div
                     key={room.id}
@@ -778,7 +785,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
               })}
               {dmRooms.length === 0 && (
                 <div className="list-empty-hint">
-                  Henüz bir sohbetin yok — Arkadaşlar panelinden birine mesaj gönder!
+                  {t('Henüz bir sohbetin yok — Arkadaşlar panelinden birine mesaj gönder!')}
                 </div>
               )}
             </nav>
@@ -805,7 +812,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
           onDrop={handleDrop}
         >
           {!activeChannelId ? (
-            <EmptyState message="Sohbet etmeye başlamak için bir kanal seç" />
+            <EmptyState message={t('Sohbet etmeye başlamak için bir kanal seç')} />
           ) : (
           <>
             <header className="chat-header">
@@ -814,8 +821,8 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
               <button
                 className={`chat-header-search-btn${isSearchBarOpen ? ' active' : ''}`}
                 onClick={() => setIsSearchBarOpen((open) => !open)}
-                title="Mesajlarda ara"
-                aria-label="Mesajlarda ara"
+                title={t('Mesajlarda ara')}
+                aria-label={t('Mesajlarda ara')}
                 aria-pressed={isSearchBarOpen}
               >
                 <Search size={18} />
@@ -833,7 +840,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
 
             {isDraggingFile && (
               <div className="drag-drop-overlay">
-                <div className="drag-drop-message"><Paperclip size={18} /> Fotoğrafı buraya bırak</div>
+                <div className="drag-drop-message"><Paperclip size={18} /> {t('Dosyayı buraya bırak')}</div>
               </div>
             )}
 
@@ -843,7 +850,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                   const sharerName =
                     peerId === user.id
                       ? user.username
-                      : voice.participants.find((p) => p.user_id === peerId)?.username ?? 'Unknown';
+                      : voice.participants.find((p) => p.user_id === peerId)?.username ?? t('Bilinmeyen');
                   return (
                     <div key={peerId} className="screen-share-tile">
                       <video
@@ -867,8 +874,8 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                         type="button"
                         className="screen-share-maximize-btn"
                         onClick={() => setMaximizedPeerId(peerId)}
-                        title="Büyüt"
-                        aria-label="Büyüt"
+                        title={t('Büyüt')}
+                        aria-label={t('Büyüt')}
                       >
                         <Maximize2 size={14} />
                       </button>
@@ -882,11 +889,11 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
             <div className="messages-wrapper" ref={messagesWrapperRef} onScroll={handleMessagesScroll}>
               <div className="messages-list">
                 {isLoadingOlderMessages && (
-                  <div className="channel-status">Eski mesajlar yükleniyor…</div>
+                  <div className="channel-status">{t('Eski mesajlar yükleniyor…')}</div>
                 )}
                 <div className="channel-intro">
                   <h2><Hash size={28} /> {activeChannelName}</h2>
-                  <p>Bu, #{activeChannelName} kanalının başlangıcı. Merhaba de!</p>
+                  <p>{t('Bu, #{channel} kanalının başlangıcı. Merhaba de!', { channel: activeChannelName ?? '' })}</p>
                 </div>
 
                 {messages.map((msg, index) => (
@@ -920,7 +927,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
 
             <div className="message-input-area">
               {mention.suggestions.length > 0 && (
-                <ul className="mention-suggestions" role="listbox" aria-label="Bahsedilecek üye">
+                <ul className="mention-suggestions" role="listbox" aria-label={t('Bahsedilecek üye')}>
                   {mention.suggestions.map((m, i) => (
                     <li
                       key={m.user_id}
@@ -940,10 +947,12 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
               {replyingTo && (
                 <div className="reply-banner">
                   <span>
-                    <CornerUpLeft size={14} /> <strong>{replyingTo.username ?? 'Bilinmeyen'}</strong> kişisine yanıt
-                    veriliyor
+                    <CornerUpLeft size={14} />{' '}
+                    {rich(t('{name} kişisine yanıt veriliyor'), {
+                      name: <strong>{replyingTo.username ?? t('Bilinmeyen')}</strong>,
+                    })}
                   </span>
-                  <button type="button" onClick={() => setReplyingTo(null)} aria-label="Yanıtı iptal et">
+                  <button type="button" onClick={() => setReplyingTo(null)} aria-label={t('Yanıtı iptal et')}>
                     <X size={14} />
                   </button>
                 </div>
@@ -960,8 +969,8 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                   className="attach-btn"
                   onClick={handleAttachClick}
                   disabled={!activeChannelId || isUploading}
-                  title="Dosya Ekle"
-                  aria-label="Dosya Ekle"
+                  title={t('Dosya Ekle')}
+                  aria-label={t('Dosya Ekle')}
                 >
                   <Paperclip size={18} />
                 </button>
@@ -969,7 +978,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                   ref={textareaRef}
                   className="message-input"
                   rows={1}
-                  placeholder={`Message #${activeChannelName}`}
+                  placeholder={t('#{channel} kanalına mesaj gönder', { channel: activeChannelName ?? '' })}
                   value={draft}
                   onChange={handleDraftInputChange}
                   onKeyDown={handleKeyDown}
@@ -980,14 +989,14 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                   className="send-btn"
                   onClick={sendMessage}
                   disabled={!draft.trim() || !activeChannelId}
-                  aria-label="Send message"
-                  title="Send (Enter)"
+                  aria-label={t('Mesajı gönder')}
+                  title={t('Gönder (Enter)')}
                 >
                   <Send size={18} />
                 </button>
               </div>
 
-              {isUploading && <div className="upload-status">Yükleniyor…</div>}
+              {isUploading && <div className="upload-status">{t('Yükleniyor…')}</div>}
               {uploadError && <div className="upload-status upload-status-error"><AlertTriangle size={14} /> {uploadError}</div>}
               {actionError && <div className="upload-status upload-status-error" role="alert"><AlertTriangle size={14} /> {actionError}</div>}
 
@@ -1018,13 +1027,13 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
         <DMChatView currentUserId={user.id} />
       ) : (
         <main className="chat-main">
-          <EmptyState message="Sohbet etmeye başlamak için bir kişi veya kanal seç" />
+          <EmptyState message={t('Sohbet etmeye başlamak için bir kişi veya kanal seç')} />
         </main>
       )}
 
       {lightboxUrl && (
         <div className="image-lightbox-overlay" onClick={() => setLightboxUrl(null)}>
-          <img src={resolveFileUrl(lightboxUrl)} alt="ek büyük önizleme" className="image-lightbox-img" />
+          <img src={resolveFileUrl(lightboxUrl)} alt={t('ek büyük önizleme')} className="image-lightbox-img" />
         </div>
       )}
 
@@ -1045,8 +1054,8 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
               type="button"
               className="screen-share-maximize-close-btn"
               onClick={() => setMaximizedPeerId(null)}
-              title="Kapat"
-              aria-label="Kapat"
+              title={t('Kapat')}
+              aria-label={t('Kapat')}
             >
               <X size={20} />
             </button>
@@ -1062,7 +1071,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
             <div className="screen-share-maximize-label">
               {maximizedPeerId === user.id
                 ? user.username
-                : voice.participants.find((p) => p.user_id === maximizedPeerId)?.username ?? 'Unknown'}
+                : voice.participants.find((p) => p.user_id === maximizedPeerId)?.username ?? t('Bilinmeyen')}
             </div>
           </div>
         </div>
@@ -1072,12 +1081,12 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
       {activeServerId && (
         <aside className="online-sidebar">
           <div className="online-sidebar-header">
-            Çevrimiçi — {onlineUsers.length}
+            {t('Çevrimiçi — {count}', { count: onlineUsers.length })}
           </div>
           <div className="online-user-list">
             {onlineUsers.map((presenceUser) => {
               const color = userColor(presenceUser.user_id);
-              const name = presenceUser.username ?? 'Unknown';
+              const name = presenceUser.username ?? t('Bilinmeyen');
               return (
                 <div key={presenceUser.user_id} className="online-user-item">
                   <div className="online-user-avatar-wrapper">

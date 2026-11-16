@@ -108,7 +108,7 @@ defmodule BackendWeb.UserControllerTest do
         |> with_unique_ip(124)
         |> post(~p"/api/users/login", %{"email" => user.email, "password" => "wrong-password"})
 
-      assert json_response(conn, 401) == %{"error" => "Invalid email or password"}
+      assert json_response(conn, 401) == %{"error" => "E-posta veya şifre hatalı"}
     end
   end
 end

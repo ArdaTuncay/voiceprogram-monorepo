@@ -27,7 +27,7 @@ defmodule BackendWeb.VerificationControllerRateLimitTest do
     assert [limited] = denied
 
     assert json_response(limited, 429) == %{
-             "error" => "Too many requests. Please try again later."
+             "error" => "Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin."
            }
   end
 end

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUTH_REQUEST_TIMEOUT_MS, loginUser, registerUser } from '../api';
+import { AUTH_REQUEST_TIMEOUT_MS, fetchFriends, loginUser, registerUser, verifyEmail } from '../api';
 import { getStoredToken } from '../tokenStorage';
 import { AUTH_REQUEST_ERRORS } from '../../utils/errorMessages';
+import { useLanguageStore } from '../../i18n';
 
 // Real Response objects rather than hand-rolled { ok, status, json } fakes —
 // the point of several tests below is what resp.json() actually does with an
@@ -34,6 +35,23 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+});
+
+describe('Accept-Language', () => {
+  it('asks the backend to answer in the UI language, signed in or not', async () => {
+    const fetchMock = stubFetch(async () => jsonResponse(200, {}));
+
+    useLanguageStore.getState().setLanguage('en');
+    await loginUser('ard@example.com', 'password123');
+    await fetchFriends();
+    useLanguageStore.getState().setLanguage('tr');
+    await verifyEmail('token');
+
+    const languages = fetchMock.mock.calls.map(
+      ([, init]) => (init?.headers as Record<string, string> | undefined)?.['Accept-Language']
+    );
+    expect(languages).toEqual(['en', 'en', 'tr']);
+  });
 });
 
 describe('post() — requests that never get a response (PROJECT_ARCHITECTURE.md §7 #15)', () => {

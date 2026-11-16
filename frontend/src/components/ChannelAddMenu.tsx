@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Plus, Hash, Volume2, FolderPlus } from 'lucide-react';
 import type { ChannelType } from '../types';
+import { useT, type MessageKey } from '../i18n';
 import './ChannelAddMenu.css';
 
 interface Props {
@@ -11,7 +12,7 @@ interface Props {
   label: string;
 }
 
-const OPTIONS: { type: ChannelType; label: string; icon: typeof Hash }[] = [
+const OPTIONS: { type: ChannelType; label: MessageKey; icon: typeof Hash }[] = [
   { type: 'text', label: 'Metin kanalı', icon: Hash },
   { type: 'voice', label: 'Sesli kanal', icon: Volume2 },
   { type: 'category', label: 'Kategori', icon: FolderPlus },
@@ -21,6 +22,7 @@ const OPTIONS: { type: ChannelType; label: string; icon: typeof Hash }[] = [
  * channel type — opens a small dropdown ("Metin kanalı" / "Sesli kanal" /
  * "Kategori") instead of cluttering the toolbar with 2-3 separate icons. */
 export default function ChannelAddMenu({ onSelect, includeCategory = true, label }: Props) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +64,7 @@ export default function ChannelAddMenu({ onSelect, includeCategory = true, label
               }}
             >
               <Icon size={14} />
-              {optionLabel}
+              {t(optionLabel)}
             </button>
           ))}
         </div>

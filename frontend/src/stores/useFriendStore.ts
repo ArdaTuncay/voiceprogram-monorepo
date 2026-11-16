@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { create } from 'zustand';
 import type { BlockedUser, Friendship } from '../types';
 import {
@@ -62,7 +63,7 @@ export const useFriendStore = create<FriendStoreState>((set, get) => ({
     set({ loading: false });
 
     if (error || !data) {
-      set({ error: error ?? 'Arkadaş listesi alınamadı' });
+      set({ error: error ?? t('Arkadaş listesi alınamadı') });
       return;
     }
     set({ friendships: data });
@@ -80,7 +81,7 @@ export const useFriendStore = create<FriendStoreState>((set, get) => ({
 
   sendRequest: async (username) => {
     const { data, error } = await apiSendFriendRequest(username);
-    if (error || !data) return error ?? 'İstek gönderilemedi';
+    if (error || !data) return error ?? t('İstek gönderilemedi');
 
     set((state) => ({ friendships: upsert(state.friendships, data) }));
     return undefined;
@@ -88,7 +89,7 @@ export const useFriendStore = create<FriendStoreState>((set, get) => ({
 
   acceptRequest: async (friendshipId) => {
     const { data, error } = await apiAcceptFriendRequest(friendshipId);
-    if (error || !data) return error ?? 'İstek kabul edilemedi';
+    if (error || !data) return error ?? t('İstek kabul edilemedi');
 
     set((state) => ({ friendships: upsert(state.friendships, data) }));
     return undefined;

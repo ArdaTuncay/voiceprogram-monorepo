@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { Socket, Channel, Presence } from 'phoenix';
 import type {
   ChatMessage,
@@ -128,7 +129,7 @@ export function joinChatChannel(channelId: string, callbacks: ChannelCallbacks):
     .join()
     .receive('ok', (resp: { messages: ChatMessage[] }) => callbacks.onJoined(resp))
     .receive('error', (resp: { reason?: string }) =>
-      callbacks.onError(resp.reason ?? 'Failed to join channel')
+      callbacks.onError(resp.reason ?? t('Kanala katılınamadı'))
     );
 
   return () => {
@@ -233,7 +234,7 @@ export function joinDmChannel(roomId: string, callbacks: ChannelCallbacks): () =
     .join()
     .receive('ok', (resp: { messages: ChatMessage[] }) => callbacks.onJoined(resp))
     .receive('error', (resp: { reason?: string }) =>
-      callbacks.onError(resp.reason ?? 'Failed to join DM room')
+      callbacks.onError(resp.reason ?? t('Sohbete katılınamadı'))
     );
 
   return () => {

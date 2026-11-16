@@ -43,7 +43,9 @@ defmodule BackendWeb.AccountController do
           conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
       end
     else
-      conn |> put_status(:unauthorized) |> json(%{error: "Mevcut şifre yanlış"})
+      conn
+      |> put_status(:unauthorized)
+      |> json(%{error: gettext("Current password is incorrect")})
     end
   end
 
@@ -66,7 +68,7 @@ defmodule BackendWeb.AccountController do
           conn
           |> put_status(:accepted)
           |> json(%{
-            message: "Onay bağlantısı yeni adrese gönderildi",
+            message: gettext("A confirmation link was sent to the new address"),
             pending_email: updated.pending_email
           })
 
@@ -74,7 +76,9 @@ defmodule BackendWeb.AccountController do
           conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
       end
     else
-      conn |> put_status(:unauthorized) |> json(%{error: "Mevcut şifre yanlış"})
+      conn
+      |> put_status(:unauthorized)
+      |> json(%{error: gettext("Current password is incorrect")})
     end
   end
 
@@ -101,7 +105,9 @@ defmodule BackendWeb.AccountController do
         json(conn, %{id: updated.id, username: updated.username, email: updated.email})
 
       {:error, :invalid_current_password} ->
-        conn |> put_status(:unauthorized) |> json(%{error: "Mevcut şifre yanlış"})
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: gettext("Current password is incorrect")})
 
       {:error, changeset} ->
         conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
@@ -132,7 +138,7 @@ defmodule BackendWeb.AccountController do
       {:error, _changeset} ->
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{error: "Geçersiz resim. Önce bir resim yükleyin."})
+        |> json(%{error: gettext("Invalid image. Upload an image first.")})
     end
   end
 
@@ -178,12 +184,14 @@ defmodule BackendWeb.AccountController do
         send_resp(conn, :no_content, "")
 
       {:error, :invalid_current_password} ->
-        conn |> put_status(:unauthorized) |> json(%{error: "Mevcut şifre yanlış"})
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: gettext("Current password is incorrect")})
 
       {:error, _reason} ->
         conn
         |> put_status(:internal_server_error)
-        |> json(%{error: "Hesap silinemedi, lütfen tekrar deneyin"})
+        |> json(%{error: gettext("Your account couldn't be deleted, please try again")})
     end
   end
 

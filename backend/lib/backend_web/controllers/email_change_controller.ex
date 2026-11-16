@@ -17,7 +17,7 @@ defmodule BackendWeb.EmailChangeController do
   def confirm(conn, %{"token" => token}) when is_binary(token) do
     case Accounts.confirm_email_change(token) do
       {:ok, user} ->
-        json(conn, %{message: "E-posta adresiniz güncellendi", email: user.email})
+        json(conn, %{message: gettext("Your email address was updated"), email: user.email})
 
       {:error, :invalid_token} ->
         conn |> put_status(:not_found) |> json(%{error: "invalid_token"})

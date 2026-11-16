@@ -20,6 +20,10 @@ config :backend, Backend.Repo,
 # for the production S3/R2 setup and config/dev.exs for testing it locally.
 config :backend, :uploads, adapter: :local
 
+# User-facing messages are English msgids with Turkish translations; Turkish
+# unless the request asks otherwise (see BackendWeb.LocalePlug).
+config :backend, BackendWeb.Gettext, default_locale: "tr", locales: ~w(tr en)
+
 # ETS housekeeping for Backend.RateLimiter (see BackendWeb.RateLimiterPlug) —
 # how often expired rate-limit counters are swept, and how old an entry can
 # get before it's considered stale. Single-node ETS is fine for both dev and

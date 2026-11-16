@@ -26,6 +26,10 @@ import {
   supportsOutputDeviceSelection,
   updateMediaPreference,
 } from '../services/mediaPreferences';
+import { microphoneErrorMessage } from '../utils/errorMessages';
+import { t, useT, type MessageKey } from '../i18n';
+import { rich } from '../i18n/rich';
+import LanguageSelect from './LanguageSelect';
 import './UserSettingsModal.css';
 
 type Category =
@@ -37,7 +41,7 @@ type Category =
   | 'shortcuts'
   | 'data';
 
-const CATEGORIES: { id: Category; label: string }[] = [
+const CATEGORIES: { id: Category; label: MessageKey }[] = [
   { id: 'account', label: 'Hesabım' },
   { id: 'appearance', label: 'Görünüm' },
   { id: 'notifications', label: 'Bildirimler' },
@@ -61,6 +65,9 @@ interface Props {
  * shared Modal component, which is a narrow centered dialog and not suited
  * to this wide, two-pane shape. */
 export default function UserSettingsModal({ user, onUserUpdated, onClose }: Props) {
+  // Subscribes to the UI language; the sections below use the plain t()
+  // and re-render along with this one.
+  useT();
   const [category, setCategory] = useState<Category>('appearance');
 
   useEffect(() => {
@@ -76,14 +83,14 @@ export default function UserSettingsModal({ user, onUserUpdated, onClose }: Prop
       <button
         className="user-settings-close-btn"
         onClick={onClose}
-        title="Kapat (ESC)"
-        aria-label="Kapat"
+        title={t('Kapat (ESC)')}
+        aria-label={t('Kapat')}
       >
         <X size={22} />
       </button>
 
       <div className="user-settings-panel">
-        <nav className="user-settings-sidebar" aria-label="Ayar kategorileri">
+        <nav className="user-settings-sidebar" aria-label={t('Ayar kategorileri')}>
           {CATEGORIES.map((c) => (
             <button
               key={c.id}
@@ -91,7 +98,7 @@ export default function UserSettingsModal({ user, onUserUpdated, onClose }: Prop
               className={`user-settings-category${category === c.id ? ' active' : ''}`}
               onClick={() => setCategory(c.id)}
             >
-              {c.label}
+              {t(c.label)}
             </button>
           ))}
         </nav>
@@ -137,16 +144,16 @@ function StatusMessage({ type, message }: { type: 'error' | 'success'; message: 
 function AccountSettings({ user, onUserUpdated }: { user: User; onUserUpdated?: (user: User) => void }) {
   async function handleAvatarSave(url: string | null) {
     const { data, error } = await updateAvatar(url);
-    if (error || !data) return error ?? 'Profil fotoğrafı kaydedilemedi';
+    if (error || !data) return error ?? t('Profil fotoğrafı kaydedilemedi');
     onUserUpdated?.({ ...user, avatar_url: data.avatar_url ?? null });
     return undefined;
   }
 
   return (
     <div className="user-settings-section">
-      <h3 className="user-settings-heading">Hesabım</h3>
+      <h3 className="user-settings-heading">{t('Hesabım')}</h3>
       <ImagePicker
-        label="Profil Fotoğrafı"
+        label={t('Profil Fotoğrafı')}
         currentUrl={user.avatar_url}
         fallback={initials(user.username)}
         color={userColor(user.id)}
@@ -177,7 +184,7 @@ function UsernameForm({ currentUsername }: { currentUsername: string }) {
       return;
     }
     setStatus('success');
-    setMessage('Kullanıcı adın güncellendi.');
+    setMessage(t('Kullanıcı adın güncellendi.'));
     setCurrentPassword('');
   }
 
@@ -186,10 +193,10 @@ function UsernameForm({ currentUsername }: { currentUsername: string }) {
 
   return (
     <form className="account-form" onSubmit={handleSubmit}>
-      <h4 className="account-form-title">Kullanıcı Adı</h4>
+      <h4 className="account-form-title">{t('Kullanıcı Adı')}</h4>
 
       <label className="user-settings-label" htmlFor="account-username-input">
-        Yeni kullanıcı adı
+        {t('Yeni kullanıcı adı')}
       </label>
       <input
         id="account-username-input"
@@ -201,7 +208,7 @@ function UsernameForm({ currentUsername }: { currentUsername: string }) {
       />
 
       <label className="user-settings-label" htmlFor="account-username-password">
-        Mevcut şifre
+        {t('Mevcut şifre')}
       </label>
       <input
         id="account-username-password"
@@ -214,7 +221,7 @@ function UsernameForm({ currentUsername }: { currentUsername: string }) {
       />
 
       <button className="account-form-submit-btn" type="submit" disabled={disabled}>
-        {status === 'submitting' ? 'Kaydediliyor…' : 'Kullanıcı Adını Değiştir'}
+        {status === 'submitting' ? t('Kaydediliyor…') : t('Kullanıcı Adını Değiştir')}
       </button>
 
       {status === 'error' && <StatusMessage type="error" message={message} />}
@@ -242,8 +249,9 @@ function EmailForm({ currentEmail }: { currentEmail: string }) {
     }
     setStatus('success');
     setMessage(
-      `${result.data?.pending_email ?? trimmed} adresine bir onay bağlantısı gönderdik. ` +
-        'Bağlantıya tıklayana kadar e-posta adresin değişmez.'
+      t('{email} adresine bir onay bağlantısı gönderdik. Bağlantıya tıklayana kadar e-posta adresin değişmez.', {
+        email: result.data?.pending_email ?? trimmed,
+      })
     );
     setCurrentPassword('');
   }
@@ -253,10 +261,10 @@ function EmailForm({ currentEmail }: { currentEmail: string }) {
 
   return (
     <form className="account-form" onSubmit={handleSubmit}>
-      <h4 className="account-form-title">E-posta</h4>
+      <h4 className="account-form-title">{t('E-posta')}</h4>
 
       <label className="user-settings-label" htmlFor="account-email-input">
-        Yeni e-posta
+        {t('Yeni e-posta')}
       </label>
       <input
         id="account-email-input"
@@ -268,7 +276,7 @@ function EmailForm({ currentEmail }: { currentEmail: string }) {
       />
 
       <label className="user-settings-label" htmlFor="account-email-password">
-        Mevcut şifre
+        {t('Mevcut şifre')}
       </label>
       <input
         id="account-email-password"
@@ -281,7 +289,7 @@ function EmailForm({ currentEmail }: { currentEmail: string }) {
       />
 
       <button className="account-form-submit-btn" type="submit" disabled={disabled}>
-        {status === 'submitting' ? 'Kaydediliyor…' : 'E-postayı Değiştir'}
+        {status === 'submitting' ? t('Kaydediliyor…') : t('E-postayı Değiştir')}
       </button>
 
       {status === 'error' && <StatusMessage type="error" message={message} />}
@@ -303,7 +311,7 @@ function PasswordForm() {
 
     if (newPassword !== confirmPassword) {
       setStatus('error');
-      setMessage('Yeni şifreler eşleşmiyor.');
+      setMessage(t('Yeni şifreler eşleşmiyor.'));
       return;
     }
 
@@ -317,7 +325,9 @@ function PasswordForm() {
 
     setStatus('success');
     setMessage(
-      'Şifren değiştirildi. Diğer tüm cihazlarda (ve bu oturumda da) oturum kapatıldı — birazdan yeniden giriş yapman gerekecek.'
+      t(
+        'Şifren değiştirildi. Diğer tüm cihazlarda (ve bu oturumda da) oturum kapatıldı — birazdan yeniden giriş yapman gerekecek.'
+      )
     );
     // The token this very request used is now invalid too (see
     // updatePassword's doc comment) — end the session deliberately after
@@ -334,10 +344,10 @@ function PasswordForm() {
 
   return (
     <form className="account-form" onSubmit={handleSubmit}>
-      <h4 className="account-form-title">Şifre</h4>
+      <h4 className="account-form-title">{t('Şifre')}</h4>
 
       <label className="user-settings-label" htmlFor="account-password-current">
-        Mevcut şifre
+        {t('Mevcut şifre')}
       </label>
       <input
         id="account-password-current"
@@ -350,7 +360,7 @@ function PasswordForm() {
       />
 
       <label className="user-settings-label" htmlFor="account-password-new">
-        Yeni şifre
+        {t('Yeni şifre')}
       </label>
       <input
         id="account-password-new"
@@ -363,7 +373,7 @@ function PasswordForm() {
       />
 
       <label className="user-settings-label" htmlFor="account-password-confirm">
-        Yeni şifre (tekrar)
+        {t('Yeni şifre (tekrar)')}
       </label>
       <input
         id="account-password-confirm"
@@ -376,7 +386,7 @@ function PasswordForm() {
       />
 
       <button className="account-form-submit-btn" type="submit" disabled={disabled}>
-        {status === 'submitting' ? 'Kaydediliyor…' : 'Şifreyi Değiştir'}
+        {status === 'submitting' ? t('Kaydediliyor…') : t('Şifreyi Değiştir')}
       </button>
 
       {status === 'error' && <StatusMessage type="error" message={message} />}
@@ -385,7 +395,7 @@ function PasswordForm() {
   );
 }
 
-const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
+const THEME_OPTIONS: { value: ThemePreference; label: MessageKey }[] = [
   { value: 'light', label: 'Açık' },
   { value: 'dark', label: 'Koyu' },
   { value: 'system', label: 'Sistem' },
@@ -412,10 +422,15 @@ function AppearanceSettings() {
 
   return (
     <div className="user-settings-section">
-      <h3 className="user-settings-heading">Görünüm</h3>
+      <h3 className="user-settings-heading">{t('Görünüm')}</h3>
+
+      <label className="user-settings-label" id="language-preference-label">
+        {t('Dil')}
+      </label>
+      <LanguageSelect />
 
       <label className="user-settings-label" id="theme-preference-label">
-        Tema
+        {t('Tema')}
       </label>
       <div
         className="theme-segmented-control"
@@ -432,7 +447,7 @@ function AppearanceSettings() {
             className={`theme-segmented-option${preference === opt.value ? ' active' : ''}`}
             onClick={() => select(opt.value)}
           >
-            {opt.label}
+            {t(opt.label)}
           </button>
         ))}
       </div>
@@ -489,7 +504,7 @@ function NotificationSettings() {
     if (checked && typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
       const result = await Notification.requestPermission();
       if (result !== 'granted') {
-        setPermissionNote('Tarayıcı bildirim izni reddedildi — masaüstü bildirimleri gösterilemeyecek.');
+        setPermissionNote(t('Tarayıcı bildirim izni reddedildi — masaüstü bildirimleri gösterilemeyecek.'));
         set('desktop', false);
         return;
       }
@@ -499,11 +514,11 @@ function NotificationSettings() {
 
   return (
     <div className="user-settings-section">
-      <h3 className="user-settings-heading">Bildirimler</h3>
+      <h3 className="user-settings-heading">{t('Bildirimler')}</h3>
 
       <ToggleSwitch
         id="notif-enabled"
-        label="Bildirimleri etkinleştir"
+        label={t('Bildirimleri etkinleştir')}
         checked={prefs.enabled}
         onChange={(checked) => set('enabled', checked)}
       />
@@ -511,14 +526,14 @@ function NotificationSettings() {
       <div className="toggle-subgroup">
         <ToggleSwitch
           id="notif-sound"
-          label="Ses bildirimleri"
+          label={t('Ses bildirimleri')}
           checked={prefs.sound}
           disabled={!prefs.enabled}
           onChange={(checked) => set('sound', checked)}
         />
         <ToggleSwitch
           id="notif-desktop"
-          label="Masaüstü bildirimleri"
+          label={t('Masaüstü bildirimleri')}
           checked={prefs.desktop}
           disabled={!prefs.enabled}
           onChange={(checked) => void handleDesktopToggle(checked)}
@@ -526,7 +541,7 @@ function NotificationSettings() {
         {permissionNote && <StatusMessage type="error" message={permissionNote} />}
         <ToggleSwitch
           id="notif-mentions-only"
-          label="Sadece bahsedilmelerde bildir"
+          label={t('Sadece bahsedilmelerde bildir')}
           checked={prefs.mentionsOnly}
           disabled={!prefs.enabled}
           onChange={(checked) => set('mentionsOnly', checked)}
@@ -538,7 +553,7 @@ function NotificationSettings() {
 
 interface Shortcut {
   keys: string[];
-  description: string;
+  description: MessageKey;
 }
 
 // Static list of what's actually wired up in the codebase today (see
@@ -555,7 +570,7 @@ const SHORTCUTS: Shortcut[] = [
 function ShortcutsSettings() {
   return (
     <div className="user-settings-section">
-      <h3 className="user-settings-heading">Klavye Kısayolları</h3>
+      <h3 className="user-settings-heading">{t('Klavye Kısayolları')}</h3>
 
       <div className="shortcuts-list">
         {SHORTCUTS.map((shortcut, i) => (
@@ -568,7 +583,7 @@ function ShortcutsSettings() {
                 </span>
               ))}
             </span>
-            <span className="shortcuts-description">{shortcut.description}</span>
+            <span className="shortcuts-description">{t(shortcut.description)}</span>
           </div>
         ))}
       </div>
@@ -596,7 +611,7 @@ function VoiceSettings() {
       setSpeakers(devices.filter((d) => d.kind === 'audiooutput'));
       setDeviceError('');
     } catch {
-      setDeviceError('Cihaz listesi alınamadı.');
+      setDeviceError(t('Cihaz listesi alınamadı.'));
     }
   }, []);
 
@@ -612,12 +627,12 @@ function VoiceSettings() {
 
   return (
     <div className="user-settings-section">
-      <h3 className="user-settings-heading">Ses & Görüntü</h3>
+      <h3 className="user-settings-heading">{t('Ses & Görüntü')}</h3>
 
       {deviceError && <StatusMessage type="error" message={deviceError} />}
 
       <label className="user-settings-label" htmlFor="voice-mic-select">
-        Mikrofon
+        {t('Mikrofon')}
       </label>
       <select
         id="voice-mic-select"
@@ -627,10 +642,10 @@ function VoiceSettings() {
           setPrefs(updateMediaPreference('micDeviceId', e.target.value || null))
         }
       >
-        <option value="">Sistem varsayılanı</option>
+        <option value="">{t('Sistem varsayılanı')}</option>
         {mics.map((d, i) => (
           <option key={d.deviceId || i} value={d.deviceId}>
-            {d.label || `Mikrofon ${i + 1}`}
+            {d.label || t('Mikrofon {n}', { n: i + 1 })}
           </option>
         ))}
       </select>
@@ -638,7 +653,7 @@ function VoiceSettings() {
       {outputSupported && (
         <>
           <label className="user-settings-label" htmlFor="voice-speaker-select">
-            Hoparlör
+            {t('Hoparlör')}
           </label>
           <select
             id="voice-speaker-select"
@@ -648,10 +663,10 @@ function VoiceSettings() {
               setPrefs(updateMediaPreference('speakerDeviceId', e.target.value || null))
             }
           >
-            <option value="">Sistem varsayılanı</option>
+            <option value="">{t('Sistem varsayılanı')}</option>
             {speakers.map((d, i) => (
               <option key={d.deviceId || i} value={d.deviceId}>
-                {d.label || `Hoparlör ${i + 1}`}
+                {d.label || t('Hoparlör {n}', { n: i + 1 })}
               </option>
             ))}
           </select>
@@ -719,7 +734,7 @@ function MicTestButton({ onPermissionGranted }: { onPermissionGranted: () => voi
       tick();
       setTesting(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Mikrofona erişilemedi');
+      setError(microphoneErrorMessage(err));
       stopTest();
     }
   }
@@ -731,14 +746,14 @@ function MicTestButton({ onPermissionGranted }: { onPermissionGranted: () => voi
         className="account-form-submit-btn"
         onClick={() => (testing ? stopTest() : void startTest())}
       >
-        {testing ? 'Testi Durdur' : 'Mikrofonu Test Et'}
+        {testing ? t('Testi Durdur') : t('Mikrofonu Test Et')}
       </button>
 
       {testing && (
         <div
           className="mic-test-meter"
           role="meter"
-          aria-label="Mikrofon seviyesi"
+          aria-label={t('Mikrofon seviyesi')}
           aria-valuenow={level}
           aria-valuemin={0}
           aria-valuemax={100}
@@ -752,7 +767,8 @@ function MicTestButton({ onPermissionGranted }: { onPermissionGranted: () => voi
   );
 }
 
-const DELETE_CONFIRMATION_PHRASE = 'HESABIMI SİL';
+// Typed exactly to confirm; it's in the UI language, like the label that asks for it.
+const DELETE_CONFIRMATION_PHRASE: MessageKey = 'HESABIMI SİL';
 
 /** Hesap Silme / Veri Yönetimi — the one irreversible action in this whole
  * modal, so it's gated harder than anything else here: current password
@@ -781,7 +797,7 @@ function AccountDeletionSettings() {
     }
 
     setStatus('success');
-    setMessage('Hesabın silindi. Giriş ekranına yönlendiriliyorsun…');
+    setMessage(t('Hesabın silindi. Giriş ekranına yönlendiriliyorsun…'));
     window.setTimeout(() => {
       disconnectSocket();
       forceLogout();
@@ -793,27 +809,27 @@ function AccountDeletionSettings() {
     locked ||
     !currentPassword ||
     !acknowledged ||
-    confirmationText !== DELETE_CONFIRMATION_PHRASE;
+    confirmationText !== t(DELETE_CONFIRMATION_PHRASE);
 
   return (
     <div className="user-settings-section">
-      <h3 className="user-settings-heading">Hesap Silme / Veri Yönetimi</h3>
+      <h3 className="user-settings-heading">{t('Hesap Silme / Veri Yönetimi')}</h3>
 
       <div className="account-delete-warning">
         <AlertTriangle size={16} />
         <p>
-          Hesabını silmek <strong>geri alınamaz</strong>. Kullanıcı adın ve e-postan
-          anonimleştirilir, tüm arkadaşlıkların/engellemelerin kaldırılır ve üyesi olduğun
-          sunuculardan çıkarılırsın. Tek başına sahibi olduğun bir sunucunun başka üyesi yoksa o
-          sunucu (kanalları ve mesajlarıyla birlikte) tamamen silinir; başka üyesi varsa
-          sahiplik en eski üyeye devredilir. Gönderdiğin mesajlar ve DM geçmişin İÇERİK olarak
-          silinmez — sadece yazarın "[silinmiş kullanıcı]" olarak görünür.
+          {rich(
+            t(
+              'Hesabını silmek {irreversible}. Kullanıcı adın ve e-postan anonimleştirilir, tüm arkadaşlıkların/engellemelerin kaldırılır ve üyesi olduğun sunuculardan çıkarılırsın. Tek başına sahibi olduğun bir sunucunun başka üyesi yoksa o sunucu (kanalları ve mesajlarıyla birlikte) tamamen silinir; başka üyesi varsa sahiplik en eski üyeye devredilir. Gönderdiğin mesajlar ve DM geçmişin İÇERİK olarak silinmez — sadece yazarın "[silinmiş kullanıcı]" olarak görünür.'
+            ),
+            { irreversible: <strong>{t('geri alınamaz')}</strong> }
+          )}
         </p>
       </div>
 
       <form className="account-form" onSubmit={handleSubmit}>
         <label className="user-settings-label" htmlFor="account-delete-password">
-          Mevcut şifre
+          {t('Mevcut şifre')}
         </label>
         <input
           id="account-delete-password"
@@ -833,11 +849,13 @@ function AccountDeletionSettings() {
             onChange={(e: ChangeEvent<HTMLInputElement>) => setAcknowledged(e.target.checked)}
             disabled={locked}
           />
-          Bu işlemin geri alınamaz olduğunu anlıyorum.
+          {t('Bu işlemin geri alınamaz olduğunu anlıyorum.')}
         </label>
 
         <label className="user-settings-label" htmlFor="account-delete-confirm-text">
-          Onaylamak için <strong>{DELETE_CONFIRMATION_PHRASE}</strong> yaz
+          {rich(t('Onaylamak için {phrase} yaz'), {
+            phrase: <strong>{t(DELETE_CONFIRMATION_PHRASE)}</strong>,
+          })}
         </label>
         <input
           id="account-delete-confirm-text"
@@ -852,7 +870,7 @@ function AccountDeletionSettings() {
           type="submit"
           disabled={disabled}
         >
-          {status === 'submitting' ? 'Siliniyor…' : 'Hesabımı Sil'}
+          {status === 'submitting' ? t('Siliniyor…') : t('Hesabımı Sil')}
         </button>
 
         {status === 'error' && <StatusMessage type="error" message={message} />}
@@ -862,7 +880,7 @@ function AccountDeletionSettings() {
   );
 }
 
-const PRIVACY_OPTIONS: { value: FriendRequestPrivacy; label: string }[] = [
+const PRIVACY_OPTIONS: { value: FriendRequestPrivacy; label: MessageKey }[] = [
   { value: 'everyone', label: 'Herkes' },
   { value: 'nobody', label: 'Kimse' },
 ];
@@ -900,10 +918,10 @@ function PrivacySettings({ user }: { user: User }) {
 
   return (
     <div className="user-settings-section">
-      <h3 className="user-settings-heading">Gizlilik & Güvenlik</h3>
+      <h3 className="user-settings-heading">{t('Gizlilik & Güvenlik')}</h3>
 
       <label className="user-settings-label" id="friend-privacy-label">
-        Arkadaşlık isteklerini kimler gönderebilir
+        {t('Arkadaşlık isteklerini kimler gönderebilir')}
       </label>
       <div
         className="theme-segmented-control"
@@ -919,28 +937,28 @@ function PrivacySettings({ user }: { user: User }) {
             className={`theme-segmented-option${privacy === opt.value ? ' active' : ''}`}
             onClick={() => void selectPrivacy(opt.value)}
           >
-            {opt.label}
+            {t(opt.label)}
           </button>
         ))}
       </div>
 
-      <h4 className="account-form-title privacy-blocked-title">Engellenen Kullanıcılar</h4>
+      <h4 className="account-form-title privacy-blocked-title">{t('Engellenen Kullanıcılar')}</h4>
 
       {message && <StatusMessage type="error" message={message} />}
 
       {blockedUsers.length === 0 ? (
-        <p className="user-settings-placeholder">Kimseyi engellemedin.</p>
+        <p className="user-settings-placeholder">{t('Kimseyi engellemedin.')}</p>
       ) : (
         <ul className="blocked-user-list">
           {blockedUsers.map((u) => (
             <li key={u.user_id} className="blocked-user-item">
-              <span className="blocked-user-name">{u.username ?? 'Bilinmeyen'}</span>
+              <span className="blocked-user-name">{u.username ?? t('Bilinmeyen')}</span>
               <button
                 className="account-form-submit-btn"
                 onClick={() => void handleUnblock(u.user_id)}
                 disabled={unblockingId === u.user_id}
               >
-                {unblockingId === u.user_id ? 'Kaldırılıyor…' : 'Engeli Kaldır'}
+                {unblockingId === u.user_id ? t('Kaldırılıyor…') : t('Engeli Kaldır')}
               </button>
             </li>
           ))}

@@ -27,11 +27,11 @@ defmodule BackendWeb.DmController do
             has_more: length(messages) >= 50
           })
         else
-          conn |> put_status(:not_found) |> json(%{error: "DM room not found"})
+          conn |> put_status(:not_found) |> json(%{error: gettext("DM room not found")})
         end
 
       nil ->
-        conn |> put_status(:not_found) |> json(%{error: "DM room not found"})
+        conn |> put_status(:not_found) |> json(%{error: gettext("DM room not found")})
     end
   end
 
@@ -49,11 +49,11 @@ defmodule BackendWeb.DmController do
           messages = DirectMessages.search_dm_messages(room.id, params)
           json(conn, %{messages: Enum.map(messages, &message_json/1)})
         else
-          conn |> put_status(:not_found) |> json(%{error: "DM room not found"})
+          conn |> put_status(:not_found) |> json(%{error: gettext("DM room not found")})
         end
 
       nil ->
-        conn |> put_status(:not_found) |> json(%{error: "DM room not found"})
+        conn |> put_status(:not_found) |> json(%{error: gettext("DM room not found")})
     end
   end
 
@@ -68,20 +68,20 @@ defmodule BackendWeb.DmController do
         |> json(DirectMessages.to_view(room, user_id))
 
       {:error, :user_not_found} ->
-        conn |> put_status(:not_found) |> json(%{error: "Kullanıcı bulunamadı"})
+        conn |> put_status(:not_found) |> json(%{error: gettext("User not found")})
 
       {:error, :cannot_dm_self} ->
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{error: "Kendinize mesaj gönderemezsiniz"})
+        |> json(%{error: gettext("You can't message yourself")})
 
       {:error, :not_friends} ->
         conn
         |> put_status(:forbidden)
-        |> json(%{error: "Sadece arkadaşlarınıza mesaj gönderebilirsiniz"})
+        |> json(%{error: gettext("You can only message your friends")})
 
       {:error, :blocked} ->
-        conn |> put_status(:forbidden) |> json(%{error: "Bu kullanıcıyla mesajlaşamazsınız"})
+        conn |> put_status(:forbidden) |> json(%{error: gettext("You can't message this user")})
 
       {:error, %Ecto.Changeset{} = changeset} ->
         conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})

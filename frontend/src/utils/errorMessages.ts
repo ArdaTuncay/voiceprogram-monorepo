@@ -1,21 +1,35 @@
 /**
- * User-facing error copy, in Turkish, for values the backend sends in a
+ * User-facing error copy for values the backend sends in a
  * machine-oriented (English) form — HTTP error bodies, Ecto changeset
  * messages — which used to be shown to users raw. Kept in one place so
  * every call site maps the same value to the same text, and so an unknown
  * value always has a deliberate fallback instead of leaking through by
  * accident. See PROJECT_ARCHITECTURE.md §7 items 11, 12 and 15.
+ *
+ * Every message is translated when it's built (see ../i18n), so tables
+ * here hold the Turkish source text and look it up per call.
  */
 import type { PushFailure } from '../types';
+import { currentLocale, t, type MessageKey } from '../i18n';
 
 /** Errors for the unauthenticated auth requests — services/api.ts's post(). */
 export const AUTH_REQUEST_ERRORS = {
-  timeout: 'Sunucu yanıt vermedi. Lütfen birkaç saniye sonra tekrar deneyin.',
-  network: 'Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.',
-  rateLimited: 'Çok fazla deneme yapıldı. Lütfen bir dakika bekleyip tekrar deneyin.',
-  serverUnavailable: 'Sunucu şu anda yanıt veremiyor. Lütfen biraz sonra tekrar deneyin.',
-  unexpected: 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
-} as const;
+  get timeout() {
+    return t('Sunucu yanıt vermedi. Lütfen birkaç saniye sonra tekrar deneyin.');
+  },
+  get network() {
+    return t('Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.');
+  },
+  get rateLimited() {
+    return t('Çok fazla deneme yapıldı. Lütfen bir dakika bekleyip tekrar deneyin.');
+  },
+  get serverUnavailable() {
+    return t('Sunucu şu anda yanıt veremiyor. Lütfen biraz sonra tekrar deneyin.');
+  },
+  get unexpected() {
+    return t('Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.');
+  },
+};
 
 /** For a response whose body isn't the JSON the backend always sends — e.g.
  * BackendWeb.RequireCloudflarePlug's empty-bodied 403, or a host/proxy's own
@@ -24,10 +38,10 @@ export const AUTH_REQUEST_ERRORS = {
 export function httpStatusErrorMessage(status: number): string {
   if (status === 429) return AUTH_REQUEST_ERRORS.rateLimited;
   if (status >= 500) return AUTH_REQUEST_ERRORS.serverUnavailable;
-  return `Sunucudan beklenmeyen bir yanıt alındı (HTTP ${status}). Lütfen tekrar deneyin.`;
+  return t('Sunucudan beklenmeyen bir yanıt alındı (HTTP {status}). Lütfen tekrar deneyin.', { status });
 }
 
-const CHANGESET_FIELD_LABELS: Record<string, string> = {
+const CHANGESET_FIELD_LABELS: Record<string, MessageKey> = {
   username: 'Kullanıcı adı',
   email: 'E-posta adresi',
   password: 'Şifre',
@@ -36,22 +50,24 @@ const CHANGESET_FIELD_LABELS: Record<string, string> = {
 /**
  * One Ecto changeset error — its field plus the message BackendWeb.
  * UserController's format_errors/1 already interpolated (`%{count}` filled
- * in) — mapped to Turkish for the validations in Backend.Accounts.User's
- * registration_changeset/2. Anything not recognized here (another field,
- * a validation added later) falls back to the raw `"<field> <message>"`
- * text, exactly what was shown before this mapping existed.
+ * in) — mapped to the UI language for the validations in
+ * Backend.Accounts.User's registration_changeset/2. Anything not recognized
+ * here (another field, a validation added later) falls back to the raw
+ * `"<field> <message>"` text, exactly what was shown before this mapping
+ * existed.
  */
 export function changesetErrorMessage(field: string, message: string): string {
-  const label = CHANGESET_FIELD_LABELS[field];
-  if (!label) return `${field} ${message}`;
+  const labelKey = CHANGESET_FIELD_LABELS[field];
+  if (!labelKey) return `${field} ${message}`;
+  const label = t(labelKey);
 
-  if (message === "can't be blank") return `${label} boş bırakılamaz.`;
+  if (message === "can't be blank") return t('{label} boş bırakılamaz.', { label });
   if (message === 'has already been taken') {
-    return `Bu ${label.toLocaleLowerCase('tr-TR')} zaten kullanımda.`;
+    return t('Bu {label} zaten kullanımda.', { label: label.toLocaleLowerCase(currentLocale()) });
   }
-  if (message === 'must be a valid email') return 'Geçerli bir e-posta adresi girin.';
+  if (message === 'must be a valid email') return t('Geçerli bir e-posta adresi girin.');
   if (message === 'only letters, numbers and underscores allowed') {
-    return `${label} yalnızca harf, rakam ve alt çizgi (_) içerebilir.`;
+    return t('{label} yalnızca harf, rakam ve alt çizgi (_) içerebilir.', { label });
   }
 
   // Ecto's own validate_length/3 default ("should be at least %{count}
@@ -59,9 +75,9 @@ export function changesetErrorMessage(field: string, message: string): string {
   // %{count} characters") — matched by pattern rather than exact text so a
   // changed min/max on the backend still maps, with the new number.
   const atLeast = /^(?:should|must) be at least (\d+) character(?:s|\(s\))$/.exec(message);
-  if (atLeast) return `${label} en az ${atLeast[1]} karakter olmalıdır.`;
+  if (atLeast) return t('{label} en az {count} karakter olmalıdır.', { label, count: Number(atLeast[1]) });
   const atMost = /^should be at most (\d+) character\(s\)$/.exec(message);
-  if (atMost) return `${label} en fazla ${atMost[1]} karakter olabilir.`;
+  if (atMost) return t('{label} en fazla {count} karakter olabilir.', { label, count: Number(atMost[1]) });
 
   return `${field} ${message}`;
 }
@@ -83,7 +99,7 @@ export function changesetErrorsMessage(errors: Record<string, string[]>): string
  * useChatStore/useDMStore and services/socket.ts. */
 export type ChatAction = 'send' | 'edit' | 'delete' | 'react';
 
-const CHAT_ACTION_FAILED: Record<ChatAction, string> = {
+const CHAT_ACTION_FAILED: Record<ChatAction, MessageKey> = {
   send: 'Mesaj gönderilemedi.',
   edit: 'Mesaj düzenlenemedi.',
   delete: 'Mesaj silinemedi.',
@@ -93,13 +109,19 @@ const CHAT_ACTION_FAILED: Record<ChatAction, string> = {
 // The `reason` values ChatChannel/DmChannel actually reply with. Both
 // spellings of "not found" are real: update_message/delete_message reply
 // "message not found", toggle_reaction replies "message_not_found".
-const CHAT_ACTION_REASONS = new Map<string, string>([
+const CHAT_ACTION_REASONS = new Map<string, MessageKey>([
   ['rate_limited', 'Çok hızlı işlem yapıyorsunuz. Lütfen birkaç saniye bekleyip tekrar deneyin.'],
   ['message not found', 'Mesaj bulunamadı, silinmiş olabilir.'],
   ['message_not_found', 'Mesaj bulunamadı, silinmiş olabilir.'],
   ['not authorized', 'Bu işlem için yetkiniz yok.'],
   ['blocked', 'Bu kişiyle aranızda engelleme olduğu için mesaj gönderilemiyor.'],
 ]);
+
+/** Looks `key` up in `table` and translates the hit, or returns `fallback`. */
+function lookup(table: Map<string, MessageKey>, key: string | undefined, fallback: MessageKey): string {
+  const hit = key !== undefined ? table.get(key) : undefined;
+  return t(hit ?? fallback);
+}
 
 /**
  * Feedback for a failed chat/DM push. A timeout gets a deliberately neutral
@@ -111,13 +133,11 @@ const CHAT_ACTION_REASONS = new Map<string, string>([
 export function chatActionErrorMessage(action: ChatAction, failure: PushFailure): string {
   if (failure.kind === 'timeout') {
     return action === 'send'
-      ? 'Sunucudan yanıt alınamadı; mesajın gönderilip gönderilmediği doğrulanamadı. Lütfen sohbeti kontrol edin.'
-      : 'Sunucudan yanıt alınamadı; işlemin tamamlanıp tamamlanmadığı doğrulanamadı.';
+      ? t('Sunucudan yanıt alınamadı; mesajın gönderilip gönderilmediği doğrulanamadı. Lütfen sohbeti kontrol edin.')
+      : t('Sunucudan yanıt alınamadı; işlemin tamamlanıp tamamlanmadığı doğrulanamadı.');
   }
-  const detail =
-    (failure.reason !== undefined && CHAT_ACTION_REASONS.get(failure.reason)) ||
-    'Lütfen tekrar deneyin.';
-  return `${CHAT_ACTION_FAILED[action]} ${detail}`;
+  const detail = lookup(CHAT_ACTION_REASONS, failure.reason, 'Lütfen tekrar deneyin.');
+  return `${t(CHAT_ACTION_FAILED[action])} ${detail}`;
 }
 
 /** The reason services/socket.ts's joinVoiceChannel rejects with when the
@@ -125,7 +145,7 @@ export function chatActionErrorMessage(action: ChatAction, failure: PushFailure)
  * BackendWeb.VoiceChannel's join/3 itself replies with. */
 export const VOICE_JOIN_TIMEOUT_REASON = 'timeout';
 
-const VOICE_JOIN_REASONS = new Map<string, string>([
+const VOICE_JOIN_REASONS = new Map<string, MessageKey>([
   [
     'already_connected_elsewhere',
     'Bu ses kanalına zaten başka bir sekmeden veya cihazdan bağlısınız. Önce oradan ayrılıp tekrar deneyin.',
@@ -136,13 +156,10 @@ const VOICE_JOIN_REASONS = new Map<string, string>([
 ]);
 
 /** A rejected voice join — joinVoiceChannel rejects with the reason as the
- * Error's message — mapped to Turkish; never the raw reason. */
+ * Error's message — mapped to the UI language; never the raw reason. */
 export function voiceJoinErrorMessage(err: unknown): string {
   const reason = err instanceof Error ? err.message : undefined;
-  return (
-    (reason !== undefined && VOICE_JOIN_REASONS.get(reason)) ||
-    'Ses kanalına katılınamadı. Lütfen tekrar deneyin.'
-  );
+  return lookup(VOICE_JOIN_REASONS, reason, 'Ses kanalına katılınamadı. Lütfen tekrar deneyin.');
 }
 
 /** getUserMedia/getDisplayMedia reject with a DOMException whose `name`
@@ -154,7 +171,7 @@ function mediaErrorName(err: unknown): string | undefined {
   return undefined;
 }
 
-const MICROPHONE_ERRORS = new Map<string, string>([
+const MICROPHONE_ERRORS = new Map<string, MessageKey>([
   [
     'NotAllowedError',
     'Mikrofon izni verilmedi. Tarayıcı ayarlarından bu siteye mikrofon izni verip tekrar deneyin.',
@@ -169,11 +186,10 @@ const MICROPHONE_ERRORS = new Map<string, string>([
 
 /** A failed getUserMedia while joining a voice channel. */
 export function microphoneErrorMessage(err: unknown): string {
-  const name = mediaErrorName(err);
-  return (name !== undefined && MICROPHONE_ERRORS.get(name)) || 'Mikrofona erişilemedi. Lütfen tekrar deneyin.';
+  return lookup(MICROPHONE_ERRORS, mediaErrorName(err), 'Mikrofona erişilemedi. Lütfen tekrar deneyin.');
 }
 
-const SCREEN_SHARE_ERRORS = new Map<string, string>([
+const SCREEN_SHARE_ERRORS = new Map<string, MessageKey>([
   ['NotFoundError', 'Paylaşılabilecek bir ekran bulunamadı.'],
   ['NotReadableError', 'Ekran şu anda yakalanamıyor, başka bir uygulama engelliyor olabilir.'],
 ]);
@@ -190,5 +206,5 @@ const SCREEN_SHARE_ERRORS = new Map<string, string>([
 export function screenShareErrorMessage(err: unknown): string | null {
   const name = mediaErrorName(err);
   if (name === 'NotAllowedError') return null;
-  return (name !== undefined && SCREEN_SHARE_ERRORS.get(name)) || 'Ekran paylaşımı başlatılamadı.';
+  return lookup(SCREEN_SHARE_ERRORS, name, 'Ekran paylaşımı başlatılamadı.');
 }

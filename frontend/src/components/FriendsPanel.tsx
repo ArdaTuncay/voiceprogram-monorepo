@@ -7,11 +7,15 @@ import { useDMStore } from '../stores/useDMStore';
 import { userColor, initials } from '../utils';
 import AvatarFace from './AvatarFace';
 import StatusIndicator from './StatusIndicator';
+import { t, useT } from '../i18n';
 import './FriendsPanel.css';
 
 type SubTab = 'online' | 'all' | 'pending' | 'add';
 
 export default function FriendsPanel() {
+  // Subscribes to the UI language; the list components below use the plain
+  // t() and re-render along with this one.
+  useT();
   const friendships = useFriendStore((s) => s.friendships);
   const loading = useFriendStore((s) => s.loading);
   const error = useFriendStore((s) => s.error);
@@ -68,26 +72,26 @@ export default function FriendsPanel() {
           className={`friends-subtab${subTab === 'online' ? ' active' : ''}`}
           onClick={() => setSubTab('online')}
         >
-          Çevrimiçi
+          {t('Çevrimiçi')}
         </button>
         <button
           className={`friends-subtab${subTab === 'all' ? ' active' : ''}`}
           onClick={() => setSubTab('all')}
         >
-          Tümü
+          {t('Tümü')}
         </button>
         <button
           className={`friends-subtab${subTab === 'pending' ? ' active' : ''}`}
           onClick={() => setSubTab('pending')}
         >
-          Bekleyen İstekler
+          {t('Bekleyen İstekler')}
           {incoming.length > 0 && <span className="friends-subtab-badge">{incoming.length}</span>}
         </button>
         <button
           className={`friends-subtab friends-subtab-add${subTab === 'add' ? ' active' : ''}`}
           onClick={() => setSubTab('add')}
         >
-          Arkadaş Ekle
+          {t('Arkadaş Ekle')}
         </button>
       </div>
 
@@ -96,13 +100,13 @@ export default function FriendsPanel() {
         {messageError && <div className="friends-error"><AlertTriangle size={14} /> {messageError}</div>}
 
         {loading ? (
-          <div className="friends-loading">Yükleniyor…</div>
+          <div className="friends-loading">{t('Yükleniyor…')}</div>
         ) : (
           <>
             {subTab === 'online' && (
               <FriendList
                 friendships={online}
-                emptyText="Şu anda çevrimiçi arkadaşın yok."
+                emptyText={t('Şu anda çevrimiçi arkadaşın yok.')}
                 actioningId={actioningId}
                 onRemove={handleRemove}
                 onMessage={handleMessage}
@@ -112,7 +116,7 @@ export default function FriendsPanel() {
             {subTab === 'all' && (
               <FriendList
                 friendships={accepted}
-                emptyText="Henüz hiç arkadaşın yok."
+                emptyText={t('Henüz hiç arkadaşın yok.')}
                 actioningId={actioningId}
                 onRemove={handleRemove}
                 onMessage={handleMessage}
@@ -139,7 +143,7 @@ export default function FriendsPanel() {
 
 function FriendAvatar({ friendship }: { friendship: Friendship }) {
   const color = userColor(friendship.user_id);
-  const name = friendship.username ?? 'Bilinmeyen';
+  const name = friendship.username ?? t('Bilinmeyen');
   return (
     <div className="friends-list-avatar-wrapper">
       <div className="friends-list-avatar" style={{ background: color }} title={name}>
@@ -179,16 +183,16 @@ function FriendList({
         <li key={f.id} className="friends-list-item">
           <FriendAvatar friendship={f} />
           <div className="friends-list-info">
-            <span className="friends-list-name">{f.username ?? 'Bilinmeyen'}</span>
+            <span className="friends-list-name">{f.username ?? t('Bilinmeyen')}</span>
             <span className="friends-list-status">
-              {f.user_status === 'online' ? 'Çevrimiçi' : 'Çevrimdışı'}
+              {f.user_status === 'online' ? t('Çevrimiçi') : t('Çevrimdışı')}
             </span>
           </div>
           <button
             className="friends-message-btn"
             onClick={() => onMessage(f.user_id)}
-            title="Mesaj Gönder"
-            aria-label={`${f.username ?? 'kullanıcıya'} mesaj gönder`}
+            title={t('Mesaj Gönder')}
+            aria-label={t('{name} mesaj gönder', { name: f.username ?? t('kullanıcıya') })}
           >
             <MessageCircle size={16} />
           </button>
@@ -196,8 +200,8 @@ function FriendList({
             className="friends-remove-btn"
             onClick={() => onRemove(f.id)}
             disabled={actioningId === f.id}
-            title="Arkadaşlıktan Çıkar"
-            aria-label={`${f.username ?? 'kullanıcıyı'} arkadaşlıktan çıkar`}
+            title={t('Arkadaşlıktan Çıkar')}
+            aria-label={t('{name} arkadaşlıktan çıkar', { name: f.username ?? t('kullanıcıyı') })}
           >
             <Trash2 size={14} />
           </button>
@@ -205,8 +209,8 @@ function FriendList({
             className="friends-remove-btn"
             onClick={() => onBlock(f.user_id)}
             disabled={actioningId === f.user_id}
-            title="Engelle"
-            aria-label={`${f.username ?? 'kullanıcıyı'} engelle`}
+            title={t('Engelle')}
+            aria-label={t('{name} engelle', { name: f.username ?? t('kullanıcıyı') })}
           >
             <Ban size={14} />
           </button>
@@ -232,27 +236,27 @@ function PendingList({
   onBlock: (userId: string) => void;
 }) {
   if (incoming.length === 0 && outgoing.length === 0) {
-    return <div className="list-empty-hint">Bekleyen bir istek yok.</div>;
+    return <div className="list-empty-hint">{t('Bekleyen bir istek yok.')}</div>;
   }
 
   return (
     <div>
       {incoming.length > 0 && (
         <>
-          <h4 className="friends-section-title">Gelen İstekler — {incoming.length}</h4>
+          <h4 className="friends-section-title">{t('Gelen İstekler — {count}', { count: incoming.length })}</h4>
           <ul className="friends-list">
             {incoming.map((f) => (
               <li key={f.id} className="friends-list-item">
                 <FriendAvatar friendship={f} />
                 <div className="friends-list-info">
-                  <span className="friends-list-name">{f.username ?? 'Bilinmeyen'}</span>
+                  <span className="friends-list-name">{f.username ?? t('Bilinmeyen')}</span>
                 </div>
                 <button
                   className="friends-accept-btn"
                   onClick={() => onAccept(f.id)}
                   disabled={actioningId === f.id}
-                  title="Kabul Et"
-                  aria-label={`${f.username ?? 'kullanıcının'} isteğini kabul et`}
+                  title={t('Kabul Et')}
+                  aria-label={t('{name} isteğini kabul et', { name: f.username ?? t('kullanıcının') })}
                 >
                   <Check size={14} />
                 </button>
@@ -260,8 +264,8 @@ function PendingList({
                   className="friends-remove-btn"
                   onClick={() => onRemove(f.id)}
                   disabled={actioningId === f.id}
-                  title="Reddet"
-                  aria-label={`${f.username ?? 'kullanıcının'} isteğini reddet`}
+                  title={t('Reddet')}
+                  aria-label={t('{name} isteğini reddet', { name: f.username ?? t('kullanıcının') })}
                 >
                   <X size={14} />
                 </button>
@@ -269,8 +273,8 @@ function PendingList({
                   className="friends-remove-btn"
                   onClick={() => onBlock(f.user_id)}
                   disabled={actioningId === f.user_id}
-                  title="Engelle"
-                  aria-label={`${f.username ?? 'kullanıcıyı'} engelle`}
+                  title={t('Engelle')}
+                  aria-label={t('{name} engelle', { name: f.username ?? t('kullanıcıyı') })}
                 >
                   <Ban size={14} />
                 </button>
@@ -282,21 +286,21 @@ function PendingList({
 
       {outgoing.length > 0 && (
         <>
-          <h4 className="friends-section-title">Gönderilen İstekler — {outgoing.length}</h4>
+          <h4 className="friends-section-title">{t('Gönderilen İstekler — {count}', { count: outgoing.length })}</h4>
           <ul className="friends-list">
             {outgoing.map((f) => (
               <li key={f.id} className="friends-list-item">
                 <FriendAvatar friendship={f} />
                 <div className="friends-list-info">
-                  <span className="friends-list-name">{f.username ?? 'Bilinmeyen'}</span>
-                  <span className="friends-list-status">Beklemede</span>
+                  <span className="friends-list-name">{f.username ?? t('Bilinmeyen')}</span>
+                  <span className="friends-list-status">{t('Beklemede')}</span>
                 </div>
                 <button
                   className="friends-remove-btn"
                   onClick={() => onRemove(f.id)}
                   disabled={actioningId === f.id}
-                  title="İsteği İptal Et"
-                  aria-label={`${f.username ?? 'kullanıcıya'} gönderilen isteği iptal et`}
+                  title={t('İsteği İptal Et')}
+                  aria-label={t('{name} gönderilen isteği iptal et', { name: f.username ?? t('kullanıcıya') })}
                 >
                   <X size={14} />
                 </button>
@@ -331,26 +335,26 @@ function AddFriendForm() {
       setError(errorMessage);
       return;
     }
-    setSuccess(`${trimmed} adlı kullanıcıya arkadaşlık isteği gönderildi!`);
+    setSuccess(t('{name} adlı kullanıcıya arkadaşlık isteği gönderildi!', { name: trimmed }));
     setUsername('');
   }
 
   return (
     <div className="add-friend-form">
-      <h3 className="add-friend-title">Arkadaş Ekle</h3>
+      <h3 className="add-friend-title">{t('Arkadaş Ekle')}</h3>
       <p className="add-friend-description">
-        Kullanıcı adını tam olarak girerek bir arkadaşlık isteği gönderebilirsin.
+        {t('Kullanıcı adını tam olarak girerek bir arkadaşlık isteği gönderebilirsin.')}
       </p>
       <form onSubmit={handleSubmit} className="add-friend-row">
         <input
           className="add-friend-input"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="Kullanıcı adı"
+          placeholder={t('Kullanıcı adı')}
           disabled={submitting}
         />
         <button className="add-friend-submit-btn" type="submit" disabled={submitting || !username.trim()}>
-          {submitting ? 'Gönderiliyor…' : 'İstek Gönder'}
+          {submitting ? t('Gönderiliyor…') : t('İstek Gönder')}
         </button>
       </form>
       {error && <div className="friends-error"><AlertTriangle size={14} /> {error}</div>}

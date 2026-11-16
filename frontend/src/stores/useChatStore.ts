@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { create } from 'zustand';
 import type {
   ChatMessage,
@@ -335,7 +336,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     set({ isUploading: false });
 
     if (error || !data) {
-      set({ uploadError: error ?? 'Yükleme başarısız oldu' });
+      set({ uploadError: error ?? t('Yükleme başarısız oldu') });
       return;
     }
 
@@ -343,7 +344,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     // leave) channels — sending now would drop the file into whatever
     // channel they've since moved to instead of the one they picked it for.
     if (useServerStore.getState().activeChannelId !== activeChannelId) {
-      set({ uploadError: 'Kanal değiştirdiğiniz için yükleme iptal edildi.' });
+      set({ uploadError: t('Kanal değiştirdiğiniz için yükleme iptal edildi.') });
       return;
     }
 

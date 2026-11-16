@@ -3,8 +3,11 @@ import type { FormEvent } from 'react';
 import type { User } from '../types';
 import { registerUser, loginUser, resendVerification } from '../services/api';
 import { AUTH_REQUEST_ERRORS } from '../utils/errorMessages';
+import { useT } from '../i18n';
+import { rich } from '../i18n/rich';
 import mascot from '../assets/zircle-mascot.svg';
 import ForgotPasswordScreen from './ForgotPasswordScreen';
+import LanguageSelect from './LanguageSelect';
 import './Auth.css';
 
 interface Props {
@@ -14,6 +17,7 @@ interface Props {
 type Mode = 'login' | 'register';
 
 export default function Auth({ onAuth }: Props) {
+  const t = useT();
   const [mode, setMode] = useState<Mode>('login');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -91,22 +95,21 @@ export default function Auth({ onAuth }: Props) {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <img src={mascot} alt="Zircle maskotu" className="auth-mascot" />
-        <h1>{mode === 'login' ? 'Tekrar hoş geldin!' : 'Hesap oluştur'}</h1>
+        <LanguageSelect className="language-select-corner" />
+        <img src={mascot} alt={t('Zircle maskotu')} className="auth-mascot" />
+        <h1>{mode === 'login' ? t('Tekrar hoş geldin!') : t('Hesap oluştur')}</h1>
         <p className="subtitle">
-          {mode === 'login'
-            ? 'Seni yeniden görmek güzel!'
-            : 'Topluluğa bugün katıl.'}
+          {mode === 'login' ? t('Seni yeniden görmek güzel!') : t('Topluluğa bugün katıl.')}
         </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {mode === 'register' && (
             <div className="form-group">
-              <label htmlFor="username">Kullanıcı adı</label>
+              <label htmlFor="username">{t('Kullanıcı adı')}</label>
               <input
                 id="username"
                 type="text"
-                placeholder="havalikullanici42"
+                placeholder={t('havalikullanici42')}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -118,11 +121,11 @@ export default function Auth({ onAuth }: Props) {
           )}
 
           <div className="form-group">
-            <label htmlFor="email">E-posta</label>
+            <label htmlFor="email">{t('E-posta')}</label>
             <input
               id="email"
               type="email"
-              placeholder="sen@ornek.com"
+              placeholder={t('sen@ornek.com')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -131,7 +134,7 @@ export default function Auth({ onAuth }: Props) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Şifre</label>
+            <label htmlFor="password">{t('Şifre')}</label>
             <input
               id="password"
               type="password"
@@ -147,14 +150,14 @@ export default function Auth({ onAuth }: Props) {
           {error && <div className="auth-error">{error}</div>}
 
           <button type="submit" className="auth-submit" disabled={loading}>
-            {loading ? 'Lütfen bekle…' : mode === 'login' ? 'Giriş yap' : 'Devam et'}
+            {loading ? t('Lütfen bekle…') : mode === 'login' ? t('Giriş yap') : t('Devam et')}
           </button>
         </form>
 
         {mode === 'login' && (
           <p className="auth-toggle">
             <button type="button" onClick={() => setForgotPassword(true)}>
-              Şifremi unuttum
+              {t('Şifremi unuttum')}
             </button>
           </p>
         )}
@@ -162,9 +165,9 @@ export default function Auth({ onAuth }: Props) {
         <hr className="auth-divider" />
 
         <p className="auth-toggle">
-          {mode === 'login' ? 'Hesabın yok mu?' : 'Zaten hesabın var mı?'}
+          {mode === 'login' ? t('Hesabın yok mu?') : t('Zaten hesabın var mı?')}
           <button type="button" onClick={switchMode}>
-            {mode === 'login' ? 'Kayıt ol' : 'Giriş yap'}
+            {mode === 'login' ? t('Kayıt ol') : t('Giriş yap')}
           </button>
         </p>
       </div>
@@ -185,6 +188,7 @@ interface VerificationPendingScreenProps {
  * shows the backend's raw "email_not_verified"/enumeration-safe generic
  * message as-is; this owns its own copy. */
 function VerificationPendingScreen({ email, onBackToLogin }: VerificationPendingScreenProps) {
+  const t = useT();
   const [resendState, setResendState] = useState<ResendState>('idle');
 
   async function handleResend() {
@@ -196,20 +200,23 @@ function VerificationPendingScreen({ email, onBackToLogin }: VerificationPending
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <img src={mascot} alt="Zircle maskotu" className="auth-mascot" />
-        <h1>E-postanızı kontrol edin</h1>
+        <img src={mascot} alt={t('Zircle maskotu')} className="auth-mascot" />
+        <h1>{t('E-postanızı kontrol edin')}</h1>
         <p className="subtitle">
-          <strong>{email}</strong> adresine bir doğrulama bağlantısı gönderdik. Hesabınızı
-          kullanmaya başlamak için gelen kutunuzdaki bağlantıya tıklayın — görünmüyorsa spam/gereksiz
-          klasörünü de kontrol etmeyi unutmayın.
+          {rich(
+            t(
+              '{email} adresine bir doğrulama bağlantısı gönderdik. Hesabınızı kullanmaya başlamak için gelen kutunuzdaki bağlantıya tıklayın — görünmüyorsa spam/gereksiz klasörünü de kontrol etmeyi unutmayın.'
+            ),
+            { email: <strong>{email}</strong> }
+          )}
         </p>
 
         <div className="auth-resend-actions">
           {resendState === 'sent' && (
-            <div className="auth-info">Doğrulama e-postası tekrar gönderildi.</div>
+            <div className="auth-info">{t('Doğrulama e-postası tekrar gönderildi.')}</div>
           )}
           {resendState === 'error' && (
-            <div className="auth-error">Mail gönderilemedi, lütfen tekrar deneyin.</div>
+            <div className="auth-error">{t('Mail gönderilemedi, lütfen tekrar deneyin.')}</div>
           )}
 
           <button
@@ -218,7 +225,7 @@ function VerificationPendingScreen({ email, onBackToLogin }: VerificationPending
             onClick={handleResend}
             disabled={resendState === 'sending'}
           >
-            {resendState === 'sending' ? 'Gönderiliyor…' : 'Tekrar gönder'}
+            {resendState === 'sending' ? t('Gönderiliyor…') : t('Tekrar gönder')}
           </button>
         </div>
 
@@ -226,7 +233,7 @@ function VerificationPendingScreen({ email, onBackToLogin }: VerificationPending
 
         <p className="auth-toggle">
           <button type="button" onClick={onBackToLogin}>
-            Giriş ekranına dön
+            {t('Giriş ekranına dön')}
           </button>
         </p>
       </div>

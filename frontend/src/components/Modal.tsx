@@ -1,5 +1,6 @@
 import type { ReactNode, MouseEvent } from 'react';
 import { X } from 'lucide-react';
+import { useT } from '../i18n';
 import './Modal.css';
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function Modal({ title, onClose, children }: Props) {
+  const t = useT();
   function handleOverlayClick(e: MouseEvent<HTMLDivElement>) {
     if (e.target === e.currentTarget) onClose();
   }
@@ -18,7 +20,7 @@ export default function Modal({ title, onClose, children }: Props) {
       <div className="modal-box">
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>
-          <button className="modal-close-btn" onClick={onClose} aria-label="Kapat" title="Kapat">
+          <button className="modal-close-btn" onClick={onClose} aria-label={t('Kapat')} title={t('Kapat')}>
             <X size={16} />
           </button>
         </div>

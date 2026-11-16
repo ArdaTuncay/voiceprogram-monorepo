@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { create } from 'zustand';
 import type {
   ChatMessage,
@@ -196,7 +197,7 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
   loadRooms: async () => {
     const { data, error } = await fetchDmRooms();
     if (error || !data) {
-      set({ roomsError: error ?? 'Sohbetler alınamadı' });
+      set({ roomsError: error ?? t('Sohbetler alınamadı') });
       return;
     }
     set({
@@ -208,7 +209,7 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
 
   openRoomWithUser: async (userId) => {
     const { data, error } = await openDmRoom(userId);
-    if (error || !data) return error ?? 'Sohbet açılamadı';
+    if (error || !data) return error ?? t('Sohbet açılamadı');
 
     set((state) => ({
       rooms: state.rooms.some((r) => r.id === data.id) ? state.rooms : [...state.rooms, data],
@@ -376,7 +377,7 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
     set({ isUploading: false });
 
     if (error || !data) {
-      set({ uploadError: error ?? 'Yükleme başarısız oldu' });
+      set({ uploadError: error ?? t('Yükleme başarısız oldu') });
       return;
     }
 
@@ -384,7 +385,7 @@ export const useDMStore = create<DMStoreState>((set, get) => ({
     // leave) rooms — sending now would drop the file into whatever room
     // they've since moved to instead of the one they picked it for.
     if (get().activeRoomId !== activeRoomId) {
-      set({ uploadError: 'Kanal değiştirdiğiniz için yükleme iptal edildi.' });
+      set({ uploadError: t('Kanal değiştirdiğiniz için yükleme iptal edildi.') });
       return;
     }
 

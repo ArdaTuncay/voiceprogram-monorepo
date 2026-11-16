@@ -18,10 +18,12 @@ defmodule BackendWeb.BlockController do
         send_resp(conn, :no_content, "")
 
       {:error, :cannot_block_self} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{error: "Kendinizi engelleyemezsiniz"})
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: gettext("You can't block yourself")})
 
       {:error, :user_not_found} ->
-        conn |> put_status(:not_found) |> json(%{error: "Kullanıcı bulunamadı"})
+        conn |> put_status(:not_found) |> json(%{error: gettext("User not found")})
 
       {:error, changeset} ->
         conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
@@ -35,7 +37,7 @@ defmodule BackendWeb.BlockController do
         send_resp(conn, :no_content, "")
 
       {:error, :not_blocked} ->
-        conn |> put_status(:not_found) |> json(%{error: "Bu kullanıcıyı engellemediniz"})
+        conn |> put_status(:not_found) |> json(%{error: gettext("You haven't blocked this user")})
     end
   end
 

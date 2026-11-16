@@ -1,3 +1,4 @@
+import { useT, type MessageKey } from '../i18n';
 import './StatusIndicator.css';
 
 export type UserPresenceStatus = 'online' | 'idle' | 'in_voice' | 'offline';
@@ -12,7 +13,7 @@ interface Props {
   className?: string;
 }
 
-const LABELS: Record<UserPresenceStatus, string> = {
+const LABELS: Record<UserPresenceStatus, MessageKey> = {
   online: 'Çevrimiçi',
   idle: 'Boşta',
   in_voice: 'Sesli görüşmede',
@@ -26,7 +27,8 @@ const LABELS: Record<UserPresenceStatus, string> = {
  * that only ever distinguish online/offline (no idle/in_voice data from the
  * backend yet) simply never pass those two status values. */
 export default function StatusIndicator({ status, size = 10, className }: Props) {
-  const label = LABELS[status];
+  const t = useT();
+  const label = t(LABELS[status]);
   return (
     <span
       className={`status-indicator status-indicator-${status}${className ? ` ${className}` : ''}`}

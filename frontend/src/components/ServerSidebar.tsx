@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Home, Users } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
 import { serverInitials } from '../utils';
+import { useT } from '../i18n';
 import AvatarFace from './AvatarFace';
 import JoinServerModal from './JoinServerModal';
 import CreateServerModal from './CreateServerModal';
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export default function ServerSidebar({ friendsActive, onSelectFriends, onNavigate }: Props) {
+  const t = useT();
   const servers = useServerStore((s) => s.servers);
   const activeServerId = useServerStore((s) => s.activeServerId);
   const setActiveServerId = useServerStore((s) => s.setActiveServerId);
@@ -40,8 +42,8 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
           onNavigate();
           setActiveServerId(null);
         }}
-        title="Direkt Mesajlar"
-        aria-label="Direkt Mesajlar"
+        title={t('Direkt Mesajlar')}
+        aria-label={t('Direkt Mesajlar')}
       >
         <Home size={20} strokeWidth={2} />
       </button>
@@ -49,8 +51,8 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
       <button
         className={`server-icon home-icon${friendsActive ? ' active' : ''}`}
         onClick={onSelectFriends}
-        title="Arkadaşlar"
-        aria-label="Arkadaşlar"
+        title={t('Arkadaşlar')}
+        aria-label={t('Arkadaşlar')}
       >
         <Users size={20} strokeWidth={2} />
       </button>

@@ -24,7 +24,7 @@ defmodule BackendWeb.ChannelController do
       _ ->
         conn
         |> put_status(:not_found)
-        |> json(%{error: "Channel not found"})
+        |> json(%{error: gettext("Channel not found")})
     end
   end
 
@@ -42,7 +42,7 @@ defmodule BackendWeb.ChannelController do
       _ ->
         conn
         |> put_status(:not_found)
-        |> json(%{error: "Channel not found"})
+        |> json(%{error: gettext("Channel not found")})
     end
   end
 
@@ -56,12 +56,12 @@ defmodule BackendWeb.ChannelController do
       false ->
         conn
         |> put_status(:forbidden)
-        |> json(%{error: "Only the server owner can perform this action"})
+        |> json(%{error: gettext("Only the server owner can perform this action")})
 
       nil ->
         conn
         |> put_status(:not_found)
-        |> json(%{error: "Channel not found"})
+        |> json(%{error: gettext("Channel not found")})
     end
   end
 

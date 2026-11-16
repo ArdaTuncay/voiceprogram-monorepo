@@ -1,3 +1,5 @@
+import { currentLanguage, t } from '../i18n';
+
 /** What the composer's file picker offers — the same list Backend.Uploads
  * accepts. Extensions rather than MIME types, since browsers report types
  * for archives inconsistently (the server decides by extension and content
@@ -18,12 +20,13 @@ export const ATTACHMENT_ACCEPT = [
   '.pptx',
 ].join(',');
 
-/** "512 B", "2,0 KB", "5,5 MB" — Turkish decimal comma. */
+/** "512 B", "2,0 KB", "5,5 MB" — with the UI language's decimal separator. */
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
+  const separator = currentLanguage() === 'tr' ? ',' : '.';
   const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(1).replace('.', ',')} KB`;
-  return `${(kb / 1024).toFixed(1).replace('.', ',')} MB`;
+  if (kb < 1024) return `${kb.toFixed(1).replace('.', separator)} KB`;
+  return `${(kb / 1024).toFixed(1).replace('.', separator)} MB`;
 }
 
 /** The name an attachment card shows: the original file name, or — for
@@ -31,5 +34,5 @@ export function formatFileSize(bytes: number): string {
 export function attachmentLabel(fileUrl: string, fileName: string | null | undefined): string {
   if (fileName) return fileName;
   const match = /\.([a-z0-9]+)$/i.exec(fileUrl);
-  return match ? `Dosya (${match[1].toUpperCase()})` : 'Dosya';
+  return match ? t('Dosya ({ext})', { ext: match[1].toUpperCase() }) : t('Dosya');
 }
