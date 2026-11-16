@@ -12,6 +12,8 @@ import {
   isMentioned,
   playNotificationSound,
 } from '../services/notificationPreferences';
+import type { OpenTarget } from '../services/push';
+import { consumeOpenTarget, listenForOpenTargets, syncPushSubscription } from '../services/push';
 
 /**
  * Owns every Phoenix-channel side effect for the whole session: joining the
@@ -117,6 +119,16 @@ export function useSocketSync(currentUser: User): void {
   // arrived while disconnected) and the active server's channel/member
   // list — so those are explicitly re-fetched here instead. Both run
   // silently in the background (see refreshFriendships/resyncActiveServer).
+  // Web Push (see services/push.ts): keeps this browser's subscription linked
+  // to the current session, and opens whatever a clicked notification points
+  // at — the one this page was opened with, or one clicked while it's open.
+  useEffect(() => {
+    void syncPushSubscription();
+    const initial = consumeOpenTarget();
+    if (initial) openNotificationTarget(initial);
+    return listenForOpenTargets(openNotificationTarget);
+  }, [userId]);
+
   useEffect(() => {
     if (!reconnectedAt) return;
     void useFriendStore.getState().refreshFriendships();
@@ -194,4 +206,14 @@ export function useSocketSync(currentUser: User): void {
     });
     return cleanup;
   }, [userId]);
+}
+
+/** Opens the DM or channel a Web Push notification was about. */
+export function openNotificationTarget(target: OpenTarget): void {
+  if (target.kind === 'dm') {
+    useServerStore.getState().setActiveServerId(null);
+    useDMStore.getState().setActiveRoomId(target.roomId);
+  } else {
+    useServerStore.getState().navigateToNotification(target.serverId, target.channelId);
+  }
 }

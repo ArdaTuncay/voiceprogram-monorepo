@@ -5,6 +5,7 @@ import { useDMStore } from '../stores/useDMStore';
 import { useConnectionStore } from '../stores/useConnectionStore';
 import { useSessionStore } from '../stores/useSessionStore';
 import { clearStoredSession } from './tokenStorage';
+import { dropBrowserPushSubscription } from './pushSubscription';
 
 /**
  * Ends the session from outside React — called when the server has told us,
@@ -26,6 +27,9 @@ import { clearStoredSession } from './tokenStorage';
  */
 export function forceLogout(): void {
   clearStoredSession();
+  // So whoever signs in on this browser next doesn't get this account's
+  // notifications (see services/push.ts).
+  void dropBrowserPushSubscription();
   useFriendStore.getState().reset();
   useServerStore.getState().reset();
   useChatStore.getState().reset();

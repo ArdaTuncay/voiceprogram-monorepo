@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useSocketSync } from '../useSocketStore';
+import { openNotificationTarget, useSocketSync } from '../useSocketStore';
 import { useServerStore } from '../useServerStore';
 import { useDMStore } from '../useDMStore';
 import { useChatStore } from '../useChatStore';
@@ -180,5 +180,31 @@ describe('useSocketSync — masaüstü bildirimleri', () => {
     callbacks.onNewDmMessage(baseDmMessage({ dm_room_id: 'room-1' }));
 
     expect(FakeNotification.instances).toHaveLength(1);
+  });
+});
+
+describe('opening what a Web Push notification was about', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+    useDMStore.getState().reset();
+    useServerStore.getState().reset();
+  });
+
+  it('opens the DM a clicked notification launched Zircle with, and clears ?open=', () => {
+    window.history.replaceState(null, '', '/?open=dm%3Aroom-7');
+
+    renderHook(() => useSocketSync(testUser));
+
+    expect(useDMStore.getState().activeRoomId).toBe('room-7');
+    expect(useServerStore.getState().activeServerId).toBeNull();
+    expect(window.location.search).toBe('');
+  });
+
+  it('jumps to the channel of a mention', () => {
+    const navigate = vi.spyOn(useServerStore.getState(), 'navigateToNotification').mockImplementation(() => {});
+
+    openNotificationTarget({ kind: 'channel', serverId: 'srv', channelId: 'chan' });
+
+    expect(navigate).toHaveBeenCalledWith('srv', 'chan');
   });
 });

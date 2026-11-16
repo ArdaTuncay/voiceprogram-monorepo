@@ -276,6 +276,15 @@ if config_env() == :prod do
   # sadece bir uyarı loglanır.
   config :backend, :reports_email, System.get_env("REPORTS_EMAIL")
 
+  # Uygulama kapalıyken bildirim (Web Push, bkz. Backend.Push). İsteğe bağlı:
+  # anahtarlar yoksa özellik kapalı olur ve ayarlarda gösterilmez. Anahtar
+  # çifti bir kez `mix push.gen.vapid` ile üretilir; sonradan değiştirilirse
+  # mevcut bütün abonelikler çalışmaz hâle gelir.
+  config :backend, Backend.Push,
+    vapid_public_key: System.get_env("VAPID_PUBLIC_KEY"),
+    vapid_private_key: System.get_env("VAPID_PRIVATE_KEY"),
+    vapid_subject: System.get_env("VAPID_SUBJECT")
+
   # ## SSL Support
   #
   # To get SSL working, you will need to add the `https` key

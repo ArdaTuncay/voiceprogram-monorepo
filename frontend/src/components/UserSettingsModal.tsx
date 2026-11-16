@@ -19,6 +19,8 @@ import { disconnectSocket } from '../services/socket';
 import { forceLogout } from '../services/session';
 import type { NotificationPreferences } from '../services/notificationPreferences';
 import { getNotificationPreferences, updateNotificationPreference } from '../services/notificationPreferences';
+import type { PushState } from '../services/push';
+import { disablePush, enablePush, getPushState, needsHomeScreenInstall } from '../services/push';
 import type { MediaPreferences } from '../services/mediaPreferences';
 import {
   getMediaPreferences,
@@ -549,7 +551,71 @@ function NotificationSettings() {
           onChange={(checked) => set('mentionsOnly', checked)}
         />
       </div>
+
+      <PushNotificationSetting />
     </div>
+  );
+}
+
+/** Web Push (see services/push.ts): notifications for DMs and @mentions
+ * while Zircle is closed, on this device. Independent of the switches above,
+ * which only cover an open tab. Hidden where it can't work, except for the
+ * one case the user can fix: an iPhone/iPad needs Zircle on the home screen. */
+function PushNotificationSetting() {
+  const [state, setState] = useState<PushState | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    void getPushState().then((next) => {
+      if (!cancelled) setState(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleToggle(checked: boolean) {
+    setBusy(true);
+    setError('');
+    if (checked) {
+      const message = await enablePush();
+      if (message) setError(message);
+    } else {
+      await disablePush();
+    }
+    setState(await getPushState());
+    setBusy(false);
+  }
+
+  if (state === 'unsupported' && needsHomeScreenInstall()) {
+    return (
+      <p className="user-settings-placeholder">
+        {t("iPhone ve iPad'de uygulama kapalıyken bildirim almak için Zircle'ı Paylaş → Ana Ekrana Ekle ile ana ekrana ekleyip oradan aç.")}
+      </p>
+    );
+  }
+  if (state !== 'on' && state !== 'off' && state !== 'denied') return null;
+
+  return (
+    <>
+      <h4 className="user-settings-subheading">{t('Uygulama kapalıyken')}</h4>
+      <ToggleSwitch
+        id="notif-push"
+        label={t('DM ve bahsedilmelerde bu cihaza bildirim gönder')}
+        checked={state === 'on'}
+        disabled={busy || state === 'denied'}
+        onChange={(checked) => void handleToggle(checked)}
+      />
+      {state === 'denied' && (
+        <StatusMessage
+          type="error"
+          message={t('Bu site için bildirimler tarayıcı ayarlarından engellenmiş.')}
+        />
+      )}
+      {error && <StatusMessage type="error" message={error} />}
+    </>
   );
 }
 

@@ -444,6 +444,16 @@ export const en = {
   'Ses bildirimleri': 'Sound notifications',
   'Masaüstü bildirimleri': 'Desktop notifications',
   'Sadece bahsedilmelerde bildir': 'Only notify me for mentions',
+  'Uygulama kapalıyken': 'While Zircle is closed',
+  'DM ve bahsedilmelerde bu cihaza bildirim gönder': 'Notify this device of DMs and mentions',
+  'Bu site için bildirimler tarayıcı ayarlarından engellenmiş.':
+    'Notifications for this site are blocked in your browser settings.',
+  "iPhone ve iPad'de uygulama kapalıyken bildirim almak için Zircle'ı Paylaş → Ana Ekrana Ekle ile ana ekrana ekleyip oradan aç.":
+    'On iPhone and iPad, add Zircle to your home screen (Share → Add to Home Screen) and open it from there to get notifications while it is closed.',
+  'Bildirim servisi şu an kullanılamıyor.': 'The notification service is unavailable right now.',
+  'Bu tarayıcı uygulama kapalıyken bildirimi desteklemiyor.':
+    "This browser doesn't support notifications while Zircle is closed.",
+  'Bildirim aboneliği oluşturulamadı.': "Couldn't turn on notifications for this device.",
   'Mesaj gönder / mesaj düzenlemeyi kaydet': 'Send message / save message edit',
   'Yeni satır': 'New line',
   'Bu pencereyi kapat / mesaj düzenlemeyi iptal et': 'Close this window / cancel message edit',
