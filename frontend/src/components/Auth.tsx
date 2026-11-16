@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { User } from '../types';
-import { registerUser, loginUser, resendVerification } from '../services/api';
+import {
+  loginUser,
+  loginWithTwoFactor,
+  registerUser,
+  resendVerification,
+} from '../services/api';
 import { AUTH_REQUEST_ERRORS } from '../utils/errorMessages';
 import { useT } from '../i18n';
 import { rich } from '../i18n/rich';
@@ -32,6 +37,8 @@ export default function Auth({ onAuth }: Props) {
   // your email"), just reached by different doors.
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
   const [forgotPassword, setForgotPassword] = useState(false);
+  // Set when the password was right but the account wants a code too.
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -62,7 +69,8 @@ export default function Auth({ onAuth }: Props) {
       } else if (result.error) {
         setError(result.error);
       } else if (result.data) {
-        onAuth(result.data);
+        if ('two_factor' in result.data) setTwoFactorChallenge(result.data.challenge);
+        else onAuth(result.data);
       }
     } catch {
       setError(AUTH_REQUEST_ERRORS.unexpected);
@@ -83,6 +91,19 @@ export default function Auth({ onAuth }: Props) {
         onBackToLogin={() => {
           setPendingVerificationEmail(null);
           setMode('login');
+        }}
+      />
+    );
+  }
+
+  if (twoFactorChallenge) {
+    return (
+      <TwoFactorLoginScreen
+        challenge={twoFactorChallenge}
+        onAuth={onAuth}
+        onBackToLogin={() => {
+          setTwoFactorChallenge(null);
+          setPassword('');
         }}
       />
     );
@@ -228,6 +249,84 @@ function VerificationPendingScreen({ email, onBackToLogin }: VerificationPending
             {resendState === 'sending' ? t('Gönderiliyor…') : t('Tekrar gönder')}
           </button>
         </div>
+
+        <hr className="auth-divider" />
+
+        <p className="auth-toggle">
+          <button type="button" onClick={onBackToLogin}>
+            {t('Giriş ekranına dön')}
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+interface TwoFactorLoginScreenProps {
+  challenge: string;
+  onAuth: (user: User) => void;
+  onBackToLogin: () => void;
+}
+
+/** The second step of a two-factor sign-in (see Backend.Accounts.TwoFactor):
+ * the 6-digit code from the authenticator app, or one of the recovery codes
+ * handed out when two-factor was turned on. The challenge from the first
+ * step lasts five minutes; after that, back to the password. */
+function TwoFactorLoginScreen({ challenge, onAuth, onBackToLogin }: TwoFactorLoginScreenProps) {
+  const t = useT();
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      const result = await loginWithTwoFactor(challenge, code.replace(/\s/g, ''));
+      if (result.data) onAuth(result.data);
+      else setError(result.error ?? AUTH_REQUEST_ERRORS.unexpected);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <img src={mascot} alt={t('Zircle maskotu')} className="auth-mascot" />
+        <h1>{t('İki adımlı doğrulama')}</h1>
+        <p className="subtitle">
+          {t('Doğrulama uygulamandaki 6 haneli kodu gir. Telefonuna erişemiyorsan kurtarma kodlarından birini kullanabilirsin.')}
+        </p>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="two-factor-code">{t('Doğrulama kodu')}</label>
+            <input
+              id="two-factor-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="123456"
+              required
+              maxLength={16}
+            />
+          </div>
+
+          {error && (
+            <div className="auth-error" role="alert">
+              {error}
+            </div>
+          )}
+
+          <button type="submit" className="auth-submit" disabled={submitting || !code.trim()}>
+            {submitting ? t('Lütfen bekle…') : t('Doğrula')}
+          </button>
+        </form>
 
         <hr className="auth-divider" />
 

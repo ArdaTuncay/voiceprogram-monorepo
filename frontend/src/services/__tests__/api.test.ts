@@ -132,7 +132,7 @@ describe('post() — requests that never get a response (PROJECT_ARCHITECTURE.md
 
     const result = await loginUser('ard@example.com', 'password123');
 
-    expect(result.data?.token).toBe('tok123');
+    expect(result.data && 'token' in result.data && result.data.token).toBe('tok123');
     expect(getStoredToken()).toBe('tok123');
   });
 

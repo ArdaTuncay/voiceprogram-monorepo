@@ -35,7 +35,7 @@ defmodule BackendWeb.AccountControllerRateLimitTest do
         })
       end
 
-    {allowed, denied} = Enum.split_with(responses, &(&1.status == 401))
+    {allowed, denied} = Enum.split_with(responses, &(&1.status == 403))
 
     assert length(allowed) == 5
     assert [limited] = denied
@@ -64,7 +64,7 @@ defmodule BackendWeb.AccountControllerRateLimitTest do
         delete(conn, ~p"/api/account", %{"current_password" => "wrong-on-purpose"})
       end
 
-    {allowed, denied} = Enum.split_with(responses, &(&1.status == 401))
+    {allowed, denied} = Enum.split_with(responses, &(&1.status == 403))
 
     assert length(allowed) == 3
     assert [limited] = denied

@@ -23,6 +23,7 @@ defmodule BackendWeb.Router do
 
     post "/users/register", UserController, :register
     post "/users/login", UserController, :login
+    post "/users/login/2fa", UserController, :login_two_factor
     get "/verify-email/:token", VerificationController, :verify
     post "/resend-verification", VerificationController, :resend
     post "/password-reset", PasswordResetController, :create
@@ -42,6 +43,10 @@ defmodule BackendWeb.Router do
 
     post "/users/logout", SessionController, :logout
     post "/users/logout_all", UserController, :logout_all
+    get "/account/2fa", TwoFactorController, :show
+    post "/account/2fa/setup", TwoFactorController, :setup
+    post "/account/2fa/enable", TwoFactorController, :enable
+    post "/account/2fa/disable", TwoFactorController, :disable
     get "/account/sessions", SessionController, :index
     delete "/account/sessions/:id", SessionController, :delete
     post "/users/renew-token", UserController, :renew_token

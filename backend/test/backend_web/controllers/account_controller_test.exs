@@ -36,7 +36,7 @@ defmodule BackendWeb.AccountControllerTest do
           "current_password" => "wrong-password"
         })
 
-      assert json_response(conn, 401) == %{"error" => "Mevcut şifre yanlış"}
+      assert json_response(conn, 403) == %{"error" => "Mevcut şifre yanlış"}
       assert Backend.Accounts.get_user(user.id).username == user.username
     end
 
@@ -96,7 +96,7 @@ defmodule BackendWeb.AccountControllerTest do
           "current_password" => "wrong-password"
         })
 
-      assert json_response(conn, 401) == %{"error" => "Mevcut şifre yanlış"}
+      assert json_response(conn, 403) == %{"error" => "Mevcut şifre yanlış"}
       assert Backend.Accounts.get_user(user.id).email == user.email
     end
 
@@ -157,7 +157,7 @@ defmodule BackendWeb.AccountControllerTest do
           "new_password" => "new-password456"
         })
 
-      assert json_response(conn, 401) == %{"error" => "Mevcut şifre yanlış"}
+      assert json_response(conn, 403) == %{"error" => "Mevcut şifre yanlış"}
 
       assert Backend.Accounts.verify_password?(
                Backend.Accounts.get_user(user.id),
@@ -271,7 +271,7 @@ defmodule BackendWeb.AccountControllerTest do
         |> with_unique_ip(2)
         |> delete(~p"/api/account", %{"current_password" => "totally-wrong"})
 
-      assert json_response(conn, 401) == %{"error" => "Mevcut şifre yanlış"}
+      assert json_response(conn, 403) == %{"error" => "Mevcut şifre yanlış"}
 
       reloaded = Backend.Accounts.get_user(user.id)
       assert reloaded.deleted_at == nil

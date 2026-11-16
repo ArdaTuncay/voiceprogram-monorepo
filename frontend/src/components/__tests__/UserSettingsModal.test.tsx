@@ -17,6 +17,11 @@ vi.mock('../../services/api', () => ({
   // The privacy tab also lists active sessions (see ActiveSessions.test.tsx).
   fetchSessions: vi.fn().mockResolvedValue({ data: [] }),
   revokeSession: vi.fn(),
+  // ...and two-factor sign-in (see TwoFactorSettings.test.tsx).
+  fetchTwoFactorStatus: vi.fn().mockResolvedValue({ data: { enabled: false, recovery_codes_left: 0 } }),
+  startTwoFactorSetup: vi.fn(),
+  enableTwoFactor: vi.fn(),
+  disableTwoFactor: vi.fn(),
 }));
 
 vi.mock('../../services/socket', () => ({

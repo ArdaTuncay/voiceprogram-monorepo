@@ -44,7 +44,7 @@ defmodule BackendWeb.AccountController do
       end
     else
       conn
-      |> put_status(:unauthorized)
+      |> put_status(:forbidden)
       |> json(%{error: gettext("Current password is incorrect")})
     end
   end
@@ -77,7 +77,7 @@ defmodule BackendWeb.AccountController do
       end
     else
       conn
-      |> put_status(:unauthorized)
+      |> put_status(:forbidden)
       |> json(%{error: gettext("Current password is incorrect")})
     end
   end
@@ -106,7 +106,7 @@ defmodule BackendWeb.AccountController do
 
       {:error, :invalid_current_password} ->
         conn
-        |> put_status(:unauthorized)
+        |> put_status(:forbidden)
         |> json(%{error: gettext("Current password is incorrect")})
 
       {:error, changeset} ->
@@ -185,7 +185,7 @@ defmodule BackendWeb.AccountController do
 
       {:error, :invalid_current_password} ->
         conn
-        |> put_status(:unauthorized)
+        |> put_status(:forbidden)
         |> json(%{error: gettext("Current password is incorrect")})
 
       {:error, _reason} ->

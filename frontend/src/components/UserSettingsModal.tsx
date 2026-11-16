@@ -31,6 +31,7 @@ import { t, useT, type MessageKey } from '../i18n';
 import { rich } from '../i18n/rich';
 import LanguageSelect from './LanguageSelect';
 import ActiveSessions from './ActiveSessions';
+import TwoFactorSettings from './TwoFactorSettings';
 import './UserSettingsModal.css';
 
 type Category =
@@ -942,6 +943,9 @@ function PrivacySettings({ user }: { user: User }) {
           </button>
         ))}
       </div>
+
+      <h4 className="account-form-title privacy-blocked-title">{t('İki Adımlı Doğrulama')}</h4>
+      <TwoFactorSettings />
 
       <h4 className="account-form-title privacy-blocked-title">{t('Aktif Oturumlar')}</h4>
       <ActiveSessions />

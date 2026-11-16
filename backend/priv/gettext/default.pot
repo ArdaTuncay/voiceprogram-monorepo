@@ -52,6 +52,7 @@ msgstr ""
 #: lib/backend_web/controllers/account_controller.ex:81
 #: lib/backend_web/controllers/account_controller.ex:110
 #: lib/backend_web/controllers/account_controller.ex:189
+#: lib/backend_web/controllers/two_factor_controller.ex:63
 #, elixir-autogen, elixir-format
 msgid "Current password is incorrect"
 msgstr ""
@@ -116,7 +117,7 @@ msgstr ""
 msgid "Invalid URL"
 msgstr ""
 
-#: lib/backend_web/controllers/user_controller.ex:62
+#: lib/backend_web/controllers/user_controller.ex:66
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password"
 msgstr ""
@@ -185,7 +186,7 @@ msgstr ""
 msgid "Record not found"
 msgstr ""
 
-#: lib/backend_web/controllers/user_controller.ex:32
+#: lib/backend_web/controllers/user_controller.ex:37
 #, elixir-autogen, elixir-format
 msgid "Registration successful, please check your email to verify your account"
 msgstr ""
@@ -432,4 +433,20 @@ msgstr ""
 #: lib/backend_web/controllers/session_controller.ex:38
 #, elixir-autogen, elixir-format
 msgid "Session not found"
+msgstr ""
+
+#: lib/backend_web/controllers/two_factor_controller.ex:68
+#: lib/backend_web/controllers/user_controller.ex:88
+#, elixir-autogen, elixir-format
+msgid "Invalid or expired code"
+msgstr ""
+
+#: lib/backend_web/controllers/two_factor_controller.ex:36
+#, elixir-autogen, elixir-format
+msgid "The setup has expired, please start again"
+msgstr ""
+
+#: lib/backend_web/controllers/user_controller.ex:83
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Please try again later."
 msgstr ""

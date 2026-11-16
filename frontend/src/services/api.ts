@@ -2,6 +2,9 @@ import { currentLanguage, t } from '../i18n';
 import type {
   ActiveSession,
   AuthResponse,
+  TwoFactorChallenge,
+  TwoFactorSetup,
+  TwoFactorStatus,
   Channel,
   ChannelType,
   MemberRole,
@@ -239,10 +242,39 @@ export function registerUser(
 export async function loginUser(
   email: string,
   password: string
-): Promise<ApiResult<AuthResponse>> {
-  const result = await post<AuthResponse>('/users/login', { email, password });
+): Promise<ApiResult<AuthResponse | TwoFactorChallenge>> {
+  const result = await post<AuthResponse | TwoFactorChallenge>('/users/login', { email, password });
+  if (result.data && 'token' in result.data) storeToken(result.data.token);
+  return result;
+}
+
+/** The second step of a two-factor sign-in: the challenge `loginUser`
+ * returned and a code from the authenticator app (or a recovery code). */
+export async function loginWithTwoFactor(challenge: string, code: string): Promise<ApiResult<AuthResponse>> {
+  const result = await post<AuthResponse>('/users/login/2fa', { challenge, code });
   if (result.data) storeToken(result.data.token);
   return result;
+}
+
+export function fetchTwoFactorStatus(): Promise<ApiResult<TwoFactorStatus>> {
+  return authedGet<TwoFactorStatus>('/account/2fa');
+}
+
+/** Starts setting up two-factor sign-in; changes nothing until `enableTwoFactor`. */
+export function startTwoFactorSetup(currentPassword: string): Promise<ApiResult<TwoFactorSetup>> {
+  return authedPost<TwoFactorSetup>('/account/2fa/setup', { current_password: currentPassword });
+}
+
+/** Turns two-factor on; resolves to the recovery codes, shown once. */
+export function enableTwoFactor(
+  setupToken: string,
+  code: string
+): Promise<ApiResult<{ recovery_codes: string[] }>> {
+  return authedPost<{ recovery_codes: string[] }>('/account/2fa/enable', { setup_token: setupToken, code });
+}
+
+export function disableTwoFactor(currentPassword: string, code: string): Promise<ApiResult<void>> {
+  return authedPost<void>('/account/2fa/disable', { current_password: currentPassword, code });
 }
 
 /** GET /api/verify-email/:token — flips the account's email_verified flag.
