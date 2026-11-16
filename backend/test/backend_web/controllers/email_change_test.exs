@@ -153,7 +153,7 @@ defmodule BackendWeb.EmailChangeTest do
   end
 
   test "a wrong current password sends nothing", %{user: user} do
-    assert json_response(request_change(user, "yeni@example.com", "yanlis"), 401)
+    assert json_response(request_change(user, "yeni@example.com", "yanlis"), 403)
     assert_no_email_sent()
   end
 

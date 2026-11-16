@@ -52,6 +52,7 @@ msgstr "Davet kodu oluşturulamadı, lütfen tekrar deneyin"
 #: lib/backend_web/controllers/account_controller.ex:81
 #: lib/backend_web/controllers/account_controller.ex:110
 #: lib/backend_web/controllers/account_controller.ex:189
+#: lib/backend_web/controllers/two_factor_controller.ex:63
 #, elixir-autogen, elixir-format
 msgid "Current password is incorrect"
 msgstr "Mevcut şifre yanlış"
@@ -116,7 +117,7 @@ msgstr "E-posta adresiniz sistemde kayıtlıysa, doğrulama bağlantısı gönde
 msgid "Invalid URL"
 msgstr "Geçersiz bağlantı"
 
-#: lib/backend_web/controllers/user_controller.ex:62
+#: lib/backend_web/controllers/user_controller.ex:66
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password"
 msgstr "E-posta veya şifre hatalı"
@@ -185,7 +186,7 @@ msgstr "Bu işlemi yalnızca sunucu sahibi yapabilir"
 msgid "Record not found"
 msgstr "Kayıt bulunamadı"
 
-#: lib/backend_web/controllers/user_controller.ex:32
+#: lib/backend_web/controllers/user_controller.ex:37
 #, elixir-autogen, elixir-format
 msgid "Registration successful, please check your email to verify your account"
 msgstr "Kayıt başarılı, lütfen e-postanızı kontrol edip hesabınızı doğrulayın"
@@ -433,3 +434,19 @@ msgstr "Zircle - E-posta Adresini Doğrula"
 #, elixir-autogen, elixir-format
 msgid "Session not found"
 msgstr "Oturum bulunamadı"
+
+#: lib/backend_web/controllers/two_factor_controller.ex:68
+#: lib/backend_web/controllers/user_controller.ex:88
+#, elixir-autogen, elixir-format
+msgid "Invalid or expired code"
+msgstr "Kod geçersiz ya da süresi dolmuş"
+
+#: lib/backend_web/controllers/two_factor_controller.ex:36
+#, elixir-autogen, elixir-format
+msgid "The setup has expired, please start again"
+msgstr "Kurulumun süresi doldu, lütfen baştan başlayın"
+
+#: lib/backend_web/controllers/user_controller.ex:83
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Too many attempts. Please try again later."
+msgstr "Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin."

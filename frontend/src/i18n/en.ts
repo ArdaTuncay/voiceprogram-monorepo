@@ -480,4 +480,29 @@ export const en = {
   'Diğer tüm oturumları kapat': 'Sign out all other sessions',
   'Bilinmeyen cihaz': 'Unknown device',
   'Zircle Masaüstü': 'Zircle Desktop',
+
+  // ── Two-factor sign-in (Auth.tsx, TwoFactorSettings.tsx) ─────────────
+  'İki adımlı doğrulama': 'Two-factor authentication',
+  'İki Adımlı Doğrulama': 'Two-Factor Authentication',
+  'Doğrulama uygulamandaki 6 haneli kodu gir. Telefonuna erişemiyorsan kurtarma kodlarından birini kullanabilirsin.':
+    "Enter the 6-digit code from your authenticator app. If you can't get to your phone, use one of your recovery codes.",
+  'Doğrulama kodu': 'Verification code',
+  'Doğrula': 'Verify',
+  'Kapalı': 'Off',
+  '{count} kurtarma kodu kaldı': {
+    one: '{count} recovery code left',
+    other: '{count} recovery codes left',
+  },
+  'Girişte şifrenin yanında, telefonundaki doğrulama uygulamasından (Google Authenticator, Authy, 1Password…) bir kod da istenir.':
+    'When you sign in, you also enter a code from an authenticator app on your phone (Google Authenticator, Authy, 1Password…).',
+  'Devre dışı bırak': 'Turn off',
+  'Etkinleştir': 'Turn on',
+  'Doğrulama uygulamanla bu QR kodu tara ya da anahtarı elle gir:':
+    'Scan this QR code with your authenticator app, or enter the key by hand:',
+  'Doğrulama uygulaması için QR kod': 'QR code for the authenticator app',
+  'Doğrula ve etkinleştir': 'Verify and turn on',
+  'Kurtarma kodlarını güvenli bir yere kaydet. Telefonuna erişemezsen girişte bunlardan birini kullanabilirsin; her biri bir kez geçerli. Bu kodları bir daha göremezsin.':
+    "Save these recovery codes somewhere safe. If you can't get to your phone, you can sign in with one of them; each works once. You won't see them again.",
+  'Kodları kaydettim': "I've saved them",
+  'Doğrulama kodu ya da kurtarma kodu': 'Verification code or recovery code',
 } satisfies Record<string, Translation>;

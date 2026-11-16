@@ -14,6 +14,28 @@ export interface AuthResponse extends User {
   token: string;
 }
 
+/** What `POST /api/users/login` returns instead of a session when the
+ * account has two-factor sign-in on: finish with `loginWithTwoFactor`. */
+export interface TwoFactorChallenge {
+  two_factor: true;
+  challenge: string;
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  recovery_codes_left: number;
+}
+
+/** `POST /api/account/2fa/setup` — the secret to add to an authenticator app. */
+export interface TwoFactorSetup {
+  /** Base32, for typing in by hand. */
+  secret: string;
+  otpauth_uri: string;
+  /** An SVG QR code of `otpauth_uri`, as a data URI. */
+  qr_data_uri: string;
+  setup_token: string;
+}
+
 /** `POST /api/users/register`'ın artık döndürdüğü şey — bir token/User değil,
  * çünkü hesap e-posta doğrulanana kadar giriş yapılamıyor (bkz.
  * BackendWeb.UserController.register/2). */

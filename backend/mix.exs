@@ -53,6 +53,9 @@ defmodule Backend.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:pbkdf2_elixir, "~> 2.0"},
+      # Two-factor sign-in: TOTP codes and the setup QR code (see Backend.Accounts.TwoFactor).
+      {:nimble_totp, "~> 1.0"},
+      {:eqrcode, "~> 0.2"},
       {:cors_plug, "~> 3.0"},
       {:hammer, "~> 7.0"},
       {:remote_ip, "~> 1.2"},

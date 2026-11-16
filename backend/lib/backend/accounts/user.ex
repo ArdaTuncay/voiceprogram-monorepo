@@ -23,6 +23,12 @@ defmodule Backend.Accounts.User do
     field :pending_email_token_hash, :string, redact: true
     field :pending_email_sent_at, :utc_datetime
     field :avatar_url, :string
+    # Two-factor sign-in — see Backend.Accounts.TwoFactor. The secret is
+    # stored encrypted; recovery codes only as hashes.
+    field :totp_secret, :string, redact: true
+    field :totp_enabled_at, :utc_datetime
+    field :totp_last_used_at, :utc_datetime
+    field :totp_recovery_hashes, {:array, :string}, default: [], redact: true
 
     timestamps(type: :utc_datetime)
   end
@@ -134,6 +140,10 @@ defmodule Backend.Accounts.User do
       password_hash: Pbkdf2.hash_pwd_salt(:crypto.strong_rand_bytes(32) |> Base.encode64()),
       status: "offline",
       avatar_url: nil,
+      totp_secret: nil,
+      totp_enabled_at: nil,
+      totp_last_used_at: nil,
+      totp_recovery_hashes: [],
       deleted_at: DateTime.truncate(DateTime.utc_now(), :second),
       token_version: user.token_version + 1
     )

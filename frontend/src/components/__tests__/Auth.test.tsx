@@ -6,10 +6,11 @@ import Auth from '../Auth';
 vi.mock('../../services/api', () => ({
   registerUser: vi.fn(),
   loginUser: vi.fn(),
+  loginWithTwoFactor: vi.fn(),
   resendVerification: vi.fn(),
 }));
 
-import { registerUser, loginUser, resendVerification } from '../../services/api';
+import { registerUser, loginUser, loginWithTwoFactor, resendVerification } from '../../services/api';
 import { AUTH_REQUEST_ERRORS } from '../../utils/errorMessages';
 
 function fillAndSubmit(fields: { username?: string; email: string; password: string }) {
@@ -220,5 +221,56 @@ describe('Auth — verification pending screen', () => {
 
     expect(screen.getByRole('button', { name: 'Giriş yap' })).not.toBeNull();
     expect(screen.queryByText('E-postanızı kontrol edin')).toBeNull();
+  });
+});
+
+describe('Auth — two-factor sign-in', () => {
+  const user = { id: 'u1', username: 'ali', email: 'ali@example.com', token: 'tok' };
+
+  it('asks for the code after a correct password, then signs in with it', async () => {
+    vi.mocked(loginUser).mockResolvedValue({ data: { two_factor: true, challenge: 'ch' } });
+    vi.mocked(loginWithTwoFactor).mockResolvedValue({ data: user });
+    const onAuth = vi.fn();
+    render(<Auth onAuth={onAuth} />);
+
+    await fillAndSubmit({ email: 'ali@example.com', password: 'password123' });
+
+    expect(onAuth).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'İki adımlı doğrulama' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Doğrulama kodu'), { target: { value: '123 456' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Doğrula' }));
+    });
+
+    expect(loginWithTwoFactor).toHaveBeenCalledWith('ch', '123456');
+    expect(onAuth).toHaveBeenCalledWith(user);
+  });
+
+  it('shows the error for a wrong code and lets the user try again', async () => {
+    vi.mocked(loginUser).mockResolvedValue({ data: { two_factor: true, challenge: 'ch' } });
+    vi.mocked(loginWithTwoFactor).mockResolvedValue({ error: 'Kod geçersiz ya da süresi dolmuş' });
+    const onAuth = vi.fn();
+    render(<Auth onAuth={onAuth} />);
+
+    await fillAndSubmit({ email: 'ali@example.com', password: 'password123' });
+    fireEvent.change(screen.getByLabelText('Doğrulama kodu'), { target: { value: '000000' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Doğrula' }));
+    });
+
+    expect(screen.getByText('Kod geçersiz ya da süresi dolmuş')).toBeInTheDocument();
+    expect(onAuth).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Doğrulama kodu')).toBeInTheDocument();
+  });
+
+  it('can go back to the password screen', async () => {
+    vi.mocked(loginUser).mockResolvedValue({ data: { two_factor: true, challenge: 'ch' } });
+    render(<Auth onAuth={vi.fn()} />);
+
+    await fillAndSubmit({ email: 'ali@example.com', password: 'password123' });
+    fireEvent.click(screen.getByRole('button', { name: 'Giriş ekranına dön' }));
+
+    expect(screen.getByLabelText('Şifre')).toBeInTheDocument();
   });
 });
