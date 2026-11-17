@@ -5,6 +5,7 @@ defmodule BackendWeb.UserSocket do
 
   channel "chat:*", BackendWeb.ChatChannel
   channel "voice:*", BackendWeb.VoiceChannel
+  channel "watch:*", BackendWeb.WatchChannel
   channel "user:*", BackendWeb.UserChannel
   channel "dm:*", BackendWeb.DmChannel
   channel "server:*", BackendWeb.ServerChannel

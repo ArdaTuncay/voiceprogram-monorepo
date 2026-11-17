@@ -30,6 +30,7 @@ vi.mock('../../services/socket', () => ({
   sendIceCandidate: vi.fn(),
   sendVoiceStatus: vi.fn(),
   sendIceDiagnostics: vi.fn(),
+  joinWatchParty: vi.fn().mockReturnValue({ request: vi.fn(() => new Promise(() => {})), leave: vi.fn() }),
   disconnectSocket: vi.fn(),
 }));
 

@@ -58,6 +58,13 @@ describe('vercel.json security headers', () => {
     expect(headers['Strict-Transport-Security']).toMatch(/^max-age=\d+/);
   });
 
+  // "Birlikte izle" (WatchPartyPanel): the YouTube embed is the only page
+  // that may be framed, and YouTube's script is never loaded into ours.
+  it('frames only the YouTube embed, without allowing its script', () => {
+    expect(directive('frame-src')).toBe('frame-src https://www.youtube-nocookie.com');
+    expect(directive('script-src')).not.toContain('youtube');
+  });
+
   it('keeps the SPA rewrite', () => {
     expect((vercel as unknown as { rewrites: unknown[] }).rewrites).toEqual([
       { source: '/(.*)', destination: '/index.html' },

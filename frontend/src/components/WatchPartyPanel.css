@@ -1,0 +1,157 @@
+/* ── Birlikte izle (WatchPartyPanel) ── */
+.watch-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.watch-panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--text-heading);
+}
+
+.watch-panel-title {
+  font-weight: 600;
+  font-size: var(--font-size-md);
+}
+
+.watch-panel-meta {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.watch-panel-header > .watch-panel-icon-btn {
+  margin-left: auto;
+}
+
+.watch-panel-icon-btn,
+.watch-panel-text-btn {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--interactive-normal);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.watch-panel-icon-btn:hover,
+.watch-panel-text-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--interactive-hover);
+}
+
+.watch-panel-text-btn.danger:hover {
+  color: var(--danger);
+}
+
+.watch-panel-hint,
+.watch-panel-consent p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.watch-panel-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.watch-panel-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text-normal);
+  font-size: var(--font-size-sm);
+}
+
+.watch-panel-input:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -1px;
+}
+
+.watch-panel-join-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  transition: background var(--transition-fast);
+}
+
+.watch-panel-join-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.watch-panel-join-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.watch-panel-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--font-size-sm);
+}
+
+.watch-panel-consent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+
+/* background: #000 bilinçli olarak tema token'larından bağımsız — video letterbox zemini */
+.watch-panel-player {
+  width: 100%;
+  max-width: 960px;
+  max-height: 60vh;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+
+.watch-panel-player iframe,
+.watch-panel-player video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: contain;
+  background: #000;
+}
+
+.watch-panel-player .watch-panel-error {
+  padding: var(--space-4);
+}

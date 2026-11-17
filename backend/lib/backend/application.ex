@@ -33,6 +33,9 @@ defmodule Backend.Application do
       # Fire-and-forget background work, e.g. Backend.Turn's credential
       # rotation.
       {Task.Supervisor, name: Backend.TaskSupervisor},
+      # One Backend.WatchParty.Room per voice room with a video open.
+      {Registry, keys: :unique, name: Backend.WatchParty.Registry},
+      {DynamicSupervisor, name: Backend.WatchParty.Supervisor, strategy: :one_for_one},
       # Start a worker by calling: Backend.Worker.start_link(arg)
       # {Backend.Worker, arg},
       # Start to serve requests, typically the last entry
