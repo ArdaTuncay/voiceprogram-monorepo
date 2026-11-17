@@ -1690,6 +1690,27 @@ npm run lint (oxlint)              → 0 uyarı
 
 Testler: `password_reset_controller_test.exs` (12), `ResetPasswordPage.test.tsx`, `ForgotPasswordScreen.test.tsx`.
 
+### 6.7 Birlikte İzle (Watch Party)
+
+Ses kanalındaki herkes aynı YouTube videosunu ya da doğrudan video bağlantısını (`https://`) aynı anda izler. Video bizim üzerimizden akmaz: herkes kendi oynatıcısında oynatır, yalnızca oynatma durumu paylaşılır.
+
+**Dosyalar:** backend `lib/backend/watch_party.ex` (bağlantı ayrıştırma + oda erişimi), `lib/backend/watch_party/room.ex` (oda başına GenServer, `Registry` + `DynamicSupervisor` ile `application.ex`'te), `lib/backend_web/channels/watch_channel.ex` (`"watch:<ses_kanalı_id>"`); frontend `hooks/useWatchParty.ts`, `utils/watchSync.ts` (saf senkron mantığı), `services/watchPlayers.ts` (YouTube + `<video>` adaptörleri), `components/WatchPartyPanel.tsx`.
+
+| Konu | Davranış |
+|---|---|
+| Tek otorite | Durum `%{rev, video: %{source, playing, position, updated_at, updated_by}}`. Tüm değişiklikler oda sürecinden geçer, sırayla uygulanır ve oradan yayınlanır; `rev` istemcide eski cevabın yeniyi ezmesini engeller |
+| Pozisyon | "`updated_at` sunucu zamanında `position` saniye". Oynarken beklenen yer `position + (sunucu_şimdi − updated_at)`; geç katılan doğru saniyeden başlar. İstemci saati `ping` gidiş-dönüşüyle (en kısa RTT örneği) sunucuya hizalanır |
+| Katılım | `join` yalnızca o ses odasının Presence'ında olan sunucu üyesine açık (`not_in_voice` / `not authorized`); sunucudan atılınca kanal kapanır. Son katılımcı çıkınca oda 30 sn sonra kapanır (yeniden bağlanmaya pay) |
+| Senkron döngüsü | Her saniye ve her durum değişikliğinde: >0,75 sn sapma → atla; `<video>`'da 0,2–0,75 sn → 0,95x/1,05x hızla yakala; YouTube embed ince hız desteklemediği için yalnızca atlar. Videonun sonuna gelmiş oynatıcı baştan başlatılmaz |
+| Yankı engeli | Oynatıcının play/pause/seek olayları paylaşılan durumla karşılaştırılır; zaten durumla uyuşuyorsa (bizim düzeltmemizin sonucu) gönderilmez. Kendi gönderdiklerimiz iyimser uygulanır, uçuştaki kendi isteklerimizin ara yankıları atlanır, reddedilirse son onaylı duruma dönülür |
+| YouTube | Google'ın IFrame API script'i yüklenmez (origin'imizde, token'ın yanında çalışırdı); `youtube-nocookie.com` embed'iyle doğrudan `postMessage` protokolü konuşulur. CSP: yalnızca `frame-src https://www.youtube-nocookie.com` ve doğrudan bağlantılar için `media-src https:` eklendi, `script-src` değişmedi |
+| Gizlilik | Her izleyici videoyu yüklemeden önce "İzlemeye katıl"a basar (kaynak site IP'yi görür); bu tıklama tarayıcının sesli otomatik oynatmasına da izin verir |
+| Rate limit | play/pause/seek/clear 120/dk, load 15/dk, ping 30/dk (kullanıcı + oda bazlı) |
+
+Bilinen sınırlar: Netflix/Disney+ gibi DRM'li servisler desteklenmez. Panel, ekran paylaşımı gibi yalnızca sunucu görünümünde gösterilir (DM/Arkadaşlar ekranında görünmez). Masaüstü (Electron, `app://zircle` origin) YouTube embed'i henüz denenmedi. Durum bellekte tutulur, birden fazla backend düğümüne geçilirse dağıtık hale getirilmeli.
+
+Testler: `watch_party_test.exs`, `watch_channel_test.exs`, `utils/__tests__/watchSync.test.ts`, `securityHeaders.test.ts` (CSP), e2e `watch-party.spec.ts` (iki ayrı kullanıcı, gerçek YouTube embed'i: oynat / durdur / sar senkronu).
+
 ---
 
 ## 7. Bilinen Boşluklar / Devam Notları

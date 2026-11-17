@@ -179,6 +179,25 @@ export interface PresenceUser {
   sfu_session?: string | null;
 }
 
+/** What a watch party plays (see Backend.WatchParty.parse_source/1). */
+export type WatchSource = { kind: 'youtube'; id: string } | { kind: 'url'; url: string };
+
+/** A voice room's shared playback state: `position` seconds at server time
+ * `updated_at` (ms) — while `playing`, the video has moved on since. */
+export interface WatchVideo {
+  source: WatchSource;
+  playing: boolean;
+  position: number;
+  updated_at: number;
+  updated_by: string;
+}
+
+export interface WatchState {
+  /** Bumped on every change; an older one never replaces a newer one. */
+  rev: number;
+  video: WatchVideo | null;
+}
+
 export interface TypingNotification {
   user_id: string;
   username: string | null;

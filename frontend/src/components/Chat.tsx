@@ -4,6 +4,7 @@ import type { User, Channel, ChannelType, PresenceUser, ReportTarget } from '../
 import { resolveFileUrl } from '../config';
 import { disconnectSocket } from '../services/socket';
 import { useVoiceChannel } from '../hooks/useVoiceChannel';
+import { useWatchParty } from '../hooks/useWatchParty';
 import { useAutoGrowTextarea } from '../hooks/useAutoGrowTextarea';
 import { useMentionSuggestions } from '../hooks/useMentionSuggestions';
 import { useCollapsedCategories } from '../hooks/useCollapsedCategories';
@@ -37,8 +38,9 @@ import NotificationPermissionBanner from './NotificationPermissionBanner';
 import UserSettingsModal from './UserSettingsModal';
 import VoiceStatusBar from './VoiceStatusBar';
 import VoiceOrbit from './VoiceOrbit';
+import WatchPartyPanel from './WatchPartyPanel';
 import type { OrbitParticipant } from './VoiceOrbit';
-import { Volume2, ScreenShare, ScreenShareOff, Hash, UserPlus, Settings, DoorOpen, LogOut, ChevronDown, AlertTriangle, Circle, Paperclip, Send, Search, Maximize2, X, Menu, CornerUpLeft } from 'lucide-react';
+import { Volume2, ScreenShare, ScreenShareOff, Clapperboard, Hash, UserPlus, Settings, DoorOpen, LogOut, ChevronDown, AlertTriangle, Circle, Paperclip, Send, Search, Maximize2, X, Menu, CornerUpLeft } from 'lucide-react';
 import './Chat.css';
 
 interface Props {
@@ -192,6 +194,13 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
   const prevScrollHeightRef = useRef<number | null>(null);
   const textareaRef = useAutoGrowTextarea(draft);
   const voice = useVoiceChannel(user);
+  const watch = useWatchParty(voice.activeRoomId, user.id);
+  // "Birlikte izle" panel opened by this user; it also shows on its own
+  // whenever someone in the room has a video open.
+  const [watchPanelOpen, setWatchPanelOpen] = useState(false);
+  useEffect(() => {
+    setWatchPanelOpen(false);
+  }, [voice.activeRoomId]);
 
   // Fetch the servers the user belongs to once, on mount.
   useEffect(() => {
@@ -507,6 +516,14 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                 {voice.isScreenSharing ? <ScreenShareOff size={14} /> : <ScreenShare size={14} />}{' '}
                 {voice.isScreenSharing ? t('Ekranı Durdur') : t('Ekranı Paylaş')}
               </button>
+
+              <button
+                className={`screen-share-btn${watchPanelOpen || watch.video ? ' active-soft' : ''}`}
+                onClick={() => setWatchPanelOpen((open) => !open)}
+                aria-pressed={watchPanelOpen}
+              >
+                <Clapperboard size={14} /> {t('Birlikte İzle')}
+              </button>
             </div>
           )}
 
@@ -588,6 +605,19 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
   useEffect(() => {
     setMobileNavOpen(false);
   }, [activeChannelId, activeDmRoomId, friendsViewOpen]);
+
+  const watchPanel =
+    voice.activeRoomId && (watchPanelOpen || watch.video) ? (
+      <WatchPartyPanel
+        party={watch}
+        nameOf={(userId) =>
+          userId === user.id
+            ? user.username
+            : voice.participants.find((p) => p.user_id === userId)?.username ?? t('Bilinmeyen')
+        }
+        onClose={() => setWatchPanelOpen(false)}
+      />
+    ) : null;
 
   const layoutClass =
     'chat-layout' +
@@ -813,7 +843,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
           onDrop={handleDrop}
         >
           {!activeChannelId ? (
-            <EmptyState message={t('Sohbet etmeye başlamak için bir kanal seç')} />
+            watchPanel ?? <EmptyState message={t('Sohbet etmeye başlamak için bir kanal seç')} />
           ) : (
           <>
             <header className="chat-header">
@@ -844,6 +874,8 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                 <div className="drag-drop-message"><Paperclip size={18} /> {t('Dosyayı buraya bırak')}</div>
               </div>
             )}
+
+            {watchPanel}
 
             {Object.keys(voice.screenShares).length > 0 && (
               <div className="screen-share-panel">

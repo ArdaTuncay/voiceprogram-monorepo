@@ -1550,6 +1550,16 @@
   background: var(--danger-hover);
 }
 
+/* "Birlikte İzle" while its panel is showing — on, but not a red "stop" state. */
+.screen-share-btn.active-soft {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.screen-share-btn.active-soft:hover {
+  background: var(--accent-hover);
+}
+
 .screen-share-panel {
   display: flex;
   flex-wrap: wrap;

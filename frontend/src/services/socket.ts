@@ -24,6 +24,7 @@ import type {
   NewDmMessageNotification,
   ReactionToggledPayload,
   PushFailure,
+  WatchState,
 } from '../types';
 import { getStoredToken } from './tokenStorage';
 import { resolveSocketUrl } from '../config';
@@ -463,6 +464,53 @@ export function sendIceDiagnostics(
     candidate_type: candidateType,
     connection_state: connectionState,
   });
+}
+
+export interface WatchPartyCallbacks {
+  /** Joined — the first time and after every automatic rejoin, with the
+   * room's state at that moment and the server's clock (ms). */
+  onJoined: (state: WatchState, serverTime: number) => void;
+  /** Someone changed the state (broadcast by Backend.WatchParty.Room). */
+  onState: (state: WatchState) => void;
+}
+
+export interface WatchPartyHandle {
+  /** One of BackendWeb.WatchChannel's events; resolves with the reply,
+   * rejects with its reason. */
+  request: <T>(event: string, payload?: Record<string, unknown>) => Promise<T>;
+  leave: () => void;
+}
+
+/**
+ * Joins a voice room's watch party ("watch:<room_id>", see
+ * BackendWeb.WatchChannel). Only valid while in that voice room — the
+ * server refuses it otherwise — so join it after the voice room and leave
+ * it with it. A refused join is left to Phoenix's rejoin loop: right after
+ * a reconnect the voice room may not have rejoined yet.
+ */
+export function joinWatchParty(roomId: string, callbacks: WatchPartyCallbacks): WatchPartyHandle {
+  const channel = getSocket().channel(`watch:${roomId}`, {});
+
+  channel.on('state', (state: WatchState) => callbacks.onState(state));
+  channel
+    .join()
+    .receive('ok', (resp: { state: WatchState; server_time: number }) =>
+      callbacks.onJoined(resp.state, resp.server_time)
+    );
+
+  return {
+    request: <T>(event: string, payload: Record<string, unknown> = {}) =>
+      new Promise<T>((resolve, reject) => {
+        channel
+          .push(event, payload)
+          .receive('ok', (reply: T) => resolve(reply))
+          .receive('error', (reply: { reason?: string }) => reject(new Error(reply?.reason ?? 'error')))
+          .receive('timeout', () => reject(new Error('timeout')));
+      }),
+    leave: () => {
+      channel.leave();
+    },
+  };
 }
 
 export interface UserChannelCallbacks {

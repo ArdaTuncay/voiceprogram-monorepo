@@ -335,6 +335,27 @@ export const en = {
   'Konuşuyor': 'Speaking',
   'Ses Bağlantısı Aktif': 'Voice Connected',
   'Ekranı Durdur': 'Stop Sharing',
+  // ── Watch together (WatchPartyPanel.tsx) ─────────────────────────────
+  'Birlikte İzle': 'Watch Together',
+  'Birlikte izle': 'Watch together',
+  'Bir YouTube bağlantısı ya da bir video adresi yapıştır; odadaki herkes aynı anda izler.':
+    'Paste a YouTube link or a video address; everyone in the room watches it in sync.',
+  '{name} açtı · {host}': 'Opened by {name} · {host}',
+  'Videoyu herkes için kapat': 'Close the video for everyone',
+  'Videoyu kapat': 'Close video',
+  'Video {host} üzerinden yüklenecek; bu site IP adresini görebilir.':
+    'The video will load from {host}; that site can see your IP address.',
+  'İzlemeye katıl': 'Join watching',
+  'Bu bağlantı açılamadı. Bir YouTube bağlantısı ya da https:// ile başlayan bir video adresi gir.':
+    "Couldn't open this link. Enter a YouTube link or a video address starting with https://.",
+  'Çok sık video değiştirildi. Biraz bekleyip tekrar dene.':
+    'The video was changed too often. Wait a moment and try again.',
+  'Video açılamadı. Tekrar dene.': "Couldn't open the video. Try again.",
+  'Video bağlantısı': 'Video link',
+  'Aç': 'Open',
+  'YouTube videosu': 'YouTube video',
+  'Bu video oynatılamadı. Bağlantı doğrudan bir video dosyasına gitmiyor olabilir.':
+    "This video couldn't be played. The link may not point directly to a video file.",
   'Ekranı Paylaş': 'Share Screen',
   'Bağlantı Kesildi': 'Disconnected',
   'Kullanıcı Ayarları': 'User Settings',

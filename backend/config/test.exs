@@ -46,6 +46,9 @@ config :phoenix,
 # inside their own DB sandbox, and route Metered API calls through Req.Test
 # stubs (Backend.TurnTest) instead of the network.
 config :backend, Backend.Turn, refresh: :inline
+
+# Backend.WatchParty.Room's grace period after its last participant leaves.
+config :backend, :watch_party_idle_ms, 50
 config :backend, Backend.Turn.Metered, req_options: [plug: {Req.Test, Backend.Turn.Metered}]
 config :backend, Backend.Uploads.S3, req_options: [plug: {Req.Test, Backend.Uploads.S3}]
 
