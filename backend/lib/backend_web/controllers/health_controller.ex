@@ -16,6 +16,11 @@ defmodule BackendWeb.HealthController do
   dead DB connection (Postgres restarted, network partition, exhausted
   pool) — that's exactly the case an orchestrator needs to know about to
   stop routing traffic to this instance.
+
+  Also reports `commit`: the git commit this instance was deployed from
+  (`config :backend, :git_commit`, from Render's RENDER_GIT_COMMIT — see
+  runtime.exs), or null when unknown. That's how a deploy is confirmed
+  from outside without dashboard access.
   """
 
   use BackendWeb, :controller
@@ -26,7 +31,7 @@ defmodule BackendWeb.HealthController do
   def show(conn, _params) do
     case Repo.query("SELECT 1") do
       {:ok, _result} ->
-        json(conn, %{status: "ok", database: "ok"})
+        json(conn, %{status: "ok", database: "ok", commit: commit()})
 
       {:error, _reason} ->
         unavailable(conn)
@@ -50,6 +55,8 @@ defmodule BackendWeb.HealthController do
   defp unavailable(conn) do
     conn
     |> put_status(:service_unavailable)
-    |> json(%{status: "error", database: "error"})
+    |> json(%{status: "error", database: "error", commit: commit()})
   end
+
+  defp commit, do: Application.get_env(:backend, :git_commit)
 end

@@ -29,6 +29,13 @@ config :backend, BackendWeb.Endpoint,
 # instead of baking Mix.env() into the compiled build.
 config :backend, :environment, config_env()
 
+# The commit this instance runs, reported by GET /api/healthz so a deploy
+# can be confirmed from outside. Render sets RENDER_GIT_COMMIT for every
+# deploy; GIT_COMMIT covers any other host. Unset (nil) locally and in tests.
+config :backend,
+       :git_commit,
+       System.get_env("RENDER_GIT_COMMIT") || System.get_env("GIT_COMMIT")
+
 # Read once, all envs — the single source of truth for "where does the
 # frontend live", shared by prod's CORS/WebSocket origin restriction below
 # and by Backend.Accounts.UserNotifier's verification-email link (which
