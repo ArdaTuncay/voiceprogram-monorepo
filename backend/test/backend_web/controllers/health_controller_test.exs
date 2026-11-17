@@ -12,7 +12,7 @@ defmodule BackendWeb.HealthControllerTest do
   } do
     conn = get(conn, ~p"/api/healthz")
 
-    assert json_response(conn, 200) == %{"status" => "ok", "database" => "ok"}
+    assert json_response(conn, 200) == %{"status" => "ok", "database" => "ok", "commit" => nil}
   end
 
   test "GET /api/healthz returns 503 when the database is unreachable", %{
@@ -33,6 +33,23 @@ defmodule BackendWeb.HealthControllerTest do
 
     conn = get(conn, ~p"/api/healthz")
 
-    assert json_response(conn, 503) == %{"status" => "error", "database" => "error"}
+    assert json_response(conn, 503) == %{
+             "status" => "error",
+             "database" => "error",
+             "commit" => nil
+           }
+  end
+
+  test "GET /api/healthz reports the deployed commit, so a deploy can be checked from outside", %{
+    conn: conn
+  } do
+    previous = Application.get_env(:backend, :git_commit)
+    Application.put_env(:backend, :git_commit, "4fd7307724a55c8a6ab62f2962ecdb016827540b")
+    on_exit(fn -> Application.put_env(:backend, :git_commit, previous) end)
+
+    conn = get(conn, ~p"/api/healthz")
+
+    assert %{"status" => "ok", "commit" => "4fd7307724a55c8a6ab62f2962ecdb016827540b"} =
+             json_response(conn, 200)
   end
 end
