@@ -16,6 +16,8 @@ vi.mock('../components/Chat', () => ({
   default: ({ onLogout }: { onLogout: () => void }) => <button onClick={onLogout}>çıkış</button>,
 }));
 vi.mock('../components/Auth', () => ({ default: () => <div>giriş</div> }));
+// Signed out at `/` is the public home page (see site/siteHome.ts).
+vi.mock('../site/HomePage', () => ({ default: () => <div>ana sayfa</div> }));
 
 import App from '../App';
 import { logoutCurrentSession } from '../services/api';
@@ -39,6 +41,6 @@ describe('App — çıkış', () => {
     expect(logoutCurrentSession).toHaveBeenCalledTimes(1);
     expect(tokenAtLogout).toEqual(['oturum-belirteci']);
     expect(getStoredToken()).toBeNull();
-    expect(screen.getByText('giriş')).toBeInTheDocument();
+    expect(screen.getByText('ana sayfa')).toBeInTheDocument();
   });
 });

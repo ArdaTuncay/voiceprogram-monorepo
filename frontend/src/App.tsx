@@ -9,6 +9,8 @@ import Chat from './components/Chat';
 import VerifyEmailPage from './components/VerifyEmailPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import ConfirmEmailChangePage from './components/ConfirmEmailChangePage';
+import HomePage from './site/HomePage';
+import { showsSiteHome } from './site/siteHome';
 import './App.css';
 
 const VERIFY_EMAIL_PATH_PREFIX = '/verify-email/';
@@ -95,6 +97,11 @@ export default function App() {
   }
 
   if (!user) {
+    // Signed out at the root of the website: the public home page, whose
+    // sign-in card opens the app right here once it calls handleAuth. The
+    // desktop app (served from file://, built with --mode electron) goes
+    // straight to its own sign-in screen, as does any other signed-out path.
+    if (showsSiteHome()) return <HomePage onAuth={handleAuth} />;
     return <Auth onAuth={handleAuth} />;
   }
 

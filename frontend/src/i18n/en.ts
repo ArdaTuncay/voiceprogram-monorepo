@@ -545,4 +545,84 @@ export const en = {
     "Save these recovery codes somewhere safe. If you can't get to your phone, you can sign in with one of them; each works once. You won't see them again.",
   'Kodları kaydettim': "I've saved them",
   'Doğrulama kodu ya da kurtarma kodu': 'Verification code or recovery code',
+
+  // ── Public site: home page (site/) ───────────────────────────────────
+  'Ana menü': 'Main menu',
+  'Özellikler': 'Features',
+  'İndir': 'Download',
+  'Güvenlik': 'Security',
+  'Destek': 'Support',
+  'Ürün': 'Product',
+  'Yardım': 'Help',
+  'Tarayıcıda aç': 'Open in browser',
+  'Gerçek zamanlı sesli ve yazılı sohbet.': 'Real-time voice and text chat.',
+  'Sesli ve yazılı sohbet': 'Voice and text chat',
+  'Arkadaşlarınla aynı çemberde.': 'In the same circle as your friends.',
+  'Giriş yap, Zircle bu sekmede açılsın. Kurulum yok; istersen sonra masaüstü uygulamasını da indirirsin.':
+    'Sign in and Zircle opens right in this tab. Nothing to install; you can get the desktop app later if you like.',
+  'Sesli kanallar ve ekran paylaşımı': 'Voice channels and screen sharing',
+  'Yazılı sohbet, özel mesajlar, dosya paylaşımı': 'Text chat, direct messages, file sharing',
+  "Tarayıcıda ve Windows'ta aynı hesap": 'One account in the browser and on Windows',
+  'Giriş yap ve tarayıcıda aç': 'Sign in and open in browser',
+  'Kayıt olduktan sonra e-postana bir doğrulama bağlantısı gönderilir.':
+    "After you sign up, we'll email you a verification link.",
+  'İki yol, tek hesap.': 'Two ways in, one account.',
+  'Nereden girersen gir sunucuların, mesajların ve arkadaşların seni bekliyor.':
+    'Wherever you sign in, your servers, messages and friends are waiting.',
+  'Tarayıcıdan': 'In the browser',
+  'Hiçbir şey kurmadan aç. Güncel bir tarayıcı yeter; telefonda ana ekranına ekleyip uygulama gibi kullanabilirsin.':
+    'Open it without installing anything. A recent browser is all you need; on your phone, add it to your home screen and use it like an app.',
+  'Giriş yap ve aç': 'Sign in and open',
+  'Masaüstünden': 'On the desktop',
+  'Windows uygulamasını kur, hesabınla giriş yap. Zircle kendi penceresinde açılır, tarayıcı sekmelerinin arasında kaybolmaz.':
+    "Install the Windows app and sign in with your account. Zircle opens in its own window, so it doesn't get lost among your browser tabs.",
+  'İndirme sayfası yakında · Windows 10 ve 11': 'Download page coming soon · Windows 10 and 11',
+  'Üç adımda başla.': 'Get started in three steps.',
+  'Hesabını aç': 'Create your account',
+  'Kullanıcı adı, e-posta ve şifre yeter. E-postana gelen bağlantıyla hesabını doğrula.':
+    'A username, an email and a password is all it takes. Verify your account with the link we email you.',
+  'Bir çember kur ya da katıl': 'Start a circle or join one',
+  'Kendi sunucunu oluştur ya da sana gönderilen davet bağlantısına tıkla.':
+    'Create your own server, or click an invite link someone sent you.',
+  'Konuşmaya başla': 'Start talking',
+  'Sesli kanala gir, mikrofon iznini ver. Yazmak istersen kanal hemen yanında.':
+    'Join a voice channel and allow the microphone. If you would rather type, the text channel is right there.',
+  'İçinde neler var?': "What's inside?",
+  'Sesli kanallar': 'Voice channels',
+  'Kanala gir, konuşmaya başla. Kimin konuştuğunu çemberde görürsün.':
+    "Join a channel and start talking. The circle shows you who's speaking.",
+  'Ekran paylaşımı': 'Screen sharing',
+  'Sesli kanaldayken ekranını tek tıkla paylaş.': 'Share your screen with one click while in a voice channel.',
+  'Yazılı sohbet': 'Text chat',
+  'Yanıtla, @bahset, tepki ver, eski mesajlarda ara.': 'Reply, @mention, react, and search old messages.',
+  'Özel mesajlar': 'Direct messages',
+  'Arkadaş ekle, bire bir yaz, dosya gönder.': 'Add friends, chat one-on-one, send files.',
+  'Zircle kapalıyken bile yeni mesajlardan haberin olur.': "You hear about new messages even when Zircle is closed.",
+  'Topluluk araçları': 'Community tools',
+  'Davet bağlantıları, moderatörler, raporlama.': 'Invite links, moderators, reporting.',
+  'Hesabın senin kontrolünde.': 'Your account, under your control.',
+  'Kimin girdiğini görür, istemediğin oturumu kapatırsın.':
+    "See who's signed in, and end any session you don't want.",
+  'Şifrenin yanında telefonundaki uygulamanın ürettiği kodu da sorar.':
+    'Asks for a code from an app on your phone as well as your password.',
+  'Açık oturumlar': 'Active sessions',
+  'Hesabının açık olduğu cihazları listeler, tek tıkla çıkış yaptırır.':
+    "Lists the devices you're signed in on and signs any of them out with one click.",
+  'Konumsuz fotoğraflar': 'Location-free photos',
+  'Paylaştığın fotoğraflardaki konum ve cihaz bilgisi gönderilmeden önce silinir.':
+    'Location and device details are removed from your photos before they are sent.',
+  'Sık sorulanlar': 'Frequently asked questions',
+  'Bir şey kurmam gerekiyor mu?': 'Do I need to install anything?',
+  'Hayır. Zircle tarayıcıda çalışır; giriş yapman yeter. İstersen Windows uygulamasını da kurabilirsin.':
+    'No. Zircle runs in the browser; just sign in. You can also install the Windows app if you like.',
+  'Telefonda kullanabilir miyim?': 'Can I use it on my phone?',
+  'Evet. Telefonunun tarayıcısından aç, ana ekranına ekle; uygulama gibi açılır ve bildirim gönderir.':
+    "Yes. Open it in your phone's browser and add it to your home screen; it opens like an app and sends notifications.",
+  'Arkadaşlarımı nasıl çağırırım?': 'How do I invite my friends?',
+  'Sunucunda bir davet bağlantısı oluştur ve paylaş. Bağlantıya tıklayan kişi giriş yapıp sunucuna katılır.':
+    'Create an invite link in your server and share it. Whoever clicks it signs in and joins your server.',
+  'Hesabımı silebilir miyim?': 'Can I delete my account?',
+  'Evet. Ayarlar bölümündeki Hesap Silme adımından hesabını kalıcı olarak silebilirsin.':
+    'Yes. You can delete your account permanently from the Delete Account step in Settings.',
+  'Çemberde yerin hazır.': 'Your place in the circle is ready.',
 } satisfies Record<string, Translation>;
