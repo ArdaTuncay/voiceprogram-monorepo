@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 
 vi.mock('../../services/api', () => ({
   loginUser: vi.fn(),
@@ -34,14 +34,15 @@ describe('HomePage sign-in card', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Kayıt ol', pressed: false }));
 
-    expect(screen.getByRole('heading', { name: 'Hesap oluştur' })).toBeInTheDocument();
+    // The home page's first step is also titled 'Hesap oluştur', so look inside the card.
+    expect(within(document.getElementById('giris')!).getByRole('heading', { name: 'Hesap oluştur' })).toBeInTheDocument();
     expect(screen.getByLabelText('Kullanıcı adı')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Kayıt ol', pressed: true })).toBeInTheDocument();
   });
 
   it("the closing 'Kayıt ol' button turns the card to sign-up", () => {
     render(<HomePage onAuth={vi.fn()} />);
-    const closing = screen.getByRole('heading', { name: 'Çemberde yerin hazır.' }).parentElement!;
+    const closing = screen.getByRole('heading', { name: 'Hemen başla.' }).parentElement!;
 
     fireEvent.click(closing.querySelector('button')!);
 
@@ -117,7 +118,7 @@ describe('HomePage sign-in card', () => {
     useLanguageStore.setState({ language: 'en' });
     render(<HomePage onAuth={vi.fn()} />);
     expect(
-      screen.getByRole('heading', { level: 1, name: translate('en', 'Arkadaşlarınla aynı çemberde.') })
+      screen.getByRole('heading', { level: 1, name: translate('en', 'Arkadaşlarınla konuş, yaz, paylaş.') })
     ).toBeInTheDocument();
   });
 });

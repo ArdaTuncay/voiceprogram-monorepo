@@ -557,72 +557,60 @@ export const en = {
   'Tarayıcıda aç': 'Open in browser',
   'Gerçek zamanlı sesli ve yazılı sohbet.': 'Real-time voice and text chat.',
   'Sesli ve yazılı sohbet': 'Voice and text chat',
-  'Arkadaşlarınla aynı çemberde.': 'In the same circle as your friends.',
-  'Giriş yap, Zircle bu sekmede açılsın. Kurulum yok; istersen sonra masaüstü uygulamasını da indirirsin.':
-    'Sign in and Zircle opens right in this tab. Nothing to install; you can get the desktop app later if you like.',
+  'Arkadaşlarınla konuş, yaz, paylaş.': 'Talk, chat and share with your friends.',
+  'Zircle tarayıcında çalışır. Giriş yap ve hemen başla.': 'Zircle runs in your browser. Sign in and get started.',
   'Sesli kanallar ve ekran paylaşımı': 'Voice channels and screen sharing',
-  'Yazılı sohbet, özel mesajlar, dosya paylaşımı': 'Text chat, direct messages, file sharing',
-  "Tarayıcıda ve Windows'ta aynı hesap": 'One account in the browser and on Windows',
+  'Mesajlar, özel sohbetler ve dosyalar': 'Messages, direct chats and files',
+  "Tarayıcıda ve Windows'ta tek hesap": 'One account in the browser and on Windows',
   'Giriş yap ve tarayıcıda aç': 'Sign in and open in browser',
   'Kayıt olduktan sonra e-postana bir doğrulama bağlantısı gönderilir.':
     "After you sign up, we'll email you a verification link.",
-  'İki yol, tek hesap.': 'Two ways in, one account.',
-  'Nereden girersen gir sunucuların, mesajların ve arkadaşların seni bekliyor.':
-    'Wherever you sign in, your servers, messages and friends are waiting.',
+  'Tarayıcıdan ya da masaüstünden.': 'In the browser or on the desktop.',
+  'Hangisinden girersen gir, her şey aynı yerde.': 'Whichever you use, everything is in the same place.',
   'Tarayıcıdan': 'In the browser',
-  'Hiçbir şey kurmadan aç. Güncel bir tarayıcı yeter; telefonda ana ekranına ekleyip uygulama gibi kullanabilirsin.':
-    'Open it without installing anything. A recent browser is all you need; on your phone, add it to your home screen and use it like an app.',
-  'Giriş yap ve aç': 'Sign in and open',
+  'Kurulum gerekmez. Telefonda ana ekrana ekleyip uygulama gibi de kullanabilirsin.':
+    'Nothing to install. On your phone, add it to your home screen and use it like an app.',
   'Masaüstünden': 'On the desktop',
-  'Windows uygulamasını kur, hesabınla giriş yap. Zircle kendi penceresinde açılır, tarayıcı sekmelerinin arasında kaybolmaz.':
-    "Install the Windows app and sign in with your account. Zircle opens in its own window, so it doesn't get lost among your browser tabs.",
-  'İndirme sayfası yakında · Windows 10 ve 11': 'Download page coming soon · Windows 10 and 11',
-  'Üç adımda başla.': 'Get started in three steps.',
-  'Hesabını aç': 'Create your account',
-  'Kullanıcı adı, e-posta ve şifre yeter. E-postana gelen bağlantıyla hesabını doğrula.':
-    'A username, an email and a password is all it takes. Verify your account with the link we email you.',
-  'Bir çember kur ya da katıl': 'Start a circle or join one',
-  'Kendi sunucunu oluştur ya da sana gönderilen davet bağlantısına tıkla.':
-    'Create your own server, or click an invite link someone sent you.',
+  'Windows uygulamasını kur, aynı hesapla giriş yap.': 'Install the Windows app and sign in with the same account.',
+  'İndirme yakında · Windows 10 ve 11': 'Download coming soon · Windows 10 and 11',
+  'Nasıl başlanır?': 'How to get started',
+  'E-posta adresini doğrula, hesabın hazır.': 'Verify your email address and your account is ready.',
+  'Sunucu kur ya da katıl': 'Create or join a server',
+  'Kendi sunucunu aç veya bir davet bağlantısıyla katıl.': 'Start your own server or join one with an invite link.',
   'Konuşmaya başla': 'Start talking',
-  'Sesli kanala gir, mikrofon iznini ver. Yazmak istersen kanal hemen yanında.':
-    'Join a voice channel and allow the microphone. If you would rather type, the text channel is right there.',
-  'İçinde neler var?': "What's inside?",
+  'Sesli kanala gir ya da yazmaya başla.': 'Join a voice channel or start typing.',
   'Sesli kanallar': 'Voice channels',
-  'Kanala gir, konuşmaya başla. Kimin konuştuğunu çemberde görürsün.':
-    "Join a channel and start talking. The circle shows you who's speaking.",
+  'Kanala gir, konuş. Konuşan kişi vurgulanır.': 'Join a channel and talk. Whoever is speaking is highlighted.',
   'Ekran paylaşımı': 'Screen sharing',
-  'Sesli kanaldayken ekranını tek tıkla paylaş.': 'Share your screen with one click while in a voice channel.',
+  'Sesli kanaldayken ekranını paylaş.': 'Share your screen while in a voice channel.',
   'Yazılı sohbet': 'Text chat',
-  'Yanıtla, @bahset, tepki ver, eski mesajlarda ara.': 'Reply, @mention, react, and search old messages.',
+  'Yanıtla, bahset, tepki ver, mesajlarda ara.': 'Reply, mention, react and search messages.',
   'Özel mesajlar': 'Direct messages',
-  'Arkadaş ekle, bire bir yaz, dosya gönder.': 'Add friends, chat one-on-one, send files.',
-  'Zircle kapalıyken bile yeni mesajlardan haberin olur.': "You hear about new messages even when Zircle is closed.",
-  'Topluluk araçları': 'Community tools',
-  'Davet bağlantıları, moderatörler, raporlama.': 'Invite links, moderators, reporting.',
-  'Hesabın senin kontrolünde.': 'Your account, under your control.',
-  'Kimin girdiğini görür, istemediğin oturumu kapatırsın.':
-    "See who's signed in, and end any session you don't want.",
-  'Şifrenin yanında telefonundaki uygulamanın ürettiği kodu da sorar.':
-    'Asks for a code from an app on your phone as well as your password.',
+  'Arkadaşlarınla bire bir yaz, dosya gönder.': 'Chat one-on-one with friends and send files.',
+  'Zircle kapalıyken de yeni mesajlardan haberin olur.': 'Get notified of new messages even when Zircle is closed.',
+  'Sunucu yönetimi': 'Server management',
+  'Davet bağlantıları, moderatörler ve raporlama.': 'Invite links, moderators and reporting.',
+  'Hesabın güvende.': 'Your account is secure.',
+  'Hesabına kimin girebileceğini sen belirlersin.': 'You decide who can access your account.',
+  'Girişte şifrenin yanında bir doğrulama kodu da istenir.':
+    'Signing in asks for a verification code as well as your password.',
   'Açık oturumlar': 'Active sessions',
-  'Hesabının açık olduğu cihazları listeler, tek tıkla çıkış yaptırır.':
-    "Lists the devices you're signed in on and signs any of them out with one click.",
-  'Konumsuz fotoğraflar': 'Location-free photos',
-  'Paylaştığın fotoğraflardaki konum ve cihaz bilgisi gönderilmeden önce silinir.':
-    'Location and device details are removed from your photos before they are sent.',
+  'Hesabının açık olduğu cihazları gör, istediğinden çıkış yap.':
+    "See the devices you're signed in on and sign out of any of them.",
+  'Fotoğraf gizliliği': 'Photo privacy',
+  'Fotoğraflardaki konum ve cihaz bilgisi yüklenmeden önce silinir.':
+    'Location and device details are removed from photos before upload.',
   'Sık sorulanlar': 'Frequently asked questions',
   'Bir şey kurmam gerekiyor mu?': 'Do I need to install anything?',
-  'Hayır. Zircle tarayıcıda çalışır; giriş yapman yeter. İstersen Windows uygulamasını da kurabilirsin.':
-    'No. Zircle runs in the browser; just sign in. You can also install the Windows app if you like.',
+  'Hayır, tarayıcı yeterli. İstersen Windows uygulamasını da kurabilirsin.':
+    'No, a browser is enough. You can also install the Windows app if you like.',
   'Telefonda kullanabilir miyim?': 'Can I use it on my phone?',
-  'Evet. Telefonunun tarayıcısından aç, ana ekranına ekle; uygulama gibi açılır ve bildirim gönderir.':
-    "Yes. Open it in your phone's browser and add it to your home screen; it opens like an app and sends notifications.",
-  'Arkadaşlarımı nasıl çağırırım?': 'How do I invite my friends?',
-  'Sunucunda bir davet bağlantısı oluştur ve paylaş. Bağlantıya tıklayan kişi giriş yapıp sunucuna katılır.':
-    'Create an invite link in your server and share it. Whoever clicks it signs in and joins your server.',
+  'Evet. Tarayıcıdan aç ve ana ekrana ekle; bildirimler de gelir.':
+    'Yes. Open it in the browser and add it to your home screen; you get notifications too.',
+  'Arkadaşlarımı nasıl davet ederim?': 'How do I invite my friends?',
+  'Sunucunda bir davet bağlantısı oluştur ve paylaş.': 'Create an invite link in your server and share it.',
   'Hesabımı silebilir miyim?': 'Can I delete my account?',
-  'Evet. Ayarlar bölümündeki Hesap Silme adımından hesabını kalıcı olarak silebilirsin.':
-    'Yes. You can delete your account permanently from the Delete Account step in Settings.',
-  'Çemberde yerin hazır.': 'Your place in the circle is ready.',
+  "Evet, Ayarlar'dan hesabını kalıcı olarak silebilirsin.":
+    'Yes, you can delete your account permanently in Settings.',
+  'Hemen başla.': 'Get started now.',
 } satisfies Record<string, Translation>;

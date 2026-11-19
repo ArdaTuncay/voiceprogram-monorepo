@@ -30,7 +30,7 @@ afterEach(() => {
 describe('App — public home page', () => {
   it('shows the home page to a signed-out visitor at /', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Arkadaşlarınla aynı çemberde.' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Arkadaşlarınla konuş, yaz, paylaş.' })).toBeInTheDocument();
   });
 
   it('opens Zircle in the same tab once the home page card signs in', async () => {
@@ -59,14 +59,14 @@ describe('App — public home page', () => {
   it("keeps the app's own sign-in screen on any other signed-out path", () => {
     window.history.replaceState(null, '', '/baska-bir-yol');
     render(<App />);
-    expect(screen.queryByRole('heading', { level: 1, name: 'Arkadaşlarınla aynı çemberde.' })).toBeNull();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Arkadaşlarınla konuş, yaz, paylaş.' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'Tekrar hoş geldin!' })).toBeInTheDocument();
   });
 
   it('never shows the site in the desktop app', () => {
     vi.stubEnv('MODE', 'electron');
     render(<App />);
-    expect(screen.queryByRole('heading', { level: 1, name: 'Arkadaşlarınla aynı çemberde.' })).toBeNull();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Arkadaşlarınla konuş, yaz, paylaş.' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'Tekrar hoş geldin!' })).toBeInTheDocument();
   });
 });
