@@ -115,6 +115,12 @@
   color: var(--site-heading);
 }
 
+.site .site-nav a[aria-current='page'] {
+  font-weight: 600;
+  color: var(--site-heading);
+  box-shadow: inset 0 -2px 0 var(--site-heading);
+}
+
 .site-language {
   margin-left: 8px;
   color: var(--site-muted);
@@ -154,6 +160,13 @@
 
 .site-btn-primary:hover:not(:disabled) {
   background: #e5e5e5;
+}
+
+/* A link styled as the primary button: '.site a' would otherwise paint its
+   text the light link color, on the light button. */
+.site a.site-btn-primary,
+.site a.site-btn-primary:hover {
+  color: var(--site-bg);
 }
 
 .site-btn:disabled {
@@ -754,6 +767,127 @@
   color: var(--site-heading);
 }
 
+/* ── Inner pages (Özellikler) ───────────────────────────── */
+.site-page-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 88px;
+  padding-bottom: 72px;
+}
+
+.site-page-hero h1 {
+  max-width: 900px;
+  font-size: clamp(38px, 5.5vw, 68px);
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  color: var(--site-heading);
+}
+
+.site-page-hero .site-lead {
+  max-width: 600px;
+}
+
+.site-fgroup {
+  border-top: 1px solid var(--site-line);
+}
+
+.site-fgroup-deep {
+  background: var(--site-bg-deep);
+}
+
+.site-fgroup-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 48px;
+  padding-top: 72px;
+  padding-bottom: 72px;
+}
+
+.site-fgroup-intro {
+  flex: 1 1 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.site-fgroup-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid var(--site-outline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--site-heading);
+}
+
+.site-fgroup-intro h2 {
+  font-size: 34px;
+  letter-spacing: -0.025em;
+  color: var(--site-heading);
+}
+
+.site-fgroup-intro p {
+  color: var(--site-muted);
+}
+
+.site-fgroup-list {
+  flex: 2 1 520px;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--site-line-strong);
+}
+
+.site-fgroup-list div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--site-line-strong);
+}
+
+.site-fgroup-list dt {
+  flex: 0 0 220px;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.site-fgroup-list dd {
+  flex: 1 1 280px;
+  min-width: 0;
+  margin: 0;
+  color: var(--site-muted);
+}
+
+.site-page-cta {
+  border-top: 1px solid var(--site-line);
+}
+
+.site-page-cta-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding-top: 88px;
+  padding-bottom: 88px;
+}
+
+.site-page-cta h2 {
+  flex: 1 1 400px;
+  min-width: 0;
+  font-size: clamp(30px, 4vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  color: var(--site-heading);
+}
+
 /* ── Footer ─────────────────────────────────────────────── */
 .site-footer {
   border-top: 1px solid var(--site-line);
@@ -854,6 +988,22 @@
 
   .site-cta-inner {
     padding: 80px 16px;
+  }
+
+  .site-page-hero {
+    padding-top: 48px;
+    padding-bottom: 48px;
+  }
+
+  .site-fgroup-inner {
+    gap: 32px;
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  .site-page-cta-inner {
+    padding-top: 64px;
+    padding-bottom: 64px;
   }
 }
 

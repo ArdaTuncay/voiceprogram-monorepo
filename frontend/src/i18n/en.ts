@@ -613,4 +613,62 @@ export const en = {
   "Evet, Ayarlar'dan hesabını kalıcı olarak silebilirsin.":
     'Yes, you can delete your account permanently in Settings.',
   'Hemen başla.': 'Get started now.',
+  // Features page (site/FeaturesPage.tsx)
+  'Sohbet için gereken her şey.': 'Everything you need to chat.',
+  'Sesli kanallar, mesajlaşma ve sunucu yönetimi tek uygulamada.':
+    'Voice channels, messaging and server management in one app.',
+  'Ses': 'Voice',
+  'Kanala gir, konuş. Arama başlatmana gerek yok.': 'Join a channel and talk. No need to start a call.',
+  'Sesli kanaldayken ekranını ya da bir pencereyi paylaş.':
+    'Share your screen or a single window while in a voice channel.',
+  'Bir video bağlantısını kanaldaki herkesle aynı anda izle.':
+    'Watch a video link in sync with everyone in the channel.',
+  'Kişiye özel ses düzeyi': 'Per-person volume',
+  'Her katılımcının sesini ayrı ayarla.': "Set each participant's volume separately.",
+  'Sustur ve sağırlaştır': 'Mute and deafen',
+  'Mikrofonunu ya da gelen sesi tek tuşla kapat.': 'Turn off your microphone or all incoming sound with one click.',
+  'Mikrofon seçimi ve testi': 'Microphone choice and test',
+  'Mikrofonunu seç, kanala girmeden dene.': 'Pick your microphone and try it before you join.',
+  'Sohbet': 'Chat',
+  'Yazdıkların kanalda kalır.': 'What you write stays in the channel.',
+  'Yanıt ve bahsetme': 'Replies and mentions',
+  'Bir mesaja yanıt ver ya da birini adıyla çağır.': 'Reply to a message or call someone by name.',
+  'Tepkiler': 'Reactions',
+  'Bir mesaja emojiyle karşılık ver.': 'Respond to a message with an emoji.',
+  'Mesaj arama': 'Message search',
+  'Kanallarda ve özel mesajlarda eski mesajları bul.': 'Find older messages in channels and direct messages.',
+  'Dosya paylaşımı': 'File sharing',
+  "Resimler 8 MB'a, belgeler ve arşivler 25 MB'a kadar.": 'Images up to 8 MB, documents and archives up to 25 MB.',
+  'Bağlantı önizlemeleri': 'Link previews',
+  'Paylaşılan bağlantının başlığı ve görseli mesajın altında görünür.':
+    "A shared link's title and image appear under the message.",
+  'Düzenleme ve silme': 'Editing and deleting',
+  'Gönderdiğin mesajı düzelt ya da sil.': 'Fix or delete a message you sent.',
+  'Topluluk': 'Community',
+  'Küçük bir arkadaş grubundan büyük bir sunucuya kadar.': 'From a small group of friends to a large server.',
+  'Sunucular ve kanallar': 'Servers and channels',
+  'Sunucunu kur, yazılı ve sesli kanalları istediğin gibi sırala.':
+    'Set up your server and arrange text and voice channels the way you like.',
+  'Davet bağlantıları': 'Invite links',
+  'Bağlantı oluştur ve paylaş. İstediğinde iptal et.': 'Create a link and share it. Revoke it whenever you like.',
+  'Moderatörler': 'Moderators',
+  'Güvendiğin üyelere yönetim yetkisi ver.': 'Give members you trust permission to help manage.',
+  'Raporlama': 'Reporting',
+  'Üyeler uygunsuz mesajları bildirir, sunucu sahibi ve moderatörler inceler.':
+    'Members report inappropriate messages; the owner and moderators review them.',
+  'Atma ve yasaklama': 'Kicks and bans',
+  'Kurallara uymayan üyeyi çıkar ya da tekrar girmesini engelle.':
+    'Remove a member who breaks the rules, or stop them from coming back.',
+  'Hesap ve uygulama': 'Account and app',
+  "Zircle'ı kendine göre ayarla.": 'Set Zircle up the way you like.',
+  'Arkadaşlar ve özel mesajlar': 'Friends and direct messages',
+  'Arkadaş ekle, bire bir yaz. Kimlerin istek gönderebileceğini sen seç.':
+    'Add friends and chat one-on-one. You choose who can send you requests.',
+  'Uygulama kapalıyken de özel mesaj ve bahsetmelerden haberin olur.':
+    'Get notified of direct messages and mentions even when the app is closed.',
+  'Koyu, açık ya da sistem ayarına göre.': 'Dark, light, or matching your system.',
+  'Türkçe ya da İngilizce.': 'Turkish or English.',
+  'Hesap güvenliği': 'Account security',
+  'İki adımlı doğrulama ve açık oturum yönetimi.': 'Two-step verification and active session management.',
+  'Hemen dene.': 'Try it now.',
 } satisfies Record<string, Translation>;

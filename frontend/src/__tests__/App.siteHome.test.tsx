@@ -63,6 +63,26 @@ describe('App — public home page', () => {
     expect(screen.getByRole('heading', { name: 'Tekrar hoş geldin!' })).toBeInTheDocument();
   });
 
+  it('shows the features page at /ozellikler, signed out or in', () => {
+    window.history.replaceState(null, '', '/ozellikler');
+    render(<App />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Sohbet için gereken her şey.' })).toBeInTheDocument();
+    cleanup();
+
+    storeToken('oturum');
+    storeUser({ id: 'u1', username: 'ali', email: 'ali@example.com' });
+    render(<App />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Sohbet için gereken her şey.' })).toBeInTheDocument();
+    expect(screen.queryByText('sohbet: ali')).toBeNull();
+  });
+
+  it('never shows the features page in the desktop app', () => {
+    vi.stubEnv('MODE', 'electron');
+    window.history.replaceState(null, '', '/ozellikler');
+    render(<App />);
+    expect(screen.queryByRole('heading', { level: 1, name: 'Sohbet için gereken her şey.' })).toBeNull();
+  });
+
   it('never shows the site in the desktop app', () => {
     vi.stubEnv('MODE', 'electron');
     render(<App />);

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { User } from '../types';
 import { useAuthFlow } from '../hooks/useAuthFlow';
 import { useT } from '../i18n';
@@ -23,8 +24,16 @@ export default function HomePage({ onAuth }: Props) {
     window.setTimeout(() => card?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true }), 0);
   }
 
+  // Arriving from another site page (say /ozellikler → /#guvenlik): the
+  // section only exists once this page has rendered, so the browser's own
+  // jump to the #fragment has already missed it.
+  useEffect(() => {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (id) document.getElementById(id)?.scrollIntoView({ block: id === 'giris' ? 'center' : 'start' });
+  }, []);
+
   return (
-    <SiteLayout>
+    <SiteLayout current="home">
       <section className="site-container site-hero">
         <div className="site-hero-copy">
           <p className="site-eyebrow">{t('Sesli ve yazılı sohbet')}</p>

@@ -10,7 +10,8 @@ import VerifyEmailPage from './components/VerifyEmailPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import ConfirmEmailChangePage from './components/ConfirmEmailChangePage';
 import HomePage from './site/HomePage';
-import { showsSiteHome } from './site/siteHome';
+import FeaturesPage from './site/FeaturesPage';
+import { sitePage } from './site/siteHome';
 import './App.css';
 
 const VERIFY_EMAIL_PATH_PREFIX = '/verify-email/';
@@ -96,12 +97,16 @@ export default function App() {
     return <ConfirmEmailChangePage token={token} />;
   }
 
+  // The public website's pages (see site/siteHome.ts). The desktop app
+  // (served from file://, built with --mode electron) never shows them.
+  const site = sitePage(user !== null);
+  if (site === 'features') return <FeaturesPage />;
+
   if (!user) {
     // Signed out at the root of the website: the public home page, whose
-    // sign-in card opens the app right here once it calls handleAuth. The
-    // desktop app (served from file://, built with --mode electron) goes
-    // straight to its own sign-in screen, as does any other signed-out path.
-    if (showsSiteHome()) return <HomePage onAuth={handleAuth} />;
+    // sign-in card opens the app right here once it calls handleAuth. Any
+    // other signed-out path gets the app's own sign-in screen.
+    if (site === 'home') return <HomePage onAuth={handleAuth} />;
     return <Auth onAuth={handleAuth} />;
   }
 
