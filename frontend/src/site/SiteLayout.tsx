@@ -1,31 +1,35 @@
 import type { ReactNode } from 'react';
 import { useT } from '../i18n';
 import LanguageSelect from '../components/LanguageSelect';
+import type { SitePage } from './siteHome';
 import './site.css';
 
 /**
  * Header and footer shared by the public site's pages (the A2 "Giriş önde"
  * design). The site is built page by page: links only point at what exists
- * today — sections of the home page — and move to the real pages
- * (/ozellikler, /indir, /guvenlik, /destek, /gizlilik, /kosullar…) as each
- * one is added, so a visitor never lands on a dead link.
+ * today — a real page, or else a section of the home page — and move to the
+ * real pages (/indir, /guvenlik, /destek, /gizlilik, /kosullar…) as each one
+ * is added, so a visitor never lands on a dead link.
  */
-export default function SiteLayout({ children }: { children: ReactNode }) {
+export default function SiteLayout({ current, children }: { current: SitePage; children: ReactNode }) {
   const t = useT();
+  const here = (page: SitePage) => (current === page ? 'page' : undefined);
 
   return (
     <div className="site">
       <header className="site-header">
         <div className="site-container site-header-inner">
-          <a href="/" className="site-logo" aria-current="page">
+          <a href="/" className="site-logo" aria-current={here('home')}>
             <ZircleMark />
             Zircle
           </a>
           <nav aria-label={t('Ana menü')} className="site-nav">
-            <a href="#ozellikler">{t('Özellikler')}</a>
-            <a href="#iki-yol">{t('İndir')}</a>
-            <a href="#guvenlik">{t('Güvenlik')}</a>
-            <a href="#sss">{t('Destek')}</a>
+            <a href="/ozellikler" aria-current={here('features')}>
+              {t('Özellikler')}
+            </a>
+            <a href="/#iki-yol">{t('İndir')}</a>
+            <a href="/#guvenlik">{t('Güvenlik')}</a>
+            <a href="/#sss">{t('Destek')}</a>
             <LanguageSelect className="site-language" />
           </nav>
         </div>
@@ -41,14 +45,14 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
           </div>
           <nav aria-label={t('Ürün')} className="site-footer-col">
             <span className="site-footer-title">{t('Ürün')}</span>
-            <a href="#ozellikler">{t('Özellikler')}</a>
-            <a href="#iki-yol">{t('İndir')}</a>
-            <a href="#giris">{t('Tarayıcıda aç')}</a>
+            <a href="/ozellikler">{t('Özellikler')}</a>
+            <a href="/#iki-yol">{t('İndir')}</a>
+            <a href="/#giris">{t('Tarayıcıda aç')}</a>
           </nav>
           <nav aria-label={t('Yardım')} className="site-footer-col">
             <span className="site-footer-title">{t('Yardım')}</span>
-            <a href="#sss">{t('Sık sorulanlar')}</a>
-            <a href="#guvenlik">{t('Güvenlik')}</a>
+            <a href="/#sss">{t('Sık sorulanlar')}</a>
+            <a href="/#guvenlik">{t('Güvenlik')}</a>
           </nav>
         </div>
         <div className="site-container site-copyright">© {new Date().getFullYear()} Zircle</div>
