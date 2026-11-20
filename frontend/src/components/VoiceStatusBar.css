@@ -1,86 +1,103 @@
 .voice-status-bar {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
-/* Sits at the bottom-left corner of the whole layout, wide enough to cover
-   both the server-icon rail (72px) and the channel list (240px) beneath it
-   — a natural extension of that column rather than a floating card. */
+/* The "Ses bağlı" card: outlined like the other panels. Its place in the
+   page (bottom of the channel column on desktop, across the bottom on
+   phones) is set by Chat.css's layout grid. */
 .voice-status-bar-fixed {
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  width: 312px;
-  z-index: 500;
-  padding: var(--space-2) var(--space-3);
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border);
-  border-right: 1px solid var(--border);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
 }
 
-/* No positioning/background of its own — embedded inside the existing
-   voice-participant-list panel under the active channel's row, which
-   already provides that. */
 .voice-status-bar-inline {
   margin-top: var(--space-1-5);
 }
 
 .voice-status-bar-room {
   display: flex;
-  align-items: center;
-  gap: var(--space-1-5);
+  flex-direction: column;
   min-width: 0;
+  line-height: var(--line-height-tight);
 }
 
-.voice-status-bar-room-icon {
-  color: var(--success);
-  flex-shrink: 0;
+.voice-status-bar-state {
+  color: var(--accent-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .voice-status-bar-room-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .voice-status-bar-room-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-heading);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.voice-status-bar-server-name {
-  font-size: 11px;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--text-normal);
 }
 
 .voice-status-bar-controls {
   display: flex;
-  gap: var(--space-1-5);
+  gap: var(--space-2);
 }
 
-/* Stacks mic above leave in one column, matched side-by-side by the (taller,
-   two-button) column's height via flexbox's default align-items: stretch —
-   deafen has no fixed height of its own, so it simply grows to match. */
-.voice-status-bar-col {
+/* Leave sits apart on the right, however many buttons are shown. */
+.voice-status-bar .voice-leave-btn {
+  margin-left: auto;
+}
+
+.voice-status-bar .voice-control-btn {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1-5);
-  flex: 1;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
 
-.voice-leave-btn {
-  color: var(--danger);
+.voice-status-bar .voice-control-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-heading);
 }
 
-.voice-leave-btn:hover {
+/* Live mic, active screen share, open watch party: filled with the accent. */
+.voice-status-bar .voice-control-btn.on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.voice-status-bar .voice-control-btn.on:hover {
+  background: var(--accent-hover);
+}
+
+/* Muted or deafened ("active" — the class the old buttons used for the
+   same state): the icon turns red on a red-tinted circle. */
+.voice-status-bar .voice-control-btn.active {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.voice-status-bar .voice-leave-btn {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.voice-status-bar .voice-leave-btn:hover {
   background: var(--danger);
   color: var(--interactive-active);
 }

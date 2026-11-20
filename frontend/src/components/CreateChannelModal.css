@@ -22,7 +22,7 @@
 }
 
 .create-channel-input-row:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .create-channel-input-icon {

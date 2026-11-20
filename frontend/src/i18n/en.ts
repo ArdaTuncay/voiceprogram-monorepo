@@ -289,7 +289,7 @@ export const en = {
   '@{name} kişisine mesaj gönder': 'Message @{name}',
   'Mesajı gönder': 'Send message',
   'Gönder (Enter)': 'Send (Enter)',
-  '{name} yazıyor...': '{name} is typing...',
+  '{name} yazıyor…': '{name} is typing…',
   'ek büyük önizleme': 'attachment full-size preview',
   'ek': 'attachment',
 
@@ -324,12 +324,12 @@ export const en = {
   'İstek Gönder': 'Send Request',
 
   // ── Main layout and server chat (Chat.tsx) ───────────────────────────
-  '{names} yazıyor...': '{names} are typing...',
-  '{names} ve {count} kişi daha yazıyor...': {
-    one: '{names} and {count} other are typing...',
-    other: '{names} and {count} others are typing...',
+  '{names} yazıyor…': '{names} are typing…',
+  '{names} ve {count} kişi daha yazıyor…': {
+    one: '{names} and {count} other are typing…',
+    other: '{names} and {count} others are typing…',
   },
-  'Yeniden Bağlanıyor...': 'Reconnecting...',
+  'Yeniden Bağlanıyor…': 'Reconnecting…',
   'Konuşuyor': 'Speaking',
   'Ses Bağlantısı Aktif': 'Voice Connected',
   'Ekranı Durdur': 'Stop Sharing',
@@ -359,7 +359,7 @@ export const en = {
   'Kullanıcı Ayarları': 'User Settings',
   'Çıkış yap': 'Log out',
   'Sunucuları ve kanalları göster': 'Show servers and channels',
-  'Yeniden bağlanmaya çalışılıyor...': 'Trying to reconnect...',
+  'Yeniden bağlanmaya çalışılıyor…': 'Trying to reconnect…',
   'Sunucu Ayarları': 'Server Settings',
   'Yeni rapor': 'New report',
   'Kanallar': 'Channels',
@@ -815,4 +815,45 @@ export const en = {
     'Your password is never stored as plain text. Changing your password signs out your other sessions.',
   'Şifrenden sonra telefonundaki doğrulama uygulamasının kodunu sorar. Telefonuna erişemezsen kurtarma kodlarınla girersin.':
     "After your password, it asks for a code from the authenticator app on your phone. If you can't get to your phone, you sign in with your recovery codes.",
+
+  // ── Main window: top bar, member card, voice card (app redesign) ─────
+  'Ara': 'Search',
+  'Bildirimler: {count} arkadaşlık isteği': {
+    one: 'Notifications: {count} friend request',
+    other: 'Notifications: {count} friend requests',
+  },
+  'Profil menüsü': 'Profile menu',
+  'Profil ve hesap': 'Profile and account',
+  'Üye listesi': 'Member list',
+  'Sunucu üyeleri': 'Server members',
+  '{count} üye': { one: '{count} member', other: '{count} members' },
+  '{count} çevrimiçi': '{count} online',
+  '{count} sohbet': { one: '{count} conversation', other: '{count} conversations' },
+  '{count} kişi': { one: '{count} person', other: '{count} people' },
+  'Tüm üyeleri göster': 'Show all members',
+  'Yalnız çevrimiçi üyeleri göster': 'Show online members only',
+  '(sen)': '(you)',
+  'Ses bağlantısı': 'Voice connection',
+  'Ses bağlı': 'Voice connected',
+  'Okunmamış mesaj var': 'Unread messages',
+  'Bağlanıyor…': 'Connecting…',
+  'Sessiz katıl': 'Join muted',
+  'Katıl (Shift ile sessiz katıl)': 'Join (Shift to join muted)',
+  '{channel} kanalına sessiz katıl': 'Join {channel} muted',
+  '{channel} ses kanalına bağlandın': 'Connected to the {channel} voice channel',
+  'Ses kanalından ayrıldın': 'You left the voice channel',
+  'Mikrofon izni gerekli': 'Microphone permission needed',
+  'Zircle mikrofonuna erişemiyor. Şunları dene:': "Zircle can't reach your microphone. Try this:",
+  'Adres çubuğundaki site ayarları (kilit) simgesine tıkla ve Mikrofon için "İzin ver"i seç.':
+    'Click the site settings (lock) icon in the address bar and set Microphone to "Allow".',
+  'Windows Ayarlar > Gizlilik ve güvenlik > Mikrofon\'da "Masaüstü uygulamalarının mikrofonunuza erişmesine izin verin"i aç.':
+    'In Windows Settings > Privacy & security > Microphone, turn on "Let desktop apps access your microphone".',
+  'Windows Ayarlar > Gizlilik ve güvenlik > Mikrofon\'da tarayıcının mikrofona erişimini aç.':
+    "In Windows Settings > Privacy & security > Microphone, turn on your browser's microphone access.",
+  'Mikrofonun takılı olduğundan emin ol.': 'Make sure your microphone is plugged in.',
+  'Tekrar dene': 'Try again',
+  'Direkt Mesajlar: {count} okunmamış mesaj': {
+    one: 'Direct Messages: {count} unread message',
+    other: 'Direct Messages: {count} unread messages',
+  },
 } satisfies Record<string, Translation>;

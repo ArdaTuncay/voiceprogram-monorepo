@@ -41,6 +41,6 @@
 }
 
 .message-context-menu-item:hover {
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--bg-hover);
+  color: var(--text-heading);
 }

@@ -46,6 +46,14 @@ export function getPreferredTheme(): Theme {
 
 export function applyTheme(theme: Theme): void {
   document.documentElement.setAttribute('data-theme', theme);
+  // Browser chrome (mobile address bar, installed PWA title bar) in the
+  // page's own background color.
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', theme === 'light' ? '#fafafa' : '#171717');
+  // The desktop app draws Windows' own minimize/maximize/close buttons over
+  // the page (titleBarOverlay); they follow the theme too. No-op on the web.
+  window.zircleDesktop?.setTitleBarTheme(theme);
 }
 
 /** Persists an explicit override, or clears it back to 'system'. Doesn't

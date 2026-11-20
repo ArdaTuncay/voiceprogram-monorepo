@@ -1,0 +1,161 @@
+/* ── Right column: the member card. Same tone as the window, outlined like
+   every other panel. Collapsed it is as tall as its online list; opened it
+   takes the whole column and scrolls. ── */
+.members-panel {
+  grid-area: members;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.members-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+  padding: var(--space-4) var(--space-2) var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--bg-primary);
+}
+
+.members-card.expanded {
+  flex: 1;
+}
+
+.members-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-right: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.members-card-title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-heading);
+}
+
+.members-card-count {
+  font-variant-numeric: tabular-nums;
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.members-card-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-size-sm);
+  height: var(--control-size-sm);
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+.members-card-toggle:hover {
+  background: var(--bg-elevated);
+  color: var(--text-heading);
+}
+
+.members-card-toggle svg {
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.members-card.expanded .members-card-toggle svg {
+  transform: rotate(180deg);
+}
+
+.members-card-list {
+  overscroll-behavior: contain;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.members-card .online-user-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1-5) var(--space-2) var(--space-1-5) 0;
+  border-radius: var(--radius-md);
+}
+
+.members-card .online-user-item:hover {
+  background: none;
+}
+
+.members-card .online-user-avatar {
+  width: 36px;
+  height: 36px;
+  font-size: var(--font-size-xs);
+}
+
+.members-card .online-status-dot {
+  right: -1px;
+  bottom: -1px;
+  box-shadow: 0 0 0 2px var(--bg-primary);
+}
+
+.members-card .online-user-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-normal);
+}
+
+.members-role-tag {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* Big servers: rows off screen skip layout and paint until scrolled to. */
+.members-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48px;
+}
+
+.members-row.offline .online-user-avatar {
+  opacity: 0.45;
+}
+
+.members-row.offline .online-user-name {
+  color: var(--text-muted);
+}
+
+.members-group + .members-group {
+  margin-top: var(--space-3);
+}
+
+.members-group-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-muted);
+}
+
+.members-group-count {
+  margin-left: var(--space-1);
+  font-weight: var(--font-weight-regular);
+}
+
+.members-card-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  color: var(--danger-text);
+  font-size: var(--font-size-sm);
+}

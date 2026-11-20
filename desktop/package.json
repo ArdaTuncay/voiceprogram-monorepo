@@ -22,7 +22,8 @@
       "artifactName": "Zircle-Setup-${version}.${ext}"
     },
     "extraResources": [
-      { "from": "../frontend/dist-electron", "to": "dist-electron" }
+      { "from": "../frontend/dist-electron", "to": "dist-electron" },
+      { "from": "build/icon.png", "to": "icon.png" }
     ]
   }
 }

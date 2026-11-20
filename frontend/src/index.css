@@ -8,11 +8,20 @@
    selector on the root element ties in specificity with :root, so source
    order (this file, light block second) decides who wins. */
 :root {
-  /* Monochrome matte gray palette (neutral scale, no blue/slate tint) */
-  --bg-primary:   #171717;  /* neutral-900 */
-  --bg-secondary: #262626;  /* neutral-800 */
-  --bg-tertiary:  #0a0a0a;  /* neutral-950 */
+  /* One gray tone (user decision, 20 Nov 2026: no black next to the gray).
+     The window background and the big panels share --bg-primary; panels
+     are told apart by a hairline border, cards and controls sit one or two
+     steps lighter. --bg-tertiary used to be near-black (#0a0a0a) and is
+     now the card tone, so every older "darker surface" (inputs, code
+     blocks, settings separators) stops reading as a black hole. */
+  --bg-primary:   #171717;  /* neutral-900: window, panels */
+  --bg-secondary: #262626;  /* neutral-800: controls, menus */
+  --bg-tertiary:  #1f1f1f;  /* card tone, see --bg-card */
   --bg-input:     #404040;  /* neutral-700 */
+  --bg-card:      #1f1f1f;  /* channel / DM cards */
+  --bg-elevated:  #2e2e2e;  /* hover on controls */
+  --bg-hover:     rgba(255, 255, 255, 0.06);
+  --bg-selected:  rgba(255, 255, 255, 0.10);
 
   --text-normal:  #e5e5e5;  /* neutral-200 */
   --text-muted:   #a3a3a3;  /* neutral-400 */
@@ -29,13 +38,15 @@
      --text-heading instead, which does invert per theme. */
   --interactive-active: #fafafa;  /* neutral-50 */
 
-  /* Accent is now tonal, not chromatic: highest-contrast neutral, not a color */
-  --accent:       #f5f5f5;  /* neutral-100 */
-  --accent-hover: #e5e5e5;  /* neutral-200 */
-  /* Accent surfaces are now light, so foreground content on them needs a dark
-     token instead of the light --interactive-active/--text-heading used
-     everywhere else — 16.4:1 contrast against --accent, 14.2:1 against --accent-hover */
-  --on-accent: var(--bg-primary);
+  /* Accent: soft lime green (user decision, 20 Nov 2026). Used as a fill
+     (selected server/channel, primary buttons, badges) with --on-accent on
+     top (15.4:1), and as a text/border color through --accent-text, which
+     the light theme swaps for a darker green that stays readable on white. */
+  --accent:       #d9f99d;
+  --accent-hover: #e6fbbd;
+  --accent-text:  #d9f99d;  /* 15.4:1 on --bg-primary, 14.1:1 on --bg-card */
+  --accent-soft:  rgba(217, 249, 157, 0.14);  /* tinted backgrounds (mentions, own reactions) */
+  --on-accent:    #171717;
 
   /* Keyboard-focus ring — same neutral accent used everywhere else, kept as
      its own token (rather than referencing --accent directly at each call
@@ -54,9 +65,59 @@
      neutral wouldn't adapt across the two very different bg scales below,
      so this stays a semi-transparent white/black pair instead. */
   --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  /* --danger is 4.0:1 on --bg-secondary — fine for icons, short of AA for
+     small text on the lighter controls. Red text uses this instead
+     (5.9:1 on --bg-secondary, 6.9:1 on --bg-primary). */
+  --danger-text: #e08a82;
+  --danger-soft: rgba(204, 101, 92, 0.16);
+
+  /* Presence and voice states */
+  --status-online: var(--accent);
+  --voice-speaking: var(--accent);
+  --voice-off: var(--danger);
+
+  /* Radius scale (docs/design-system.md): replaces ~20 one-off values */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  /* Shadows: only floating things (menus, popovers, modals) get one */
+  --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
 
   /* Motion tokens */
   --transition-fast: 0.15s ease;
+  --duration-instant: 80ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-pulse: 1200ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Control and layout sizes */
+  --control-size-sm: 32px;
+  --control-size-md: 44px;
+  --control-size-lg: 56px;
+  --rail-width: 72px;
+  --sidebar-width: 264px;
+  --members-width: 288px;
+  --topbar-height: 60px;
+  --layout-gap: 12px;
+
+  /* Stacking order */
+  --z-sticky: 20;
+  --z-dropdown: 500;
+  --z-overlay: 1500;
+  --z-modal: 2000;
+  --z-toast: 2500;
+  --z-titlebar: 3000;
 
   /* Typography tokens */
   --font-sans: 'InterVariable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -66,8 +127,14 @@
   --font-size-md: 1.0625rem;
   --font-size-lg: 1.25rem;
   --font-size-xl: 1.5rem;
+  --font-size-2xl: 1.625rem;
   --line-height-tight: 1.25;
   --line-height-normal: 1.5;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --tracking-tight: -0.02em;
 
   /* Spacing scale — a superset of the plain 8px grid: the half-steps
      (--space-1-5, --space-2-5) exist because several already-consistent
@@ -84,11 +151,15 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
 
   font-family: var(--font-sans);
   font-size: 16px;
   color: var(--text-normal);
   background: var(--bg-primary);
+  /* Native scrollbars and form controls in the matching shade. */
+  color-scheme: dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -103,9 +174,8 @@
      --text-heading  (#171717 on #fafafa):  17.2:1
      --interactive-normal (#404040 on --bg-secondary #f5f5f5): 9.5:1
      --interactive-hover  (#262626 on --bg-secondary #f5f5f5): 13.9:1
-     --accent        (#171717 on #fafafa):  17.2:1 (and --on-accent, which
-                       resolves to --bg-primary, gets the same ratio back
-                       against --accent as its background)
+     --accent-text   (#3f6212 on #fafafa):   6.8:1 (the --accent fill
+                       #a3e635 carries --on-accent #1a2e05 text at 9.7:1)
      --success  (#256b40 on #fafafa): 6.2:1
      --danger   (#b3261e on #fafafa): 6.3:1  (white-on-it, for the
                  danger-filled buttons that pair it with --interactive-active: 6.5:1)
@@ -114,6 +184,7 @@
    success/danger/warning are new hex values, not the dark theme's — reusing
    those would be far too light to read as text on a light background. */
 [data-theme="light"] {
+  color-scheme: light;
   --bg-primary:   #fafafa;  /* neutral-50 */
   --bg-secondary: #f5f5f5;  /* neutral-100 */
   --bg-tertiary:  #e5e5e5;  /* neutral-200 — one step grayer than secondary,
@@ -131,24 +202,55 @@
   --interactive-hover:  #262626;  /* neutral-800 */
   /* --interactive-active intentionally NOT overridden — see the :root comment above. */
 
-  --accent:       #171717;  /* neutral-900 */
-  --accent-hover: #262626;  /* neutral-800 */
-  /* --on-accent stays the var(--bg-primary) reference — it resolves to this
-     theme's light --bg-primary automatically, which is exactly what's
-     needed as foreground text on the now-dark --accent background. */
+  /* Green accent, light end: a stronger lime so filled surfaces still show
+     on white, dark green text on top of it (9.7:1), and a darker green for
+     accent-colored text and borders (6.8:1 on --bg-primary). */
+  --accent:       #a3e635;
+  --accent-hover: #b5ec5a;
+  --accent-text:  #3f6212;
+  --accent-soft:  rgba(101, 163, 13, 0.14);
+  --on-accent:    #1a2e05;
+  --focus-ring:   #3f6212;
+
+  --bg-card:      #f2f2f2;
+  --bg-elevated:  #e8e8e8;
+  --bg-hover:     rgba(0, 0, 0, 0.05);
+  --bg-selected:  rgba(0, 0, 0, 0.08);
 
   --success: #256b40;
   --danger:  #b3261e;
   --danger-hover: #8c1e18;
   --warning: #7a4e00;
 
+  --danger-text: #b3261e;
+  --danger-soft: rgba(179, 38, 30, 0.10);
+
+  --status-online: #4d7c0f;  /* 4.8:1 on --bg-primary */
+  --voice-speaking: #4d7c0f;
+
   --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.14);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
 }
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+/* The desktop app (Electron) hides the native title bar and draws a 32px
+   strip of its own (DesktopTitleBar) with Windows' window buttons over its
+   right end; everything else starts below it. Zero on the web. */
+:root {
+  --titlebar-height: 0px;
+}
+
+html.is-desktop {
+  --titlebar-height: 32px;
 }
 
 body {
@@ -162,8 +264,27 @@ body {
 
 #root {
   width: 100%;
-  height: 100vh;
+  height: calc(100vh - var(--titlebar-height));
+  margin-top: var(--titlebar-height);
   display: flex;
+}
+
+.desktop-titlebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: var(--z-titlebar);
+  display: flex;
+  align-items: center;
+  height: var(--titlebar-height);
+  padding-left: var(--space-4);
+  background: var(--bg-primary);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  user-select: none;
+  -webkit-app-region: drag;
 }
 
 h1, h2, h3 {
@@ -178,6 +299,7 @@ p {
 button {
   font-family: inherit;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 input, textarea {
@@ -207,4 +329,31 @@ select:focus-visible {
   color: var(--text-muted);
   padding: var(--space-2) var(--space-1);
   text-align: left;
+}
+
+/* One switch for every animation and transition in the app: when the OS
+   asks for less motion, loops stop and state changes become instant. The
+   speaking indicator stays visible as a static ring (see Chat.css). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Text for screen readers only (live announcements, extra context). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

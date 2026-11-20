@@ -50,7 +50,8 @@ async function registerAndLogIn(page: Page, username: string, email: string, pas
   await page.getByLabel('E-posta').fill(email);
   await page.getByLabel('Şifre').fill(password);
   await page.getByRole('button', { name: 'Giriş yap', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Çıkış yap' })).toBeVisible();
+  // Signed in: the top bar's profile button (sign-out lives in its menu).
+  await expect(page.getByRole('button', { name: 'Profil menüsü' })).toBeVisible();
 }
 
 function youtubeFrame(page: Page) {

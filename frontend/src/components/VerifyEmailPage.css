@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: calc(100vh - var(--titlebar-height));
   background: var(--bg-tertiary);
   padding: var(--space-5);
 }

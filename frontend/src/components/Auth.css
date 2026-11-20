@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: calc(100vh - var(--titlebar-height));
   background: var(--bg-tertiary);
   padding: var(--space-5);
 }
@@ -71,7 +71,7 @@
 }
 
 .form-group input:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .form-group input::placeholder {
@@ -143,7 +143,7 @@
 .auth-toggle button {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--accent-text);
   cursor: pointer;
   font-size: 14px;
   padding: 0;

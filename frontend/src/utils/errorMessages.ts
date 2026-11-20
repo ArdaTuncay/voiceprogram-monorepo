@@ -184,6 +184,14 @@ const MICROPHONE_ERRORS = new Map<string, MessageKey>([
   ],
 ]);
 
+/** Whether a failed getUserMedia was the microphone permission being
+ * refused (by the user, the browser or the OS) — the voice UI shows how to
+ * allow it rather than only an error line. */
+export function isMicrophonePermissionError(err: unknown): boolean {
+  const name = mediaErrorName(err);
+  return name === 'NotAllowedError' || name === 'SecurityError';
+}
+
 /** A failed getUserMedia while joining a voice channel. */
 export function microphoneErrorMessage(err: unknown): string {
   return lookup(MICROPHONE_ERRORS, mediaErrorName(err), 'Mikrofona erişilemedi. Lütfen tekrar deneyin.');

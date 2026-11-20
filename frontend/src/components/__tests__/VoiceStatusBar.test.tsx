@@ -80,3 +80,33 @@ describe('VoiceStatusBar — üç buton doğru action\'ları çağırıyor', () 
     expect(onLeave).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('VoiceStatusBar — ekran paylaşımı ve Birlikte İzle', () => {
+  it('işleyici verilmezse bu iki buton gösterilmez', () => {
+    render(<VoiceStatusBar {...baseProps} />);
+    expect(screen.queryByRole('button', { name: 'Ekranı Paylaş' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Birlikte İzle' })).toBeNull();
+  });
+
+  it('verilince gösterilir, durumu ve tıklamayı yansıtır', () => {
+    const onToggleScreenShare = vi.fn();
+    const onToggleWatchParty = vi.fn();
+    render(
+      <VoiceStatusBar
+        {...baseProps}
+        isScreenSharing
+        onToggleScreenShare={onToggleScreenShare}
+        isWatchPartyOpen
+        onToggleWatchParty={onToggleWatchParty}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ekranı Durdur' }));
+    expect(onToggleScreenShare).toHaveBeenCalledTimes(1);
+
+    const watch = screen.getByRole('button', { name: 'Birlikte İzle' });
+    expect(watch.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(watch);
+    expect(onToggleWatchParty).toHaveBeenCalledTimes(1);
+  });
+});

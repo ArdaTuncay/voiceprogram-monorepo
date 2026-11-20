@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import type { KeyboardEvent, ChangeEvent, DragEvent, UIEvent } from 'react';
+import type { KeyboardEvent, ChangeEvent, DragEvent, ReactNode, UIEvent } from 'react';
 import type { User, Channel, ChannelType, PresenceUser, ReportTarget } from '../types';
 import { resolveFileUrl } from '../config';
 import { disconnectSocket } from '../services/socket';
@@ -11,6 +11,7 @@ import { useCollapsedCategories } from '../hooks/useCollapsedCategories';
 import { useServerStore, groupChannelsByCategory } from '../stores/useServerStore';
 import { useChatStore } from '../stores/useChatStore';
 import { useDMStore } from '../stores/useDMStore';
+import { useFriendStore } from '../stores/useFriendStore';
 import { useSocketSync } from '../stores/useSocketStore';
 import { useConnectionStore } from '../stores/useConnectionStore';
 import { userColor, initials, shouldGroupMessages } from '../utils';
@@ -27,6 +28,11 @@ import LeaveServerModal from './LeaveServerModal';
 import ReportModal from './ReportModal';
 import AvatarFace from './AvatarFace';
 import FriendsPanel from './FriendsPanel';
+import type { FriendsTab } from './FriendsPanel';
+import TopBar, { TopBarSearch } from './TopBar';
+import { TopBarSlotContext } from './topBarSlotContext';
+import MembersPanel from './MembersPanel';
+import MicPermissionHelp from './MicPermissionHelp';
 import EmptyState from './EmptyState';
 import DMChatView from './DMChatView';
 import MessageItem from './MessageItem';
@@ -40,7 +46,7 @@ import VoiceStatusBar from './VoiceStatusBar';
 import VoiceOrbit from './VoiceOrbit';
 import WatchPartyPanel from './WatchPartyPanel';
 import type { OrbitParticipant } from './VoiceOrbit';
-import { Volume2, ScreenShare, ScreenShareOff, Clapperboard, Hash, UserPlus, Settings, DoorOpen, LogOut, ChevronDown, AlertTriangle, Circle, Paperclip, Send, Search, Maximize2, X, Menu, CornerUpLeft } from 'lucide-react';
+import { Volume2, Hash, UserPlus, Settings, DoorOpen, ChevronDown, AlertTriangle, Paperclip, Send, Maximize2, X, Menu, CornerUpLeft, Users, MicOff } from 'lucide-react';
 import './Chat.css';
 
 interface Props {
@@ -52,9 +58,9 @@ interface Props {
 
 function typingIndicatorText(usernames: (string | null)[]): string {
   const names = usernames.map((name) => name || translate('Bilinmeyen'));
-  if (names.length === 1) return translate('{name} yazıyor...', { name: names[0] });
-  if (names.length === 2) return translate('{names} yazıyor...', { names: names.join(', ') });
-  return translate('{names} ve {count} kişi daha yazıyor...', {
+  if (names.length === 1) return translate('{name} yazıyor…', { name: names[0] });
+  if (names.length === 2) return translate('{names} yazıyor…', { names: names.join(', ') });
+  return translate('{names} ve {count} kişi daha yazıyor…', {
     names: names.slice(0, 2).join(', '),
     count: names.length - 2,
   });
@@ -75,7 +81,7 @@ function buildOrbitParticipants(
     const reconnecting = reconnectingPeerIds.has(p.user_id);
     const name = p.username ?? translate('Bilinmeyen');
     const statusText = reconnecting
-      ? translate('Yeniden Bağlanıyor...')
+      ? translate('Yeniden Bağlanıyor…')
       : p.deafened
         ? translate('Sağırlaştırıldı')
         : p.muted
@@ -149,6 +155,17 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
   const hasConnectedBefore = useConnectionStore((s) => s.hasConnectedBefore);
   const reconnectedAt = useConnectionStore((s) => s.reconnectedAt);
 
+  // Incoming friend requests are the top bar bell's badge — loaded quietly
+  // at start (FriendsPanel loads the list itself when opened) and kept
+  // current by the socket's friend_request events after that.
+  const pendingRequestCount = useFriendStore(
+    (s) => s.friendships.filter((f) => f.status === 'pending' && f.direction === 'incoming').length,
+  );
+  const refreshFriendships = useFriendStore((s) => s.refreshFriendships);
+  useEffect(() => {
+    void refreshFriendships();
+  }, [refreshFriendships]);
+
   const dmRooms = useDMStore((s) => s.rooms);
   const activeDmRoomId = useDMStore((s) => s.activeRoomId);
   const unreadCounts = useDMStore((s) => s.unreadCounts);
@@ -159,6 +176,14 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
   // view, separate from the Home/DM screen's default empty state (see
   // ServerSidebar's dedicated Friends icon).
   const [friendsViewOpen, setFriendsViewOpen] = useState(false);
+  // Which Friends tab to open on, plus a counter that remounts the panel
+  // so the bell can jump straight to the pending requests even while
+  // Friends is already showing.
+  const [friendsTab, setFriendsTab] = useState<{ tab: FriendsTab; key: number }>({ tab: 'online', key: 0 });
+  // The right-hand member card; the top bar's member button hides it.
+  const [membersPanelOpen, setMembersPanelOpen] = useState(true);
+  // Where views render their own title and buttons (see TopBar.tsx).
+  const [topBarSlot, setTopBarSlot] = useState<HTMLDivElement | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -201,6 +226,15 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
   useEffect(() => {
     setWatchPanelOpen(false);
   }, [voice.activeRoomId]);
+
+  // The voice room last tried — "Tekrar dene" on the mic-permission help
+  // joins it again.
+  const lastVoiceJoinRef = useRef<{ roomId: string; muted: boolean } | null>(null);
+  // The help card can be closed; a new failed attempt shows it again.
+  const [micHelpHidden, setMicHelpHidden] = useState(false);
+  useEffect(() => {
+    if (voice.micBlocked) setMicHelpHidden(false);
+  }, [voice.micBlocked]);
 
   // Fetch the servers the user belongs to once, on mount.
   useEffect(() => {
@@ -377,7 +411,8 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
     onLogout();
   }
 
-  function handleSelectFriends() {
+  function handleSelectFriends(tab: FriendsTab = 'online') {
+    setFriendsTab((prev) => ({ tab, key: prev.key + 1 }));
     setActiveServerId(null);
     // Opening Friends never opens a DM — it replaces whatever DM view was
     // showing, so any previously-active room stops counting as "currently
@@ -387,19 +422,21 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
     setFriendsViewOpen(true);
   }
 
-  function handleVoiceRoomClick(roomId: string) {
-    if (voice.activeRoomId === roomId) {
-      voiceLeaveRef.current();
-    } else {
-      // Captured now, synchronously, rather than after join() resolves —
-      // nothing reads either value unless voice.activeRoomId is also
-      // truthy (both the safety effect above and VoiceStatusBar's render
-      // gate on it), so a join that ultimately fails just leaves harmless,
-      // unused stale values here instead of needing its own cleanup path.
-      setVoiceRoomServerId(activeServerId);
-      setVoiceRoomName(channels.find((c) => c.id === roomId)?.name ?? null);
-      void voice.join(roomId);
-    }
+  function handleVoiceRoomClick(roomId: string, options: { muted?: boolean } = {}) {
+    // Already in (or still connecting to) this room: nothing to do. Leaving
+    // is the "Ses bağlı" card's own button, so a stray click on the channel
+    // you're talking in never hangs up.
+    if (voice.activeRoomId === roomId || voice.joiningRoomId === roomId) return;
+
+    // Captured now, synchronously, rather than after join() resolves —
+    // nothing reads either value unless voice.activeRoomId is also
+    // truthy (both the safety effect above and VoiceStatusBar's render
+    // gate on it), so a join that ultimately fails just leaves harmless,
+    // unused stale values here instead of needing its own cleanup path.
+    setVoiceRoomServerId(activeServerId);
+    setVoiceRoomName(channels.find((c) => c.id === roomId)?.name ?? null);
+    lastVoiceJoinRef.current = { roomId, muted: !!options.muted };
+    void voice.join(roomId, { muted: options.muted });
   }
 
   function handleToggleScreenShare() {
@@ -457,7 +494,6 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
     handleDraftChange(e.target.value);
   }
 
-  const myColor = userColor(user.id);
   const activeServer = servers.find((s) => s.id === activeServerId);
   const activeServerName = activeServer?.name ?? '';
   const activeChannelName = channels.find((c) => c.id === activeChannelId)?.name ?? '';
@@ -478,19 +514,54 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
   function renderChannelRow(ch: Channel) {
     if (ch.type === 'voice') {
       const isActive = voice.activeRoomId === ch.id;
+      const isJoining = voice.joiningRoomId === ch.id;
+      const peopleCount = isActive ? voice.participants.length : ch.voice_occupants?.length ?? 0;
       return (
-        <div key={ch.id}>
-          <div
+        <div
+          key={ch.id}
+          className={`voice-channel-card${isActive ? ' active' : ''}${isJoining ? ' joining' : ''}`}
+        >
+          <button
+            type="button"
             className={`channel-item voice-channel-item${isActive ? ' active' : ''}`}
-            onClick={() => handleVoiceRoomClick(ch.id)}
+            onClick={(e) => handleVoiceRoomClick(ch.id, { muted: e.shiftKey })}
+            title={isActive || isJoining ? undefined : t('Katıl (Shift ile sessiz katıl)')}
           >
-            <span className="channel-hash"><Volume2 size={18} /></span>
-            {ch.name}
-          </div>
+            <span className="channel-hash"><Volume2 size={16} strokeWidth={1.75} /></span>
+            <span className="channel-name">{ch.name}</span>
+            {peopleCount > 0 && (
+              <span className="voice-channel-count" aria-label={t('{count} kişi', { count: peopleCount })}>
+                {peopleCount}
+              </span>
+            )}
+          </button>
 
+          {!isActive && !isJoining && (
+            <button
+              type="button"
+              className="voice-join-muted-btn"
+              onClick={() => handleVoiceRoomClick(ch.id, { muted: true })}
+              title={t('Sessiz katıl')}
+              aria-label={t('{channel} kanalına sessiz katıl', { channel: ch.name })}
+            >
+              <MicOff size={16} strokeWidth={1.75} />
+            </button>
+          )}
+
+          {isJoining && (
+            <div className="voice-joining" role="status">
+              <span className="voice-joining-spinner" aria-hidden="true" />
+              {t('Bağlanıyor…')}
+            </div>
+          )}
+
+          {/* Who's in the room you're in — names, speaking ring, mute and
+              deafen icons, and a click-for-volume popover on each person.
+              The controls themselves are in the "Ses bağlı" card. */}
           {isActive && (
             <div className="voice-participant-list">
               <VoiceOrbit
+                layout="list"
                 participants={buildOrbitParticipants(
                   voice.participants,
                   voice.speakingUserIds,
@@ -500,39 +571,14 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                 currentUserId={user.id}
                 onVolumeChange={voice.setPeerVolume}
               />
-
-              <VoiceStatusBar
-                isMuted={voice.isMuted}
-                isDeafened={voice.isDeafened}
-                onToggleMute={voice.toggleMute}
-                onToggleDeafen={voice.toggleDeafen}
-                onLeave={() => voiceLeaveRef.current()}
-              />
-
-              <button
-                className={`screen-share-btn${voice.isScreenSharing ? ' active' : ''}`}
-                onClick={handleToggleScreenShare}
-              >
-                {voice.isScreenSharing ? <ScreenShareOff size={14} /> : <ScreenShare size={14} />}{' '}
-                {voice.isScreenSharing ? t('Ekranı Durdur') : t('Ekranı Paylaş')}
-              </button>
-
-              <button
-                className={`screen-share-btn${watchPanelOpen || watch.video ? ' active-soft' : ''}`}
-                onClick={() => setWatchPanelOpen((open) => !open)}
-                aria-pressed={watchPanelOpen}
-              >
-                <Clapperboard size={14} /> {t('Birlikte İzle')}
-              </button>
             </div>
           )}
 
           {/* Join-before-you-look-inside preview — who's already in this
               room, without joining it yourself first (see
               Backend.Chat.voice_occupants/1 + "voice_presence_updated").
-              Hidden once isActive, since VoiceOrbit above already shows
-              (a richer version of) the same "who's in here" information —
-              this would just be a redundant second list underneath it. */}
+              Hidden once isActive, since the list above already shows the
+              same people with their live state. */}
           {!isActive && !!ch.voice_occupants?.length && (
             <div className="voice-occupants-preview">
               {ch.voice_occupants.map((occupant) => (
@@ -553,52 +599,36 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
     }
 
     const unread = unreadChannelIds.has(ch.id);
+    const isActive = ch.id === activeChannelId;
     return (
-      <div
+      <button
         key={ch.id}
-        className={`channel-item${ch.id === activeChannelId ? ' active' : ''}`}
+        type="button"
+        className={`channel-item${isActive ? ' active' : ''}`}
+        aria-current={isActive ? 'page' : undefined}
         onClick={() => selectChannel(ch.id)}
       >
-        <span className="channel-hash"><Hash size={18} /></span>
-        <span className={unread ? 'channel-name-unread' : undefined}>{ch.name}</span>
-        {unread && <span className="unread-dot" />}
-      </div>
+        <span className="channel-hash"><Hash size={16} strokeWidth={1.75} /></span>
+        <span className={`channel-name${unread ? ' channel-name-unread' : ''}`}>{ch.name}</span>
+        {unread && <span className="unread-dot" aria-label={t('Okunmamış mesaj var')} />}
+      </button>
     );
   }
 
-  const userPanel = (
-    <div className="user-panel">
-      <div
-        className={`user-avatar-sm${voice.activeRoomId && voice.speakingUserIds.has(user.id) ? ' speaking' : ''}`}
-        style={{ background: myColor }}
-        title={user.username}
-      >
-        <AvatarFace url={user.avatar_url} fallback={initials(user.username)} />
-      </div>
-      <div className="user-info">
-        <div className="user-name-sm">{user.username}</div>
-        <div className={`user-status-sm${isConnected ? '' : ' user-status-offline'}`}>
-          <Circle size={8} fill="currentColor" stroke="none" /> {isConnected ? t('Çevrimiçi') : t('Bağlantı Kesildi')}
-        </div>
-      </div>
-      <button
-        className="user-settings-btn"
-        onClick={() => setShowUserSettingsModal(true)}
-        title={t('Kullanıcı Ayarları')}
-        aria-label={t('Kullanıcı Ayarları')}
-      >
-        <Settings size={20} strokeWidth={2} />
-      </button>
-      <button
-        className="logout-btn"
-        onClick={handleLogout}
-        title={t('Çıkış yap')}
-        aria-label={t('Çıkış yap')}
-      >
-        <LogOut size={20} strokeWidth={2} />
-      </button>
-    </div>
-  );
+  // Joining and leaving a voice room, said out loud for screen readers (the
+  // visual cues are the channel card and the "Ses bağlı" card). Speaking
+  // isn't announced — that would drown everything else out.
+  const [voiceAnnouncement, setVoiceAnnouncement] = useState('');
+  const announcedRoomRef = useRef<string | null>(null);
+  useEffect(() => {
+    const previous = announcedRoomRef.current;
+    announcedRoomRef.current = voice.activeRoomId;
+    if (voice.activeRoomId && voice.activeRoomId !== previous) {
+      setVoiceAnnouncement(t('{channel} ses kanalına bağlandın', { channel: voiceRoomName ?? '' }));
+    } else if (!voice.activeRoomId && previous) {
+      setVoiceAnnouncement(t('Ses kanalından ayrıldın'));
+    }
+  }, [voice.activeRoomId, voiceRoomName, t]);
 
   // Picking somewhere to read (a channel, a DM, the friends screen) is what
   // the drawer was opened for, so close it and show that.
@@ -624,7 +654,65 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
     (mobileNavOpen ? ' mobile-nav-open' : '') +
     (voice.activeRoomId ? ' chat-layout--voice' : '');
 
+  // Screen sharing and Birlikte İzle are drawn only in the voice room's own
+  // server (the shared screens and the watch panel live in its channel
+  // view), so the "Ses bağlı" card offers them there — plus the stop button
+  // whenever you're sharing, wherever you are.
+  const viewingVoiceServer =
+    !!voice.activeRoomId && activeServerId === voiceRoomServerId && !friendsViewOpen;
+
+  // The member card belongs to a server; search results take its place
+  // while they're open (same column as before the redesign).
+  const showMembersPanel =
+    !!activeServerId && !friendsViewOpen && membersPanelOpen && !(isSearchPanelOpen && activeChannelId);
+
+  // The current view's title and buttons in the top bar. DMChatView renders
+  // its own through TopBarSlot, since it owns that state.
+  let topBarContent: ReactNode = null;
+  if (friendsViewOpen) {
+    topBarContent = (
+      <h1 className="topbar-title">
+        <span className="topbar-title-text">{t('Arkadaşlar')}</span>
+      </h1>
+    );
+  } else if (activeServerId) {
+    topBarContent = (
+      <>
+        <h1 className="topbar-title">
+          {activeChannelId && <Hash size={22} strokeWidth={1.75} className="topbar-title-icon" />}
+          <span className="topbar-title-text">{activeChannelId ? activeChannelName : activeServerName}</span>
+        </h1>
+        {activeChannelId && (
+          <TopBarSearch open={isSearchBarOpen} onToggle={() => setIsSearchBarOpen((open) => !open)}>
+            <SearchBar
+              autoFocus
+              isSearching={isSearching}
+              onSearch={(filters) => void searchChannelMessages(activeChannelId, filters)}
+            />
+          </TopBarSearch>
+        )}
+        <button
+          type="button"
+          className="topbar-btn"
+          onClick={() => setMembersPanelOpen((open) => !open)}
+          aria-pressed={membersPanelOpen}
+          title={t('Üye listesi')}
+          aria-label={t('Üye listesi')}
+        >
+          <Users size={20} strokeWidth={1.75} />
+        </button>
+      </>
+    );
+  } else if (!activeDmRoomId) {
+    topBarContent = (
+      <h1 className="topbar-title">
+        <span className="topbar-title-text">{t('Direkt Mesajlar')}</span>
+      </h1>
+    );
+  }
+
   return (
+    <TopBarSlotContext.Provider value={topBarSlot}>
     <div className={layoutClass}>
       <button
         type="button"
@@ -641,6 +729,9 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
         aria-hidden="true"
       />
       <NotificationPermissionBanner />
+      <div className="visually-hidden" role="status" aria-live="polite">
+        {voiceAnnouncement}
+      </div>
 
       {/* Only after we've actually been connected before — never during the
           initial page-load handshake, where this would be a misleading
@@ -648,32 +739,16 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
       {!isConnected && hasConnectedBefore && (
         <div className="reconnect-banner" role="status">
           <span className="reconnect-banner-dot" />
-          {t('Yeniden bağlanmaya çalışılıyor...')}
+          {t('Yeniden bağlanmaya çalışılıyor…')}
         </div>
       )}
 
       <ServerSidebar
         friendsActive={friendsViewOpen}
-        onSelectFriends={handleSelectFriends}
+        onSelectFriends={() => handleSelectFriends()}
         onNavigate={() => setFriendsViewOpen(false)}
       />
 
-      {/* Always accessible while a voice room is active, regardless of
-          which server/DM/Arkadaşlar view is currently on screen — see the
-          "leave on server switch" bug this (and the safety-effect guard
-          above) fixes. */}
-      {voice.activeRoomId && (
-        <VoiceStatusBar
-          variant="fixed"
-          roomName={voiceRoomName}
-          serverName={voiceRoomServerName}
-          isMuted={voice.isMuted}
-          isDeafened={voice.isDeafened}
-          onToggleMute={voice.toggleMute}
-          onToggleDeafen={voice.toggleDeafen}
-          onLeave={() => voiceLeaveRef.current()}
-        />
-      )}
 
       {/* ── Left sidebar ── */}
       {/* Tapping any channel or DM closes the phone drawer — including the
@@ -687,23 +762,28 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
         {activeServerId ? (
           <>
             <div className="server-header">
-              <span className="server-header-name">{activeServerName}</span>
+              <div className="server-header-text">
+                <span className="server-header-name">{activeServerName}</span>
+                <span className="server-header-meta">{t('{count} çevrimiçi', { count: onlineUsers.length })}</span>
+              </div>
               <button
+                type="button"
                 className="invite-people-btn"
                 onClick={() => setShowInviteModal(true)}
                 title={t('İnsanları Davet Et')}
                 aria-label={t('İnsanları Davet Et')}
               >
-                <UserPlus size={16} />
+                <UserPlus size={18} strokeWidth={1.75} />
               </button>
               {canOpenSettings && (
                 <button
+                  type="button"
                   className="invite-people-btn"
                   onClick={() => setShowSettingsModal(true)}
                   title={t('Sunucu Ayarları')}
                   aria-label={t('Sunucu Ayarları')}
                 >
-                  <Settings size={16} />
+                  <Settings size={18} strokeWidth={1.75} />
                   {activeServerId && reportServerIds.has(activeServerId) && (
                     <span className="settings-report-dot" aria-label={t('Yeni rapor')} />
                   )}
@@ -711,17 +791,16 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
               )}
               {!isServerOwner && (
                 <button
+                  type="button"
                   className="invite-people-btn leave-server-btn"
                   onClick={() => setShowLeaveModal(true)}
                   title={t('Sunucudan Ayrıl')}
                   aria-label={t('Sunucudan Ayrıl')}
                 >
-                  <DoorOpen size={16} />
+                  <DoorOpen size={18} strokeWidth={1.75} />
                 </button>
               )}
             </div>
-
-            {userPanel}
 
             <nav className="channel-list">
               {isServerOwner && (
@@ -745,7 +824,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                           className="channel-category-toggle"
                           onClick={() => toggleCategory(group.category!.id)}
                         >
-                          <ChevronDown size={12} className={`category-chevron${collapsed ? ' collapsed' : ''}`} />
+                          <ChevronDown size={14} className={`category-chevron${collapsed ? ' collapsed' : ''}`} />
                           <span className="channel-category-label">{group.category.name}</span>
                         </button>
                         {isServerOwner && (
@@ -772,26 +851,45 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                   </div>
                 );
               })}
-              {voice.error && <div className="channel-status error"><AlertTriangle size={14} /> {voice.error}</div>}
+              {voice.micBlocked && !micHelpHidden ? (
+                <MicPermissionHelp
+                  onRetry={() => {
+                    const last = lastVoiceJoinRef.current;
+                    if (last) handleVoiceRoomClick(last.roomId, { muted: last.muted });
+                  }}
+                  onDismiss={() => setMicHelpHidden(true)}
+                />
+              ) : (
+                !voice.micBlocked &&
+                voice.error && (
+                  <div className="channel-status error" role="alert">
+                    <AlertTriangle size={14} /> {voice.error}
+                  </div>
+                )
+              )}
             </nav>
           </>
         ) : (
           <>
             <div className="server-header">
-              <span className="server-header-name">{t('Direkt Mesajlar')}</span>
+              <div className="server-header-text">
+                <span className="server-header-name">{t('Direkt Mesajlar')}</span>
+                <span className="server-header-meta">{t('{count} sohbet', { count: dmRooms.length })}</span>
+              </div>
             </div>
-
-            {userPanel}
 
             <nav className="channel-list">
               {dmRooms.map((room) => {
                 const unreadCount = unreadCounts[room.id] ?? 0;
                 const color = userColor(room.user_id);
                 const name = room.username ?? t('Bilinmeyen');
+                const online = room.user_status === 'online';
                 return (
-                  <div
+                  <button
                     key={room.id}
+                    type="button"
                     className={`channel-item dm-room-item${room.id === activeDmRoomId ? ' active' : ''}`}
+                    aria-current={room.id === activeDmRoomId ? 'page' : undefined}
                     onClick={() => {
                       setFriendsViewOpen(false);
                       setActiveDmRoomId(room.id);
@@ -802,16 +900,19 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
                         <AvatarFace url={room.avatar_url} fallback={initials(name)} />
                       </div>
                       <StatusIndicator
-                        status={room.user_status === 'online' ? 'online' : 'offline'}
-                        size={9}
+                        status={online ? 'online' : 'offline'}
+                        size={11}
                         className="dm-room-status-dot"
                       />
                     </div>
-                    <span className={unreadCount > 0 ? 'channel-name-unread' : undefined}>{name}</span>
+                    <span className="dm-room-text">
+                      <span className={`channel-name${unreadCount > 0 ? ' channel-name-unread' : ''}`}>{name}</span>
+                      <span className="dm-room-status">{online ? t('Çevrimiçi') : t('Çevrimdışı')}</span>
+                    </span>
                     {unreadCount > 0 && (
                       <span className="unread-badge">{formatUnreadBadge(unreadCount)}</span>
                     )}
-                  </div>
+                  </button>
                 );
               })}
               {dmRooms.length === 0 && (
@@ -824,6 +925,39 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
         )}
       </aside>
 
+      {/* Always accessible while a voice room is active, regardless of
+          which server/DM/Arkadaşlar view is currently on screen — see the
+          "leave on server switch" bug this (and the safety-effect guard
+          above) fixes. */}
+      {voice.activeRoomId && (
+        <VoiceStatusBar
+          variant="fixed"
+          roomName={voiceRoomName}
+          serverName={voiceRoomServerName}
+          isMuted={voice.isMuted}
+          isDeafened={voice.isDeafened}
+          onToggleMute={voice.toggleMute}
+          onToggleDeafen={voice.toggleDeafen}
+          onLeave={() => voiceLeaveRef.current()}
+          isScreenSharing={voice.isScreenSharing}
+          onToggleScreenShare={viewingVoiceServer || voice.isScreenSharing ? handleToggleScreenShare : undefined}
+          isWatchPartyOpen={watchPanelOpen || !!watch.video}
+          onToggleWatchParty={viewingVoiceServer ? () => setWatchPanelOpen((open) => !open) : undefined}
+        />
+      )}
+
+      <TopBar
+        user={user}
+        isConnected={isConnected}
+        pendingRequestCount={pendingRequestCount}
+        onOpenPendingRequests={() => handleSelectFriends('pending')}
+        onOpenSettings={() => setShowUserSettingsModal(true)}
+        onLogout={handleLogout}
+        slotRef={setTopBarSlot}
+      >
+        {topBarContent}
+      </TopBar>
+
       {/* ── Main area — exactly one view renders at a time, each owning
           its own <main> (server chat keeps drag/drop bound to the channel
           store here; DMChatView binds its own to the DM store). The
@@ -832,7 +966,7 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
           open (see handleSelectFriends). ── */}
       {friendsViewOpen ? (
         <main className="chat-main">
-          <FriendsPanel />
+          <FriendsPanel key={friendsTab.key} initialTab={friendsTab.tab} />
         </main>
       ) : activeServerId ? (
         <>
@@ -846,29 +980,6 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
             watchPanel ?? <EmptyState message={t('Sohbet etmeye başlamak için bir kanal seç')} />
           ) : (
           <>
-            <header className="chat-header">
-              <span className="chat-header-hash"><Hash size={20} /></span>
-              <span className="chat-header-name">{activeChannelName}</span>
-              <button
-                className={`chat-header-search-btn${isSearchBarOpen ? ' active' : ''}`}
-                onClick={() => setIsSearchBarOpen((open) => !open)}
-                title={t('Mesajlarda ara')}
-                aria-label={t('Mesajlarda ara')}
-                aria-pressed={isSearchBarOpen}
-              >
-                <Search size={18} />
-              </button>
-            </header>
-
-            {isSearchBarOpen && (
-              <div className="chat-search-row">
-                <SearchBar
-                  isSearching={isSearching}
-                  onSearch={(filters) => void searchChannelMessages(activeChannelId, filters)}
-                />
-              </div>
-            )}
-
             {isDraggingFile && (
               <div className="drag-drop-overlay">
                 <div className="drag-drop-message"><Paperclip size={18} /> {t('Dosyayı buraya bırak')}</div>
@@ -1110,34 +1221,11 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
         </div>
       )}
 
-      {/* ── Right sidebar: online users — hidden entirely until a server is active ── */}
-      {activeServerId && (
-        <aside className="online-sidebar">
-          <div className="online-sidebar-header">
-            {t('Çevrimiçi — {count}', { count: onlineUsers.length })}
-          </div>
-          <div className="online-user-list">
-            {onlineUsers.map((presenceUser) => {
-              const color = userColor(presenceUser.user_id);
-              const name = presenceUser.username ?? t('Bilinmeyen');
-              return (
-                <div key={presenceUser.user_id} className="online-user-item">
-                  <div className="online-user-avatar-wrapper">
-                    <div
-                      className="online-user-avatar"
-                      style={{ background: color }}
-                      title={name}
-                    >
-                      <AvatarFace url={presenceUser.avatar_url} fallback={initials(name)} />
-                    </div>
-                    <StatusIndicator status="online" size={11} className="online-status-dot" />
-                  </div>
-                  <span className="online-user-name">{name}</span>
-                </div>
-              );
-            })}
-          </div>
-        </aside>
+      {/* ── Right column: the member card (online by default, everyone by
+          role behind its arrow) — servers only, hidden by the top bar's
+          member button or while search results are open. ── */}
+      {showMembersPanel && activeServerId && (
+        <MembersPanel serverId={activeServerId} onlineUsers={onlineUsers} currentUserId={user.id} />
       )}
 
       {/* Hidden elements that actually play the remote peers' voice audio. */}
@@ -1196,5 +1284,6 @@ export default function Chat({ user, onLogout, onUserUpdated }: Props) {
         />
       )}
     </div>
+    </TopBarSlotContext.Provider>
   );
 }

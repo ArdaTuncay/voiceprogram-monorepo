@@ -6,7 +6,7 @@
 }
 
 .status-indicator-online {
-  background: var(--success);
+  background: var(--status-online);
 }
 
 .status-indicator-idle {
@@ -19,14 +19,14 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1.5px solid var(--success);
+  border: 1.5px solid var(--status-online);
 }
 
 .status-indicator-dot {
   width: 40%;
   height: 40%;
   border-radius: 50%;
-  background: var(--success);
+  background: var(--status-online);
 }
 
 .status-indicator-offline {

@@ -41,6 +41,10 @@ interface Props {
    * Omitting this (along with `currentUserId`) disables the click-to-open
    * volume popover entirely — avatars render exactly as before. */
   onVolumeChange?: (peerId: string, volume: number) => void;
+  /** 'list' always renders the stacked list (avatar, name, mute/deafen
+   * icons), whatever the count — the channel-card design uses it. 'orbit'
+   * (default) is the circle up to maxOrbitSize people. */
+  layout?: 'orbit' | 'list';
 }
 
 const ORBIT_RADIUS = 56;
@@ -173,7 +177,13 @@ function ParticipantAvatar({ p, size }: { p: OrbitParticipant; size: number }) {
  * Orbit positions are recomputed only when the participant COUNT changes,
  * not on every render — geometry depends solely on how many slots exist,
  * not on who occupies them or their speaking/muted state. */
-export default function VoiceOrbit({ participants, maxOrbitSize = 8, currentUserId, onVolumeChange }: Props) {
+export default function VoiceOrbit({
+  participants,
+  maxOrbitSize = 8,
+  currentUserId,
+  onVolumeChange,
+  layout = 'orbit',
+}: Props) {
   const n = participants.length;
 
   // Subscribes to the UI language; the small components below use the plain
@@ -195,7 +205,7 @@ export default function VoiceOrbit({ participants, maxOrbitSize = 8, currentUser
     return !!onVolumeChange && peerId !== currentUserId;
   }
 
-  if (n <= 1) {
+  if (n <= 1 && layout !== 'list') {
     return (
       <div className="voice-orbit-single">
         {participants.map((p) => {
@@ -213,7 +223,7 @@ export default function VoiceOrbit({ participants, maxOrbitSize = 8, currentUser
     );
   }
 
-  if (n > maxOrbitSize) {
+  if (layout === 'list' || n > maxOrbitSize) {
     return (
       <>
         {participants.map((p) => {
@@ -227,7 +237,7 @@ export default function VoiceOrbit({ participants, maxOrbitSize = 8, currentUser
             </div>
           );
           return (
-            <div key={p.id} className="voice-participant">
+            <div key={p.id} className={`voice-participant${p.isSpeaking ? ' speaking' : ''}`}>
               {hasVolumePopover(p.id) ? (
                 <AvatarWithVolumePopover peerId={p.id} volume={p.volume ?? 1} onVolumeChange={onVolumeChange!}>
                   {avatar}
