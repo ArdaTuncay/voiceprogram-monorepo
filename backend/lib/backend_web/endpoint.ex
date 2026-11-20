@@ -74,6 +74,10 @@ defmodule BackendWeb.Endpoint do
     only: BackendWeb.static_paths(),
     raise_on_missing_only: code_reloading?
 
+  # Uploads kept in S3/R2, served through this host (the bucket's own
+  # r2.dev address is blocked on common Turkish networks) — see its moduledoc.
+  plug BackendWeb.S3UploadsPlug
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
