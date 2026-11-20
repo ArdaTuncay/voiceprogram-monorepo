@@ -68,9 +68,9 @@ Taslak: https://claude.ai/artifact/YBkxVqBF1ezQ5eYUKmZ1a5. Sayfalarda sarı işa
 
 ### 3. Masaüstü kurulum dosyası (1.0.0)
 İndir düğmesi şu adresi gösteriyor: `https://github.com/ArdaTuncay/voiceprogram-monorepo/releases/download/desktop-v1.0.0/Zircle-Setup-1.0.0.exe`. Bu dosya henüz yok.
-- [ ] Derlemek: `cd frontend; npm run build:electron`, sonra `cd desktop; npm run build:win`. (20 Kasım: site dalından deneme derlemesi yapıldı, 112,8 MB. Yayına çıkacak dosya merge'den sonra `main`'den yeniden derlenecek. Simge ayarlı değil, Electron'un varsayılan simgesi çıkıyor.)
+- [ ] Derlemek: `cd frontend; npm run build:electron`, sonra `cd desktop; npm run build:win`. (20 Kasım: site dalından deneme derlemesi yapıldı, 112,8 MB. Yayına çıkacak dosya merge'den sonra `main`'den yeniden derlenecek. Simge eklendi: `desktop/build/icon.png`, `favicon.svg`'deki maskottan üretilen 512×512 şeffaf PNG.)
 - [ ] Kurulum dosyasını deneyip uygulamanın açıldığını ve giriş yapılabildiğini kontrol etmek.
-- [ ] GitHub'da `desktop-v1.0.0` sürümünü oluşturup `Zircle-Setup-1.0.0.exe` dosyasını yüklemek. **Dışarıya açık bir işlem; önce kullanıcıdan onay al.**
+- [ ] **Yayın günü** (kullanıcı kararı, 20 Kasım): GitHub'da `desktop-v1.0.0` sürümünü oluşturup `Zircle-Setup-1.0.0.exe` dosyasını yüklemek. **Dışarıya açık bir işlem; önce kullanıcıdan onay al.**
 - [ ] `frontend/src/site/release.ts` içinde `date` (YYYY-AA-GG) ve `sizeMb` alanlarını doldurmak. Böylece İndir ve Yenilikler sayfalarında tarih ve boyut görünür.
 - Eski `desktop-v1` sürümü (Ağustos, 0.0.0) duruyor; ne yapılacağına kullanıcı karar verecek.
 
