@@ -680,6 +680,28 @@ defmodule Backend.Servers do
   end
 
   @doc """
+  What the public invite page shows before anyone signs in
+  (`GET /api/invites/:code`): the invite's server and its inviter, both
+  preloaded. Applies the same validity checks as `accept_invite/2` — not
+  found, expired, used up — so the page never offers a join that would
+  then fail. A ban is the one exception: it depends on who accepts, and
+  the page doesn't know that yet.
+  """
+  def preview_invite(code) when is_binary(code) do
+    case Invite |> Repo.get_by(code: code) |> Repo.preload([:server, :inviter]) do
+      nil ->
+        {:error, :not_found}
+
+      invite ->
+        cond do
+          invite_expired?(invite) -> {:error, :expired}
+          invite_maxed_out?(invite) -> {:error, :max_uses_reached}
+          true -> {:ok, invite}
+        end
+    end
+  end
+
+  @doc """
   Validates an invite `code` and, if valid, adds `user_id` as a member of its
   server. Already-members are treated as a no-op success (idempotent accept).
 

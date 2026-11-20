@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import type { User } from '../types';
 import { useAuthFlow } from '../hooks/useAuthFlow';
 import { useT } from '../i18n';
-import SiteLayout from './SiteLayout';
+import SiteLayout, { DownloadIcon } from './SiteLayout';
 import SiteAuthCard from './SiteAuthCard';
 
 interface Props {
@@ -95,7 +95,10 @@ export default function HomePage({ onAuth }: Props) {
                 {t('Windows uygulamasını kur, aynı hesapla giriş yap.')}
               </p>
               <div className="site-path-actions">
-                <span className="site-muted-small">{t('İndirme yakında · Windows 10 ve 11')}</span>
+                <a href="/indir" className="site-btn site-btn-outline">
+                  {t('İndirme sayfası')}
+                </a>
+                <span className="site-muted-small">{t('Windows 10 ve 11')}</span>
               </div>
             </article>
           </div>
@@ -124,7 +127,12 @@ export default function HomePage({ onAuth }: Props) {
       </section>
 
       <section id="ozellikler" className="site-container site-section site-section-tight">
-        <h2>{t('Özellikler')}</h2>
+        <div className="site-section-row">
+          <h2>{t('Özellikler')}</h2>
+          <a href="/ozellikler" className="site-section-link">
+            {t('Tüm özellikleri gör')}
+          </a>
+        </div>
         <div className="site-features">
           <Feature title={t('Sesli kanallar')} text={t('Kanala gir, konuş. Konuşan kişi vurgulanır.')} />
           <Feature title={t('Ekran paylaşımı')} text={t('Sesli kanaldayken ekranını paylaş.')} />
@@ -140,6 +148,9 @@ export default function HomePage({ onAuth }: Props) {
           <div className="site-section-head">
             <h2>{t('Hesabın güvende.')}</h2>
             <p>{t('Hesabına kimin girebileceğini sen belirlersin.')}</p>
+            <a href="/guvenlik" className="site-section-link">
+              {t('Güvenlik sayfası')}
+            </a>
           </div>
           <ul className="site-security-list">
             <li>
@@ -174,6 +185,9 @@ export default function HomePage({ onAuth }: Props) {
             {t("Evet, Ayarlar'dan hesabını kalıcı olarak silebilirsin.")}
           </Faq>
         </div>
+        <a href="/destek" className="site-section-link">
+          {t('Diğer sorular için Destek')}
+        </a>
       </section>
 
       <section className="site-cta">
@@ -181,9 +195,15 @@ export default function HomePage({ onAuth }: Props) {
         <div className="site-cta-ring site-cta-ring-inner" aria-hidden="true" />
         <div className="site-cta-inner">
           <h2>{t('Hemen başla.')}</h2>
-          <button type="button" className="site-btn site-btn-primary site-btn-large" onClick={() => goToCard('register')}>
-            {t('Kayıt ol')}
-          </button>
+          <div className="site-cta-actions">
+            <button type="button" className="site-btn site-btn-primary site-btn-large" onClick={() => goToCard('register')}>
+              {t('Kayıt ol')}
+            </button>
+            <a href="/indir" className="site-btn site-btn-outline site-btn-large">
+              <DownloadIcon />
+              {t('Windows için indir')}
+            </a>
+          </div>
         </div>
       </section>
     </SiteLayout>
@@ -199,7 +219,8 @@ function Feature({ title, text }: { title: string; text: string }) {
   );
 }
 
-function Faq({ question, open, children }: { question: string; open?: boolean; children: string }) {
+/** One question-and-answer row (also used by the support page). */
+export function Faq({ question, open, children }: { question: string; open?: boolean; children: string }) {
   return (
     <details open={open}>
       <summary>

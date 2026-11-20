@@ -1,12 +1,16 @@
 import type { User } from '../types';
 import type { useAuthFlow } from '../hooks/useAuthFlow';
 import { useT } from '../i18n';
+import { rich } from '../i18n/rich';
 import { TwoFactorLoginScreen, VerificationPendingScreen } from '../components/Auth';
 import ForgotPasswordScreen from '../components/ForgotPasswordScreen';
 
 interface Props {
   flow: ReturnType<typeof useAuthFlow>;
   onAuth: (user: User) => void;
+  /** The card's title is the page's main heading on the sign-in page (h1),
+   * and a section heading inside the home page's hero (h2, the default). */
+  titleLevel?: 'h1' | 'h2';
 }
 
 /**
@@ -17,8 +21,9 @@ interface Props {
  * check your email, two-factor code, forgot password — are the app's own
  * screens, shown inside this card.
  */
-export default function SiteAuthCard({ flow, onAuth }: Props) {
+export default function SiteAuthCard({ flow, onAuth, titleLevel = 'h2' }: Props) {
   const t = useT();
+  const Title = titleLevel;
   const register = flow.mode === 'register';
 
   let body;
@@ -44,7 +49,7 @@ export default function SiteAuthCard({ flow, onAuth }: Props) {
           </button>
         </div>
 
-        <h2>{register ? t('Hesap oluştur') : t('Tekrar hoş geldin!')}</h2>
+        <Title>{register ? t('Hesap oluştur') : t('Tekrar hoş geldin!')}</Title>
 
         <form className="site-auth-form" onSubmit={flow.handleSubmit}>
           {register && (
@@ -101,7 +106,12 @@ export default function SiteAuthCard({ flow, onAuth }: Props) {
         </form>
 
         {register ? (
-          <p className="site-auth-note">{t('Kayıt olduktan sonra e-postana bir doğrulama bağlantısı gönderilir.')}</p>
+          <p className="site-auth-note">
+            {rich(t("Kayıt olarak {terms}'nı ve {privacy}'nı kabul edersin. E-postana bir doğrulama bağlantısı gönderilir."), {
+              terms: <a href="/kosullar">{t('Kullanım Koşulları')}</a>,
+              privacy: <a href="/gizlilik">{t('Gizlilik Politikası')}</a>,
+            })}
+          </p>
         ) : (
           <button type="button" className="site-auth-link" onClick={flow.openForgotPassword}>
             {t('Şifremi unuttum')}

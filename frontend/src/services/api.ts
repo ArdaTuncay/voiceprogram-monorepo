@@ -522,6 +522,17 @@ export function revokeInvite(serverId: string, inviteId: string): Promise<ApiRes
   return authedDelete<void>(`/servers/${serverId}/invites/${inviteId}`);
 }
 
+/** What the public invite page (/davet/:code) shows before signing in. */
+export interface InvitePreview {
+  server_name: string;
+  server_icon_url: string | null;
+  inviter_username: string | null;
+}
+
+export function previewInvite(code: string): Promise<ApiResult<InvitePreview>> {
+  return get<InvitePreview>(`/invites/${encodeURIComponent(code)}`);
+}
+
 export function acceptInvite(code: string): Promise<ApiResult<Server>> {
   return authedPost<Server>(`/invites/${code}/accept`, {});
 }

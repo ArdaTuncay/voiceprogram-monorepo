@@ -13,8 +13,8 @@ export type AuthMode = 'login' | 'register';
  * validation errors, the same "check your email" step for an unverified
  * address, and the same two-factor step.
  */
-export function useAuthFlow(onAuth: (user: User) => void) {
-  const [mode, setModeState] = useState<AuthMode>('login');
+export function useAuthFlow(onAuth: (user: User) => void, initialMode: AuthMode = 'login') {
+  const [mode, setModeState] = useState<AuthMode>(initialMode);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

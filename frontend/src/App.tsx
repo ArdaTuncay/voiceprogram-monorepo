@@ -9,9 +9,18 @@ import Chat from './components/Chat';
 import VerifyEmailPage from './components/VerifyEmailPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import ConfirmEmailChangePage from './components/ConfirmEmailChangePage';
+import { useServerStore } from './stores/useServerStore';
 import HomePage from './site/HomePage';
 import FeaturesPage from './site/FeaturesPage';
-import { sitePage } from './site/siteHome';
+import DownloadPage from './site/DownloadPage';
+import SignInPage from './site/SignInPage';
+import InvitePage from './site/InvitePage';
+import SecurityPage from './site/SecurityPage';
+import SupportPage from './site/SupportPage';
+import ChangelogPage from './site/ChangelogPage';
+import NotFoundPage from './site/NotFoundPage';
+import { PrivacyPage, TermsPage } from './site/LegalPages';
+import { inviteCodeFromPath, sitePage, takePendingInvite } from './site/siteHome';
 import './App.css';
 
 const VERIFY_EMAIL_PATH_PREFIX = '/verify-email/';
@@ -32,10 +41,41 @@ export default function App() {
   const [user, setUser] = useState<User | null>(loadSession);
   const forcedLogoutAt = useSessionStore((s) => s.forcedLogoutAt);
 
+  // Bumped to re-render after this component moves the address itself
+  // (history.replaceState doesn't trigger a render on its own).
+  const [, setAddressVersion] = useState(0);
+
   function handleAuth(u: User) {
     storeUser(u);
     setUser(u);
   }
+
+  // Signing in on a site page (/, /giris) opens Zircle in the same tab; the
+  // address becomes the app's own, /, so a reload stays in the app.
+  function handleSiteAuth(u: User) {
+    window.history.replaceState(null, '', '/');
+    handleAuth(u);
+  }
+
+  // A signed-in visitor joined from an invite page: open Zircle on /, where
+  // the server store already has that server selected.
+  function openApp() {
+    window.history.replaceState(null, '', '/');
+    setAddressVersion((v) => v + 1);
+  }
+
+  // An invite the visitor chose to join before signing in (see InvitePage):
+  // join it as soon as there's a user, then reload the server list so it's
+  // there even if the list was fetched before the join went through.
+  useEffect(() => {
+    if (!user) return;
+    const code = takePendingInvite();
+    if (!code) return;
+    const servers = useServerStore.getState();
+    void servers.joinServerByInvite(code).then((error) => {
+      if (!error) void useServerStore.getState().loadServers();
+    });
+  }, [user]);
 
   // Reuses the exact same cleanup a forced logout (401, revoked token) goes
   // through — clears the token/user from localStorage *and* every Zustand
@@ -99,16 +139,36 @@ export default function App() {
 
   // The public website's pages (see site/siteHome.ts). The desktop app
   // (served from file://, built with --mode electron) never shows them.
-  const site = sitePage(user !== null);
-  if (site === 'features') return <FeaturesPage />;
-
-  if (!user) {
-    // Signed out at the root of the website: the public home page, whose
-    // sign-in card opens the app right here once it calls handleAuth. Any
-    // other signed-out path gets the app's own sign-in screen.
-    if (site === 'home') return <HomePage onAuth={handleAuth} />;
-    return <Auth onAuth={handleAuth} />;
+  switch (sitePage(user !== null)) {
+    case 'home':
+      return <HomePage onAuth={handleSiteAuth} />;
+    case 'signin':
+      return <SignInPage onAuth={handleSiteAuth} />;
+    case 'features':
+      return <FeaturesPage />;
+    case 'download':
+      return <DownloadPage />;
+    case 'invite':
+      return <InvitePage code={inviteCodeFromPath()} onJoined={openApp} />;
+    case 'security':
+      return <SecurityPage />;
+    case 'support':
+      return <SupportPage />;
+    case 'changelog':
+      return <ChangelogPage />;
+    case 'privacy':
+      return <PrivacyPage />;
+    case 'terms':
+      return <TermsPage />;
+    case 'notfound':
+      return <NotFoundPage />;
+    case null:
+      break;
   }
+
+  // Only the desktop app gets here signed out: on the website every
+  // signed-out address is a site page.
+  if (!user) return <Auth onAuth={handleAuth} />;
 
   return <Chat user={user} onLogout={handleLogout} onUserUpdated={handleAuth} />;
 }
