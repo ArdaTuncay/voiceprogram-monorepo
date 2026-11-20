@@ -59,6 +59,11 @@ defmodule BackendWeb.UploadController do
         conn
         |> put_status(:unprocessable_entity)
         |> json(%{error: gettext("The file couldn't be uploaded")})
+
+      {:error, :storage_full} ->
+        conn
+        |> put_status(:insufficient_storage)
+        |> json(%{error: gettext("Storage is full, so new files can't be uploaded right now")})
     end
   end
 

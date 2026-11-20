@@ -20,6 +20,10 @@ config :backend, Backend.Repo,
 # for the production S3/R2 setup and config/dev.exs for testing it locally.
 config :backend, :uploads, adapter: :local
 
+# Total upload storage limit — under Cloudflare R2's 10 GB free tier (see
+# Backend.Uploads.quota_bytes/0). Past it, new uploads are refused.
+config :backend, :uploads_quota_bytes, 9 * 1024 * 1024 * 1024
+
 # User-facing messages are English msgids with Turkish translations; Turkish
 # unless the request asks otherwise (see BackendWeb.LocalePlug).
 config :backend, BackendWeb.Gettext, default_locale: "tr", locales: ~w(tr en)

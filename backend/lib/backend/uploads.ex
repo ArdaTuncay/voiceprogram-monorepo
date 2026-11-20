@@ -28,6 +28,9 @@ defmodule Backend.Uploads do
 
   require Logger
 
+  import Ecto.Query, only: [from: 2]
+
+  alias Backend.Repo
   alias Backend.Uploads.{Metadata, S3}
 
   # Stored extension => canonical content type.
@@ -65,7 +68,7 @@ defmodule Backend.Uploads do
   Validates and persists an uploaded `%Plug.Upload{}`.
 
   Returns `{:ok, %{file_url:, content_type:, file_name:, file_size:}}` or
-  `{:error, :unsupported_type | :invalid_file_signature | :too_large | :invalid_file}`.
+  `{:error, :unsupported_type | :invalid_file_signature | :too_large | :invalid_file | :storage_full}`.
   `file_url` is a relative `/uploads/...` path for the local adapter, or an
   absolute `https://...` URL for the S3 adapter — either way it's ready to
   hand back to the client as-is (see `BackendWeb.UploadController`).
@@ -80,7 +83,9 @@ defmodule Backend.Uploads do
          :ok <- validate_signature(upload.path, content_type),
          {:ok, source, size} <- without_metadata(upload.path, content_type) do
       try do
-        persist(source, upload.filename, extension, content_type, size, visibility)
+        with :ok <- check_quota(size) do
+          persist(source, upload.filename, extension, content_type, size, visibility)
+        end
       after
         if source != upload.path, do: File.rm(source)
       end
@@ -101,9 +106,38 @@ defmodule Backend.Uploads do
       end
 
     with {:ok, file_url} <- result do
+      record_stored(file_url, size)
+
       {:ok,
        %{file_url: file_url, content_type: content_type, file_name: file_name, file_size: size}}
     end
+  end
+
+  @doc """
+  The storage limit in bytes (`config :backend, :uploads_quota_bytes`).
+  Kept under the object store's free tier (Cloudflare R2: 10 GB) so the
+  bill stays at zero: past it, new uploads are refused with
+  `:storage_full` instead of being stored.
+  """
+  def quota_bytes, do: Application.get_env(:backend, :uploads_quota_bytes, 9 * 1024 * 1024 * 1024)
+
+  @doc "Bytes stored so far, by every file ever saved (deletions aren't subtracted)."
+  def stored_bytes do
+    Repo.one(from u in "stored_uploads", select: type(coalesce(sum(u.size), 0), :integer))
+  end
+
+  # Two uploads checked at the same moment can both pass and overshoot by
+  # at most one file each (25 MB) — far inside the gap between the limit
+  # and the free tier.
+  defp check_quota(size) do
+    if stored_bytes() + size > quota_bytes(), do: {:error, :storage_full}, else: :ok
+  end
+
+  defp record_stored(file_url, size) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    # Schemaless insert: the uuid primary key isn't generated for us.
+    row = %{id: Ecto.UUID.bingenerate(), file_url: file_url, size: size, inserted_at: now}
+    Repo.insert_all("stored_uploads", [row])
   end
 
   # Images are stored without their EXIF/XMP/text metadata (location,

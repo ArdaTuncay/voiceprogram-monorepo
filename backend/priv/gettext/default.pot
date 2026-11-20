@@ -465,3 +465,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Someone"
 msgstr ""
+
+#: lib/backend_web/controllers/upload_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Storage is full, so new files can't be uploaded right now"
+msgstr ""
