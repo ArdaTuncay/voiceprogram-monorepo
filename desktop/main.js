@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, net, session, desktopCapturer, ipcMain } = require('electron');
+const { app, BrowserWindow, protocol, net, session, desktopCapturer, ipcMain, Tray, Menu, nativeImage } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
@@ -23,16 +23,83 @@ const DIST_DIR = app.isPackaged
   : path.join(__dirname, '../frontend/dist-electron');
 
 let mainWindow = null;
+let tray = null;
+
+// Native window buttons (minimize/maximize/close) drawn over the page's own
+// 32px title strip (frontend DesktopTitleBar), in the page's colors —
+// recolored through preload-main.js when the theme changes.
+const TITLEBAR_HEIGHT = 32;
+const TITLEBAR_COLORS = {
+  dark: { color: '#171717', symbolColor: '#e5e5e5' },
+  light: { color: '#fafafa', symbolColor: '#262626' },
+};
+
+const ICON_PATH = app.isPackaged
+  ? path.join(process.resourcesPath, 'icon.png')
+  : path.join(__dirname, 'build', 'icon.png');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     title: 'Zircle',
     width: 1280,
     height: 800,
+    // Below this the channel column, conversation and member card no longer
+    // fit side by side (the page switches to its phone layout at 768px).
+    minWidth: 940,
+    minHeight: 600,
+    backgroundColor: TITLEBAR_COLORS.dark.color,
+    icon: ICON_PATH,
+    // Hidden native title bar, but Windows keeps its own caption buttons
+    // (and with them Snap Layouts on hover over maximize).
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { ...TITLEBAR_COLORS.dark, height: TITLEBAR_HEIGHT },
+    webPreferences: {
+      preload: path.join(__dirname, 'preload-main.js'),
+      contextIsolation: true,
+    },
   });
 
   mainWindow.loadURL('app://zircle/index.html');
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 }
+
+function showMainWindow() {
+  if (!mainWindow) {
+    createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+// Tray icon: open the window or quit. Closing the window still quits the
+// app (the user's choice) — the tray is a shortcut, not a background mode.
+function createTray() {
+  const image = nativeImage.createFromPath(ICON_PATH).resize({ width: 16, height: 16 });
+  tray = new Tray(image);
+  const turkish = app.getLocale().toLowerCase().startsWith('tr');
+  tray.setToolTip('Zircle');
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: turkish ? "Zircle'ı aç" : 'Open Zircle', click: showMainWindow },
+      { type: 'separator' },
+      { label: turkish ? 'Çık' : 'Quit', click: () => app.quit() },
+    ])
+  );
+  tray.on('click', showMainWindow);
+}
+
+ipcMain.on('titlebar:theme', (event, theme) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const colors = TITLEBAR_COLORS[theme === 'light' ? 'light' : 'dark'];
+  if (win && !win.isDestroyed()) {
+    win.setTitleBarOverlay({ ...colors, height: TITLEBAR_HEIGHT });
+    win.setBackgroundColor(colors.color);
+  }
+});
 
 /**
  * Opens the source-picker modal and resolves with the DesktopCapturerSource
@@ -145,6 +212,7 @@ app.whenReady().then(() => {
   );
 
   createWindow();
+  createTray();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

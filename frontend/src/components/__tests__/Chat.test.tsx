@@ -57,6 +57,8 @@ function makeVoiceMock(overrides: Partial<ReturnType<typeof useVoiceChannel>> = 
     isDeafened: false,
     reconnectingPeerIds: new Set(),
     error: '',
+    joiningRoomId: null,
+    micBlocked: false,
     join: vi.fn(),
     leave: vi.fn(),
     startScreenShare: vi.fn(),
@@ -541,5 +543,61 @@ describe('Chat — başarısız işlem geri bildirimi', () => {
     });
 
     expect(screen.getByRole('alert').textContent).toContain('Mesaj gönderilemedi. Lütfen tekrar deneyin.');
+  });
+});
+
+describe('Chat — ses kanalı: tekrar tıklama, sessiz katılma, bağlanıyor, mikrofon izni', () => {
+  const server: Server = { id: 'srv-v', name: 'Sunucu V', owner_id: 'owner-1' };
+  const voiceChannel: Channel = { id: 'vc-v', name: 'ses-v', type: 'voice', parent_id: null, position: 0 };
+
+  function renderInServer(voiceOverrides: Partial<ReturnType<typeof useVoiceChannel>> = {}) {
+    useServerStore.setState({
+      servers: [server],
+      activeServerId: server.id,
+      channels: [voiceChannel],
+      channelsServerId: server.id,
+    });
+    const mock = makeVoiceMock(voiceOverrides);
+    vi.mocked(useVoiceChannel).mockReturnValue(mock);
+    render(<Chat user={testUser} onLogout={vi.fn()} />);
+    return mock;
+  }
+
+  it('içinde olduğun ses kanalına tekrar tıklamak seni çıkarmaz', () => {
+    const mock = renderInServer({ activeRoomId: voiceChannel.id });
+    fireEvent.click(screen.getAllByText('ses-v')[0]);
+    expect(mock.leave).not.toHaveBeenCalled();
+    expect(mock.join).not.toHaveBeenCalled();
+  });
+
+  it('Shift ile tıklamak ve "Sessiz katıl" düğmesi mikrofon kapalı katılır', () => {
+    const mock = renderInServer();
+    fireEvent.click(screen.getByText('ses-v'), { shiftKey: true });
+    expect(mock.join).toHaveBeenLastCalledWith(voiceChannel.id, { muted: true });
+
+    fireEvent.click(screen.getByRole('button', { name: 'ses-v kanalına sessiz katıl' }));
+    expect(mock.join).toHaveBeenLastCalledWith(voiceChannel.id, { muted: true });
+
+    fireEvent.click(screen.getByText('ses-v'));
+    expect(mock.join).toHaveBeenLastCalledWith(voiceChannel.id, { muted: false });
+  });
+
+  it('bağlanırken kanal kartında "Bağlanıyor…" görünür', () => {
+    renderInServer({ joiningRoomId: voiceChannel.id });
+    expect(screen.getByText('Bağlanıyor…')).not.toBeNull();
+  });
+
+  it('mikrofon izni yoksa yardım kartı çıkar; "Tekrar dene" aynı kanala yeniden katılır', () => {
+    const mock = renderInServer({ micBlocked: true, error: 'Mikrofon izni verilmedi.' });
+    expect(screen.getByText('Mikrofon izni gerekli')).not.toBeNull();
+    expect(screen.queryByText('Mikrofon izni verilmedi.')).toBeNull();
+
+    // Önce bir katılma denemesi olmalı ki "Tekrar dene" neyi deneyeceğini bilsin.
+    fireEvent.click(screen.getByText('ses-v'));
+    fireEvent.click(screen.getByRole('button', { name: 'Tekrar dene' }));
+    expect(mock.join).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kapat' }));
+    expect(screen.queryByText('Mikrofon izni gerekli')).toBeNull();
   });
 });

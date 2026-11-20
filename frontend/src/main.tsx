@@ -4,7 +4,11 @@ import '@fontsource-variable/inter'
 import './index.css'
 import App from './App.tsx'
 import ErrorBoundary from './components/ErrorBoundary'
+import DesktopTitleBar from './components/DesktopTitleBar'
 import { initTheme } from './services/theme'
+
+const isDesktopApp = import.meta.env.MODE === 'electron'
+if (isDesktopApp) document.documentElement.classList.add('is-desktop')
 
 // Redundant with index.html's inline bootstrap script in the normal case
 // (that one already ran, before any paint) — this is the fallback for the
@@ -13,6 +17,7 @@ initTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    {isDesktopApp && <DesktopTitleBar />}
     <ErrorBoundary>
       <App />
     </ErrorBoundary>

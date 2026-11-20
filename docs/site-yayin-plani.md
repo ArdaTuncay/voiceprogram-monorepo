@@ -57,11 +57,11 @@ Tasarım tuvali, "A2 sitesi" sayfası: https://claude.ai/artifact/1EqN3rYWJd8LEw
 
 ### 2. Gizlilik ve Koşullar için cevaplar
 Taslak: https://claude.ai/artifact/YBkxVqBF1ezQ5eYUKmZ1a5. Sayfalarda sarı işaretli `<Todo>` alanları bunlar; hepsi `frontend/src/site/LegalPages.tsx` dosyasında.
-- [ ] **Veri sorumlusu:** Zircle'ı işleten kişinin adı soyadı ya da şirketin unvanı.
-- [ ] **KVKK başvuru adresi:** E-postayı gizleme kararıyla çelişiyor, ama bu iki metinde en az bir adres olmalı.
-- [ ] **Yaş sınırı.**
-- [ ] **Canlıda açık olan hizmetler:** Dosyalar hangi depolama hizmetinde (R2, S3 ya da başka)? Sentry açık mı? Önde Cloudflare var mı?
-- [ ] **Sözler:** "Reklam göstermeyiz, verilerini satmayız" ve "Zircle ücretsizdir" cümleleri kalsın mı?
+- [x] **Veri sorumlusu:** Arda Tuncay (20 Kasım).
+- [x] **KVKK başvuru adresi:** ceng.ardatuncay@gmail.com, yalnız Gizlilik ve Koşullar sayfalarında (20 Kasım).
+- [x] **Yaş sınırı:** 13 (20 Kasım).
+- [x] **Canlıda açık olan hizmetler** (Render ortam değişkenlerinden, 20 Kasım): `S3_*` yok, dosyalar Render'ın diskinde; `SENTRY_DSN` yok; trafik Render'ın Cloudflare altyapısından geçiyor; veritabanı Neon. **Dikkat:** Render'da `METERED_*` da yok; ses aktarımı (TURN) canlıda ayarlı olmayabilir, metindeki Metered satırı doğrulanmalı.
+- [x] **Sözler:** İkisi de kalıyor (20 Kasım).
 - [ ] **Son güncelleme tarihi:** "[yayın tarihi]" yerine yayın günü yazılacak.
 - [ ] **Hukuki inceleme:** Yayından önce bir hukukçuya baktırmak önerilir. Sonrasında metinlerin İngilizcesi yazılabilir.
 - Bilinmesi gereken: Hesap silinince kişi anonimleşir ama gönderdiği mesajlar silinmez. Taslak bunu açıkça yazıyor.
@@ -70,6 +70,7 @@ Taslak: https://claude.ai/artifact/YBkxVqBF1ezQ5eYUKmZ1a5. Sayfalarda sarı işa
 İndir düğmesi şu adresi gösteriyor: `https://github.com/ArdaTuncay/voiceprogram-monorepo/releases/download/desktop-v1.0.0/Zircle-Setup-1.0.0.exe`. Bu dosya henüz yok.
 - [ ] Derlemek: `cd frontend; npm run build:electron`, sonra `cd desktop; npm run build:win`. (20 Kasım: site dalından deneme derlemesi yapıldı, 112,8 MB. Yayına çıkacak dosya merge'den sonra `main`'den yeniden derlenecek. Simge eklendi: `desktop/build/icon.png`, `favicon.svg`'deki maskottan üretilen 512×512 şeffaf PNG.)
 - [ ] Kurulum dosyasını deneyip uygulamanın açıldığını ve giriş yapılabildiğini kontrol etmek.
+  - 20 Kasım: `feat/uygulama-tasarim`'dan (tüm site + yeni tasarım) aday derlendi: `desktop/dist/Zircle-Setup-1.0.0.exe`, 112,9 MB. Paketli uygulama açıldı, yeni başlık çubuğu çalışıyor, canlı sunucuya (`/api/healthz` 200) ulaşıyor. Giriş ekranının dar sütuna sıkışma hatası düzeltildi (f5e46f4). **Kalan:** kurulum dosyasını kurup gerçek hesapla giriş yapmak (kullanıcı yapacak).
 - [ ] **Yayın günü** (kullanıcı kararı, 20 Kasım): GitHub'da `desktop-v1.0.0` sürümünü oluşturup `Zircle-Setup-1.0.0.exe` dosyasını yüklemek. **Dışarıya açık bir işlem; önce kullanıcıdan onay al.**
 - [ ] `frontend/src/site/release.ts` içinde `date` (YYYY-AA-GG) ve `sizeMb` alanlarını doldurmak. Böylece İndir ve Yenilikler sayfalarında tarih ve boyut görünür.
 - Eski `desktop-v1` sürümü (Ağustos, 0.0.0) 20 Kasım'da kullanıcının isteğiyle silindi. Git etiketi `desktop-v1` de silindi.
@@ -102,6 +103,13 @@ Taslak: https://claude.ai/artifact/YBkxVqBF1ezQ5eYUKmZ1a5. Sayfalarda sarı işa
    - [ ] Oturum açıkken `/` adresi doğrudan Zircle'ı açıyor.
    - [ ] Masaüstü uygulaması siteyi değil, kendi giriş ekranını gösteriyor.
 4. Yenilikler ve yasal sayfalardaki tarihleri yayın günüyle güncellemek.
+
+## Sonra yapılacaklar (hatırlatma)
+
+- [ ] **Cloudflare kartını sanal kartla değiştir.** R2'yi açarken (20 Kasım) gerçek kredi kartı girildi. Bankanın uygulamasından düşük limitli bir sanal kart oluşturup Cloudflare → Manage account → Billing → Payment info'dan değiştir. Kart yalnız doğrulama için; 9 GB sınırı (PR #46) yüzünden ücret çıkmaz.
+- [ ] **Cloudflare'de fatura uyarısı kur** (Billing → Notifications), istersen mobil uygulama ile iki adımlı doğrulama ve yedek kodlar.
+- [x] **Dosya depolama:** R2 bağlandı (21 Kasım; #46 9 GB sınırı, #47 imza düzeltmesi, #48 dosyalar sunucu üzerinden, çünkü `*.r2.dev` Türkiye'deki ağlarda engelli). Gizlilik metni güncellendi. Alan adı alınınca kovaya bağlanıp `S3_PUBLIC_URL_BASE` oraya çevrilecek.
+- [ ] **Ses aktarımı (TURN):** Render'da `METERED_*` yok; canlıda ayarlı mı kontrol et, değilse Gizlilik'teki Metered satırını kaldır ya da Metered'ı bağla.
 
 ## Bu işte değişen başlıca dosyalar
 

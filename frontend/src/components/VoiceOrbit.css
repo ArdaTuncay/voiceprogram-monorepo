@@ -94,3 +94,101 @@
   min-width: 2.5em;
   text-align: right;
 }
+
+/* ── List layout (layout="list", and the orbit's 9+ fallback): one row per
+   person under the voice channel card — avatar, name, red mute/deafen
+   icons. The speaker gets the accent ring and a brighter name, so the
+   indicator never rests on color alone. ── */
+.voice-participant {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 3px 0;
+}
+
+.voice-participant-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  color: var(--interactive-active);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.voice-participant-avatar.speaking {
+  box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--voice-speaking);
+  animation: voice-speaking-pulse var(--duration-pulse) ease-in-out infinite;
+}
+
+@keyframes voice-speaking-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--voice-speaking);
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 5px var(--voice-speaking);
+  }
+}
+
+.voice-participant-info {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  line-height: var(--line-height-tight);
+}
+
+.voice-participant-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voice-participant.speaking .voice-participant-name {
+  color: var(--text-heading);
+  font-weight: var(--font-weight-medium);
+}
+
+.voice-status-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--voice-off);
+}
+
+/* "Konuşuyor", "Ses Bağlantısı Aktif"… stay for screen readers; only the
+   reconnecting state is worth a visible line. */
+.voice-participant-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.voice-participant-status.reconnecting {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--warning);
+  font-size: var(--font-size-xs);
+}

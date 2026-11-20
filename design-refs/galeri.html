@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Zircle tasarım referansları</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0a0a0a; color: #e5e5e5; font: 15px/1.5 Inter, system-ui, sans-serif; }
+  header { max-width: 1400px; margin: 0 auto; padding: 40px 24px 8px; }
+  h1 { margin: 0 0 8px; font-size: 28px; color: #fafafa; letter-spacing: -0.01em; }
+  header p { margin: 0 0 6px; color: #a3a3a3; max-width: 900px; }
+  main { max-width: 1400px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); gap: 28px; }
+  article { background: #171717; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+  article a.img { display: block; background: #262626; aspect-ratio: 4 / 3; }
+  article img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .body { padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 8px; }
+  .no { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; border-radius: 999px; background: #f5f5f5; color: #171717; font-weight: 700; margin-right: 10px; }
+  h2 { margin: 0; font-size: 19px; color: #fafafa; display: flex; align-items: center; }
+  .by { font-size: 13px; color: #a3a3a3; }
+  .by a { color: #d4d4d4; }
+  .k { color: #fafafa; font-weight: 600; }
+  ul { margin: 0; padding-left: 18px; }
+  li { margin: 2px 0; }
+  @media (max-width: 640px) { main { grid-template-columns: 1fr; padding: 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Zircle için tasarım referansları</h1>
+  <p>Dribbble'dan seçilmiş, birbirinden farklı kurgular. Renklere değil yerleşime bak: hangisini seçersen, bugünkü siyah ve gri tonlara uyarlanır.</p>
+  <p>Görsellere ya da başlıklara tıklayınca Dribbble'daki asıl sayfası açılır. Tasarımlar sahiplerine aittir; birebir kopyalanmaz, kurgusu uyarlanır.</p>
+</header>
+<main>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/22605126-Discord-UI-in-Apple-Vision-Pro" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/10188201/file/original-3b098fed4ef4b4e49b9879d63d22cfb1.png" alt="Ses odası: üstte konuşanların kartları, altta dinleyicilerin avatar ızgarası" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">1</span>Konuşanlar kartta, dinleyenler ızgarada</h2>
+    <div class="by">Neamul Morshed Nahid · <a href="https://dribbble.com/shots/22605126-Discord-UI-in-Apple-Vision-Pro" target="_blank" rel="noopener">Discord UI in Apple Vision Pro</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Ses odasında konuşanlar üstte büyük kartlar, diğerleri altta küçük avatar ızgarası.</li>
+      <li><span class="k">Kontroller:</span> Altta havada duran bir hapın içinde.</li>
+      <li><span class="k">Kenar:</span> Sunucu şeridi ve kanal listesi tek bir panelde.</li>
+      <li><span class="k">Zircle'da:</span> Ses kanalına girince ana alan bu görünüme geçer.</li>
+    </ul>
+  </div>
+</article>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/26757420-Discord-But-it-s-Twitch-now" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/45655192/file/da95a0d283ba3567c011dd89c8bbca8e.png" alt="Ses odasında katılımcıların yayınları yan yana uzun kartlar" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">2</span>Yayınlar yan yana</h2>
+    <div class="by">Mani Djalilzadeh · <a href="https://dribbble.com/shots/26757420-Discord-But-it-s-Twitch-now" target="_blank" rel="noopener">Discord, But it's Twitch now</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Odadaki herkesin ekranı ya da yayını yan yana uzun kartlar hâlinde. Altta oda bilgisi ve kontroller.</li>
+      <li><span class="k">Zircle'da:</span> Ekran paylaşımı ve Birlikte İzle öne çıkar; sesli oda bir "izleme odası" gibi görünür.</li>
+    </ul>
+  </div>
+</article>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/23304691-Discord-UI-challenge" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/12089302/file/original-0e9638aef4aec37c9b3094dd9cffa43b.png" alt="Ana alanın üst yarısında arama, alt yarısında yazılı sohbet" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">3</span>Arama üstte, sohbet altta</h2>
+    <div class="by">Artem Udovichenko · <a href="https://dribbble.com/shots/23304691-Discord-UI-challenge" target="_blank" rel="noopener">Discord UI challenge</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Ana alanın üst yarısı arama (avatarlar ve kontroller), alt yarısında yazılı sohbet devam ediyor.</li>
+      <li><span class="k">Kenar:</span> Sol altta "ses bağlı" paneli.</li>
+      <li><span class="k">Zircle'da:</span> Ses kanalına girince sohbet kaybolmaz; üstte açılıp kapanabilen bir arama alanı belirir.</li>
+    </ul>
+  </div>
+</article>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/21873826-Discord-UI-Vision-PRO-OS-Spatial-UI-Design" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/8198822/file/original-b40718cdb6e78d7b4eb5e0af7017864f.png" alt="Özel mesajda süren arama, sohbetin altında yüzen arama kontrolleri" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">4</span>Sohbetin içinde yüzen arama hapı</h2>
+    <div class="by">Lycoris · <a href="https://dribbble.com/shots/21873826-Discord-UI-Vision-PRO-OS-Spatial-UI-Design" target="_blank" rel="noopener">Discord UI: Vision PRO/OS</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Süren arama sağ üstte iki avatar ve süreyle gösteriliyor. Kontroller, mesaj kutusunun üstünde yüzen bir hapın içinde.</li>
+      <li><span class="k">Zircle'da:</span> Ses odasındayken hangi ekranda olursan ol, altta ortada küçük bir kontrol hapı kalır.</li>
+    </ul>
+  </div>
+</article>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/17315310-Voice-Remote-Communication-Tool-Dark-Version" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/35104641/file/original-051e229645736b762172fc597d47dfd8.png" alt="Kompakt ses aracı: üye listesi, ses bağlı kartı ve davet bildirimi" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">5</span>Kompakt üye listesi ve hızlı davet</h2>
+    <div class="by">Alex Ds Karera · <a href="https://dribbble.com/shots/17315310-Voice-Remote-Communication-Tool-Dark-Version" target="_blank" rel="noopener">Voice Remote Communication Tool</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Kanalın üyeleri sade bir listede: kim konuşuyor, kim ekran paylaşıyor, kim sessiz. Altta "Ses bağlı" kartı.</li>
+      <li><span class="k">Davet:</span> Ses davetine hazır yanıtlar: "Kanala katıl", "2 dakika ver", "Meşgulüm".</li>
+      <li><span class="k">Zircle'da:</span> Ses daveti ve kanal satırının altındaki üye listesi sadeleşir.</li>
+    </ul>
+  </div>
+</article>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/26592510-Social-Media-Platform" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/45120307/file/57c13abac8079b9fe5c05a6f96728b21.png" alt="Arada boşluk olan, köşeleri yuvarlak ayrı paneller" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">6</span>Ayrık, yuvarlak paneller</h2>
+    <div class="by">Natasha Osipova · <a href="https://dribbble.com/shots/26592510-Social-Media-Platform" target="_blank" rel="noopener">Social Media Platform</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Her bölüm arada boşluk olan ayrı, köşeleri yuvarlak bir kutu: solda kişiler ve kanallar, ortada sohbet, sağda üyeler ve dosyalar.</li>
+      <li><span class="k">Sohbet içi arama:</span> Sohbette "görüntülü arama başlattı · Katıl" satırı var.</li>
+      <li><span class="k">Zircle'da:</span> Bütün iskelet bu "yüzen paneller" görünümüne geçer; içerik aynı kalır.</li>
+    </ul>
+  </div>
+</article>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/24243277-Discord-Like-Web-App" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/14785077/file/original-74163919d1c3b88f4c584f33bbf3164c.png" alt="Ekip sohbeti, sağda üyeler ve dosyalar paneli" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">7</span>Sağda üyeler ve dosyalar</h2>
+    <div class="by">Ronas IT · <a href="https://dribbble.com/shots/24243277-Discord-Like-Web-App" target="_blank" rel="noopener">Discord-Like Web App</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Panel yaklaşımı 6'ya benziyor. Üst sağda arama ve görüntülü arama düğmeleri, sağ panelde üyeler ve paylaşılan dosyalar.</li>
+      <li><span class="k">Sohbet içi arama:</span> Sohbetin içinde "aramaya katıl" düğmesi var.</li>
+      <li><span class="k">Zircle'da:</span> Sağdaki üye listesine "Dosyalar" bölümü eklenir.</li>
+    </ul>
+  </div>
+</article>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/5587903-ECHO-Voice-chat-for-gamers" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/23866710/file/original-7eb9625341a43e620ba7ac7f02a5654f.png" alt="Oyuncular için sesli sohbet: kanal sekmeleri, sesli mesaj, ses kanalındaki kişiler" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">8</span>Oyuncu odaklı ses kanalı</h2>
+    <div class="by">10Clouds · <a href="https://dribbble.com/shots/5587903-ECHO-Voice-chat-for-gamers" target="_blank" rel="noopener">ECHO – Voice chat for gamers</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Kanallar üstte hap biçiminde sekmeler. Solda ses kanalındaki kişiler ve konuşma simgeleri, sağda arkadaş listesi.</li>
+      <li><span class="k">Sesli mesaj:</span> Sohbette sesli mesaj dalgası.</li>
+      <li><span class="k">Zircle'da:</span> Ses kanalı kişileri kanal listesinin üstünde ayrı bir blok olarak durur.</li>
+    </ul>
+  </div>
+</article>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/18461356-Discord-Activities" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/2851648/file/still-5c0da99a168fddc7225dcf68d5047e7e.png" alt="Ses odasında ortak etkinlik ortada, katılımcılar etrafında" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">9</span>Etkinlik ortada, herkes etrafında</h2>
+    <div class="by">John Avent · <a href="https://dribbble.com/shots/18461356-Discord-Activities" target="_blank" rel="noopener">Discord Activities</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Ses odasında ortak bir etkinlik (burada bir oyun masası) ortada, katılımcıların avatarları etrafında. Altta kontrol çubuğu.</li>
+      <li><span class="k">Zircle'da:</span> Birlikte İzle, ses odasının ortasında açılır; izleyenler videonun çevresinde görünür.</li>
+    </ul>
+  </div>
+</article>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/15893000-Teamflow-for-Mac" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/32212221/file/original-97d7534e010c4ee01541594778d34881.png" alt="Mekânsal ses: oda bir harita, kişiler masaların etrafında" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">10</span>Mekânsal oda haritası</h2>
+    <div class="by">Alan Tippins · <a href="https://dribbble.com/shots/15893000-Teamflow-for-Mac" target="_blank" rel="noopener">Teamflow for Mac</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Oda yukarıdan görülen bir harita; kişiler avatar olarak masaların etrafında, yakın olanlar birbirini duyar.</li>
+      <li><span class="k">Kenar ve kontroller:</span> Kenarda "alanlar" altında içerideki avatarlar, altta etiketli kontrol çubuğu.</li>
+      <li><span class="k">Zircle'da:</span> Tamamen farklı bir kullanım biçimi; büyük bir değişiklik olur.</li>
+    </ul>
+  </div>
+</article>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/6645847-Discord-Redesign" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/42358865/file/original-2ec741d7ea7b3a87f16cd7c42d5b4587.png" alt="Klasik üç sütun, daha temiz: sağda rollerine göre gruplanmış üyeler" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">11</span>Klasik iskelet, rötuşlu</h2>
+    <div class="by">Pim Scholten · <a href="https://dribbble.com/shots/6645847-Discord-Redesign" target="_blank" rel="noopener">Discord Redesign</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Bugünkü üç sütunlu yapı, ama yuvarlak bir pencere, sıkı yazılar ve rollerine göre gruplanmış üye listesiyle.</li>
+      <li><span class="k">Zircle'da:</span> En az değişiklikle, bugünkü uygulamanın temizlenmiş hâli.</li>
+    </ul>
+  </div>
+</article>
+
+<article>
+  <a class="img" href="https://dribbble.com/shots/15130543-Clubhouse-Desktop-Concept" target="_blank" rel="noopener"><img src="https://cdn.dribbble.com/userupload/30662194/file/original-ba5252c98f7972f78ccf9d59e01ce10f.jpg" alt="Odalar kart ızgarası, altta yüzen aktif oda hapı" loading="lazy"></a>
+  <div class="body">
+    <h2><span class="no">12</span>Oda kartları ve yüzen aktif oda</h2>
+    <div class="by">Val Pieŭnioŭ · <a href="https://dribbble.com/shots/15130543-Clubhouse-Desktop-Concept" target="_blank" rel="noopener">Clubhouse Desktop Concept</a></div>
+    <ul>
+      <li><span class="k">Kurgu:</span> Odalar iki sütunlu kartlar; her kartta konuşanların adları alt alta. Solda sade bir menü.</li>
+      <li><span class="k">Aktif oda:</span> Altta ortada yüzen bir hap: o an bulunduğun oda, kontroller ve çıkış.</li>
+      <li><span class="k">Zircle'da:</span> Ses kanalları için ayrı bir "odalar" sayfası olur. Açık temalı bir tasarım, ama yapısına bak.</li>
+    </ul>
+  </div>
+</article>
+
+</main>
+</body>
+</html>

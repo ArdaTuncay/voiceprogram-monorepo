@@ -22,7 +22,7 @@
 
 .settings-tab.active {
   color: var(--text-heading);
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--accent-text);
 }
 
 .settings-section {

@@ -48,3 +48,12 @@ interface ImportMeta {
 interface NotificationOptions {
   renotify?: boolean;
 }
+
+/** Exposed by the desktop app's preload script (desktop/preload-main.js);
+ * absent in the browser. */
+interface Window {
+  zircleDesktop?: {
+    /** Recolors the native window buttons (titleBarOverlay) to match the theme. */
+    setTitleBarTheme: (theme: 'dark' | 'light') => void;
+  };
+}

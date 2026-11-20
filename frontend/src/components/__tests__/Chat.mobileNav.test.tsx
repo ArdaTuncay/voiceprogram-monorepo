@@ -55,6 +55,8 @@ function makeVoiceMock(overrides: Partial<ReturnType<typeof useVoiceChannel>> = 
     isDeafened: false,
     reconnectingPeerIds: new Set(),
     error: '',
+    joiningRoomId: null,
+    micBlocked: false,
     join: vi.fn(),
     leave: vi.fn(),
     startScreenShare: vi.fn(),

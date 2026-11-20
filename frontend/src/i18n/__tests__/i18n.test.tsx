@@ -18,15 +18,15 @@ describe('translate', () => {
   });
 
   it('fills placeholders in both languages', () => {
-    expect(translate('tr', '{name} yazıyor...', { name: 'ali' })).toBe('ali yazıyor...');
-    expect(translate('en', '{name} yazıyor...', { name: 'ali' })).toBe('ali is typing...');
+    expect(translate('tr', '{name} yazıyor…', { name: 'ali' })).toBe('ali yazıyor…');
+    expect(translate('en', '{name} yazıyor…', { name: 'ali' })).toBe('ali is typing…');
   });
 
   it('picks the English singular or plural form by count', () => {
-    const key = '{names} ve {count} kişi daha yazıyor...';
-    expect(translate('en', key, { names: 'a, b', count: 1 })).toBe('a, b and 1 other are typing...');
-    expect(translate('en', key, { names: 'a, b', count: 3 })).toBe('a, b and 3 others are typing...');
-    expect(translate('tr', key, { names: 'a, b', count: 3 })).toBe('a, b ve 3 kişi daha yazıyor...');
+    const key = '{names} ve {count} kişi daha yazıyor…';
+    expect(translate('en', key, { names: 'a, b', count: 1 })).toBe('a, b and 1 other are typing…');
+    expect(translate('en', key, { names: 'a, b', count: 3 })).toBe('a, b and 3 others are typing…');
+    expect(translate('tr', key, { names: 'a, b', count: 3 })).toBe('a, b ve 3 kişi daha yazıyor…');
   });
 
   it('t follows the current language', () => {

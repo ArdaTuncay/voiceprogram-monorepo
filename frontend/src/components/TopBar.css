@@ -1,0 +1,329 @@
+/* ── Top bar: the current view's title on the left, the always-there
+   account buttons (notifications, settings, profile) on the right. Sits in
+   the layout grid's "top" area, above the conversation and member panels,
+   on the same background as the window — no panel of its own. ── */
+.topbar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  min-width: 0;
+}
+
+.topbar-view {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+}
+
+.topbar-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0 auto 0 var(--space-1);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-heading);
+}
+
+.topbar-title-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.topbar-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  flex-shrink: 0;
+}
+
+/* Round icon buttons — the same shape everywhere in the bar, a step
+   lighter than the window so they read as controls. */
+.topbar-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-size-md);
+  height: var(--control-size-md);
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.topbar-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-heading);
+}
+
+.topbar-btn[aria-pressed='true'] {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+  color: var(--text-heading);
+}
+
+.topbar-btn-danger {
+  color: var(--danger-text);
+}
+
+.topbar-btn-danger:hover {
+  background: var(--danger);
+  color: var(--interactive-active);
+}
+
+.topbar-badge {
+  font-variant-numeric: tabular-nums;
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-primary);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  line-height: 14px;
+  text-align: center;
+  box-sizing: content-box;
+}
+
+/* ── Search: a pill that reads "Ara" while closed and holds the search
+   input while open. The magnifier stays the same toggle button in both
+   states, so opening and closing work exactly as before (Chat/DMChatView
+   own isSearchBarOpen); SearchBar's own magnifier is hidden here so the
+   pill shows one icon, not two. ── */
+.topbar-search {
+  display: flex;
+  align-items: center;
+  height: var(--control-size-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.topbar-search.open {
+  width: min(320px, 40vw);
+  border-color: var(--border-strong);
+}
+
+.topbar-search:focus-within {
+  border-color: var(--accent-text);
+}
+
+.topbar-search-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 100%;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.topbar-search:not(.open) .topbar-search-toggle {
+  min-width: 180px;
+}
+
+.topbar-search-toggle:hover {
+  color: var(--text-heading);
+}
+
+.topbar-search.open .topbar-search-toggle {
+  padding-right: var(--space-1);
+  color: var(--text-heading);
+}
+
+.topbar-search .search-bar {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+  padding: 0 var(--space-3) 0 var(--space-1);
+  border: none;
+  background: transparent;
+}
+
+.topbar-search .search-bar:focus-within {
+  border: none;
+}
+
+.topbar-search .search-bar-icon {
+  display: none;
+}
+
+/* ── Profile ── */
+.topbar-profile {
+  position: relative;
+}
+
+.topbar-profile-btn {
+  display: flex;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  cursor: pointer;
+}
+
+.topbar-avatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-size-md);
+  height: var(--control-size-md);
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  color: var(--interactive-active);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+}
+
+.topbar-avatar-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  border: 2.5px solid var(--bg-primary);
+  background: var(--status-online);
+}
+
+.topbar-avatar-dot.offline {
+  background: var(--text-muted);
+}
+
+.topbar-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: var(--z-dropdown);
+  width: 248px;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-md);
+}
+
+.topbar-menu-who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  margin-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-menu-who .topbar-avatar-dot {
+  border-color: var(--bg-secondary);
+}
+
+.topbar-menu-who-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--line-height-tight);
+}
+
+.topbar-menu-name {
+  color: var(--text-heading);
+  font-weight: var(--font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-menu-status {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.topbar-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-normal);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.topbar-menu-item svg {
+  color: var(--text-muted);
+}
+
+.topbar-menu-item:hover,
+.topbar-menu-item:focus-visible {
+  background: var(--bg-hover);
+}
+
+.topbar-menu-item-danger,
+.topbar-menu-item-danger svg {
+  color: var(--danger-text);
+}
+
+/* ── Phone width: the menu button takes the bar's left edge (Chat.css),
+   the search pill shrinks to its magnifier until opened, and the member
+   button goes (the member card isn't shown on phones). ── */
+@media (max-width: 768px) {
+  .topbar,
+  .topbar-view,
+  .topbar-actions {
+    gap: var(--space-1-5);
+  }
+
+  .topbar-title {
+    font-size: var(--font-size-lg);
+  }
+
+  .topbar-search:not(.open) .topbar-search-toggle {
+    min-width: 0;
+    padding: 0 var(--space-3);
+  }
+
+  .topbar-search:not(.open) .topbar-search-toggle span {
+    display: none;
+  }
+
+  .topbar-search.open {
+    width: min(240px, 55vw);
+  }
+
+  .topbar-view > .topbar-btn[aria-pressed] {
+    display: none;
+  }
+}

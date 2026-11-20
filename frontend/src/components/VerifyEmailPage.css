@@ -1,9 +1,10 @@
 .verify-email-page {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  background: var(--bg-tertiary);
+  min-height: calc(100vh - var(--titlebar-height));
+  background: var(--bg-primary);
   padding: var(--space-5);
 }
 

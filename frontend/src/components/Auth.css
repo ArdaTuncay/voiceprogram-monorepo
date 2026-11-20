@@ -1,19 +1,23 @@
 .auth-page {
+  /* #root is a flex row: without flex: 1 the page shrinks to the card's
+     width and sits in a narrow column on the left (the desktop app's first
+     screen). */
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  background: var(--bg-tertiary);
+  min-height: calc(100vh - var(--titlebar-height));
+  background: var(--bg-primary);
   padding: var(--space-5);
 }
 
 .auth-card {
-  background: var(--bg-primary);
-  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
   padding: var(--space-8);
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
   text-align: center;
 }
 
@@ -71,7 +75,7 @@
 }
 
 .form-group input:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .form-group input::placeholder {
@@ -143,7 +147,7 @@
 .auth-toggle button {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--accent-text);
   cursor: pointer;
   font-size: 14px;
   padding: 0;

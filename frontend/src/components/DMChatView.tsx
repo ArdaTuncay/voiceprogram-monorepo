@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ChangeEvent, DragEvent, UIEvent } from 'react';
-import { AtSign, Ban, Paperclip, Send, AlertTriangle, Search, CornerUpLeft, X } from 'lucide-react';
+import { AtSign, Ban, Paperclip, Send, AlertTriangle, CornerUpLeft, X } from 'lucide-react';
 import { resolveFileUrl } from '../config';
 import { useDMStore } from '../stores/useDMStore';
 import { useFriendStore } from '../stores/useFriendStore';
@@ -13,6 +13,7 @@ import MessageItem from './MessageItem';
 import SearchBar from './SearchBar';
 import SearchResultsPanel from './SearchResultsPanel';
 import ReportModal from './ReportModal';
+import { TopBarSearch, TopBarSlot } from './TopBar';
 import type { ReportTarget } from '../types';
 
 interface Props {
@@ -182,29 +183,34 @@ export default function DMChatView({ currentUserId }: Props) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <header className="chat-header">
-        <span className="chat-header-hash"><AtSign size={20} /></span>
-        <span className="chat-header-name">{otherName}</span>
-        <button
-          className={`chat-header-search-btn${isSearchBarOpen ? ' active' : ''}`}
-          onClick={() => setIsSearchBarOpen((open) => !open)}
-          title={t('Mesajlarda ara')}
-          aria-label={t('Mesajlarda ara')}
-          aria-pressed={isSearchBarOpen}
-        >
-          <Search size={18} />
-        </button>
+      {/* Title, search and block live in the top bar (see TopBar.tsx);
+          rendered in place when there's no TopBar above, as in tests. */}
+      <TopBarSlot>
+        <h1 className="topbar-title">
+          <AtSign size={22} strokeWidth={1.75} className="topbar-title-icon" />
+          <span className="topbar-title-text">{otherName}</span>
+        </h1>
+        <TopBarSearch open={isSearchBarOpen} onToggle={() => setIsSearchBarOpen((open) => !open)}>
+          {activeRoomId && (
+            <SearchBar
+              autoFocus
+              isSearching={isSearching}
+              onSearch={(filters) => void searchDmMessages(activeRoomId, filters)}
+            />
+          )}
+        </TopBarSearch>
         {otherUserId && (
           <button
-            className="invite-people-btn leave-server-btn"
+            type="button"
+            className="topbar-btn topbar-btn-danger"
             onClick={() => setConfirmingBlock(true)}
             title={t('{name} kullanıcısını engelle', { name: otherName })}
             aria-label={t('{name} kullanıcısını engelle', { name: otherName })}
           >
-            <Ban size={16} />
+            <Ban size={18} strokeWidth={1.75} />
           </button>
         )}
-      </header>
+      </TopBarSlot>
 
       {confirmingBlock && (
         <div className="dm-block-confirm">
@@ -228,12 +234,6 @@ export default function DMChatView({ currentUserId }: Props) {
 
       {blockError && (
         <div className="channel-status error"><AlertTriangle size={14} /> {blockError}</div>
-      )}
-
-      {activeRoomId && isSearchBarOpen && (
-        <div className="chat-search-row">
-          <SearchBar isSearching={isSearching} onSearch={(filters) => void searchDmMessages(activeRoomId, filters)} />
-        </div>
       )}
 
       {isDraggingFile && (
@@ -338,7 +338,7 @@ export default function DMChatView({ currentUserId }: Props) {
               <span />
               <span />
             </span>
-            {t('{name} yazıyor...', { name: typingUsername })}
+            {t('{name} yazıyor…', { name: typingUsername })}
           </div>
         )}
       </div>

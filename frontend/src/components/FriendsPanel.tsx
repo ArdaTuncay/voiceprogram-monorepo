@@ -10,9 +10,16 @@ import StatusIndicator from './StatusIndicator';
 import { t, useT } from '../i18n';
 import './FriendsPanel.css';
 
-type SubTab = 'online' | 'all' | 'pending' | 'add';
+export type FriendsTab = 'online' | 'all' | 'pending' | 'add';
+type SubTab = FriendsTab;
 
-export default function FriendsPanel() {
+interface Props {
+  /** Which tab opens first — the top bar's bell opens straight onto the
+   * pending requests. */
+  initialTab?: FriendsTab;
+}
+
+export default function FriendsPanel({ initialTab = 'online' }: Props) {
   // Subscribes to the UI language; the list components below use the plain
   // t() and re-render along with this one.
   useT();
@@ -26,7 +33,7 @@ export default function FriendsPanel() {
 
   const openRoomWithUser = useDMStore((s) => s.openRoomWithUser);
 
-  const [subTab, setSubTab] = useState<SubTab>('online');
+  const [subTab, setSubTab] = useState<SubTab>(initialTab);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [messageError, setMessageError] = useState('');
 

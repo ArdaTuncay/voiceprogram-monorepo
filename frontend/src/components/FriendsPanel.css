@@ -6,83 +6,94 @@
   min-height: 0;
 }
 
+/* Tabs as pills: the open one filled with the accent, "Arkadaş Ekle"
+   outlined and pushed to the right. */
 .friends-subtabs {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  height: 48px;
-  padding: 0 var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-6) var(--space-3);
   flex-shrink: 0;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .friends-subtab {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 600;
-  padding: var(--space-1-5) var(--space-2-5);
-  border-radius: 4px;
-  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: var(--space-1-5);
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-normal);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
 }
 
 .friends-subtab:hover {
-  color: var(--text-normal);
-  background: var(--bg-primary);
+  background: var(--bg-elevated);
+  color: var(--text-heading);
 }
 
 .friends-subtab.active {
-  color: var(--text-heading);
-  background: var(--bg-primary);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .friends-subtab-add {
   margin-left: auto;
-  color: var(--success);
+  border-color: var(--border-strong);
+  background: transparent;
+}
+
+.friends-subtab-add.active {
+  border-color: transparent;
 }
 
 .friends-subtab-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 var(--space-1);
-  border-radius: 8px;
-  background: var(--danger);
-  color: var(--interactive-active);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--on-accent);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
+}
+
+.friends-subtab.active .friends-subtab-badge {
+  background: var(--on-accent);
+  color: var(--accent);
 }
 
 .friends-content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-2) var(--space-6) var(--space-5);
 }
 
 .friends-error {
-  color: var(--danger);
-  font-size: 13px;
+  color: var(--danger-text);
+  font-size: var(--font-size-sm);
   margin-bottom: var(--space-3);
 }
 
 .friends-loading {
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   padding: var(--space-6) var(--space-1);
 }
 
 .friends-section-title {
   color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   margin: var(--space-5) var(--space-1) var(--space-2);
 }
 
@@ -94,18 +105,22 @@
   list-style: none;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .friends-list-item {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-1);
-  border-bottom: 1px solid var(--bg-tertiary);
+  padding: var(--space-2-5) var(--space-3);
+  border-radius: var(--radius-lg);
+  transition: background var(--duration-fast) var(--ease-out);
 }
 
-.friends-list-item:last-child {
-  border-bottom: none;
+.friends-list-item:hover {
+  background: var(--bg-card);
 }
 
 .friends-list-avatar-wrapper {
@@ -114,22 +129,27 @@
 }
 
 .friends-list-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
   color: var(--interactive-active);
   text-transform: uppercase;
 }
 
 .friends-status-dot {
   position: absolute;
-  bottom: -2px;
-  right: -2px;
+  bottom: -1px;
+  right: -1px;
+  box-shadow: 0 0 0 2px var(--bg-primary);
+}
+
+.friends-list-item:hover .friends-status-dot {
+  box-shadow: 0 0 0 2px var(--bg-card);
 }
 
 .friends-list-info {
@@ -137,37 +157,39 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  line-height: var(--line-height-tight);
 }
 
 .friends-list-name {
-  color: var(--text-normal);
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--text-heading);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .friends-list-status {
+  margin-top: 2px;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .friends-remove-btn,
 .friends-accept-btn,
 .friends-message-btn {
-  background: var(--bg-tertiary);
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--text-normal);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
 
 .friends-message-btn {
@@ -180,12 +202,12 @@
 }
 
 .friends-accept-btn {
-  color: var(--success);
+  color: var(--accent-text);
 }
 
 .friends-accept-btn:hover:not(:disabled) {
-  background: var(--success);
-  color: var(--interactive-active);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .friends-remove-btn:hover:not(:disabled) {
@@ -205,13 +227,13 @@
 
 .add-friend-title {
   color: var(--text-heading);
-  font-size: 16px;
+  font-size: var(--font-size-md);
   margin: 0 0 var(--space-2);
 }
 
 .add-friend-description {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   margin: 0 0 var(--space-4);
 }
 
@@ -222,22 +244,29 @@
 
 .add-friend-input {
   flex: 1;
-  background: var(--bg-input);
-  border: none;
-  border-radius: 4px;
+  min-width: 0;
+  height: var(--control-size-md);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
   color: var(--text-normal);
-  font-size: 14px;
-  padding: var(--space-2-5) var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.add-friend-input:focus {
+  border-color: var(--accent-text);
 }
 
 .add-friend-submit-btn {
-  background: var(--accent);
+  height: var(--control-size-md);
+  padding: 0 var(--space-5);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
   color: var(--on-accent);
-  font-size: 14px;
-  font-weight: 600;
-  padding: 0 var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -252,7 +281,7 @@
 }
 
 .add-friend-success {
-  color: var(--success);
-  font-size: 13px;
+  color: var(--accent-text);
+  font-size: var(--font-size-sm);
   margin-top: var(--space-3);
 }

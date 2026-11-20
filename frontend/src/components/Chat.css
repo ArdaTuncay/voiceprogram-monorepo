@@ -1,32 +1,87 @@
+/* ── Main window layout ──────────────────────────────────────────────────
+   One gray tone throughout; the parts are separate outlined panels with a
+   gap between them (docs/ornek-tasarim). A grid instead of the old flex
+   row, so the top bar can sit above the conversation and the member card
+   while the server rail and the channel column run the full height:
+
+     rail | side  | top  | top
+     rail | side  | main | members
+     rail | voice | main | members   ← only while in a voice room
+
+   The members column exists only while something is in it (the member
+   card or search results), checked with :has() so no JS has to track it.
+   Each part names its own area: .server-sidebar (rail), .channel-sidebar
+   (side), .topbar (top), .chat-main (main), .members-panel and
+   .search-results-panel (members), .voice-status-bar-fixed (voice). ── */
 .chat-layout {
-  display: flex;
-  height: 100vh;
+  display: grid;
+  grid-template-columns: var(--rail-width) var(--sidebar-width) minmax(0, 1fr);
+  grid-template-rows: var(--topbar-height) minmax(0, 1fr);
+  grid-template-areas:
+    'rail side top'
+    'rail side main';
+  gap: var(--layout-gap);
   width: 100%;
+  height: calc(100vh - var(--titlebar-height));
+  padding: 0 var(--layout-gap) var(--layout-gap);
+  box-sizing: border-box;
   overflow: hidden;
   background: var(--bg-primary);
 }
 
-/* ── Reconnect banner — floats above the layout (not a flex child, so it
-   never reflows the sidebar/main/online-list row underneath) while the
-   socket is down after having been connected before; disappears the
-   instant it reopens. ── */
+.chat-layout--voice {
+  grid-template-rows: var(--topbar-height) minmax(0, 1fr) auto;
+  grid-template-areas:
+    'rail side  top'
+    'rail side  main'
+    'rail voice main';
+}
+
+.chat-layout:has(> .members-panel, > .search-results-panel) {
+  grid-template-columns: var(--rail-width) var(--sidebar-width) minmax(0, 1fr) var(--members-width);
+  grid-template-areas:
+    'rail side top  top'
+    'rail side main members';
+}
+
+.chat-layout--voice:has(> .members-panel, > .search-results-panel) {
+  grid-template-areas:
+    'rail side  top  top'
+    'rail side  main members'
+    'rail voice main members';
+}
+
+/* The rail and the channel column start at the window's top edge plus a
+   gap, level with the top bar's buttons. */
+.chat-layout > .server-sidebar,
+.chat-layout > .channel-sidebar {
+  margin-top: var(--layout-gap);
+}
+
+.chat-layout > .voice-status-bar-fixed {
+  grid-area: voice;
+}
+
+/* ── Reconnect banner — floats above the layout (fixed, never a grid
+   item) while the socket is down after having been connected before;
+   disappears the instant it reopens. ── */
 .reconnect-banner {
   position: fixed;
-  top: 12px;
+  top: calc(var(--titlebar-height) + 12px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 3000;
+  z-index: var(--z-titlebar);
   display: flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  border-radius: 20px;
-  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
   border: 1px solid var(--warning);
   color: var(--warning);
-  font-size: 13px;
-  font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  box-shadow: var(--shadow-md);
   pointer-events: none;
 }
 
@@ -36,7 +91,7 @@
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--warning);
-  animation: reconnect-banner-pulse 1.2s ease-in-out infinite;
+  animation: reconnect-banner-pulse var(--duration-pulse) ease-in-out infinite;
 }
 
 @keyframes reconnect-banner-pulse {
@@ -44,85 +99,511 @@
   50% { opacity: 1; transform: scale(1); }
 }
 
-/* ── Left sidebar ── */
+/* ── Channel column: no panel of its own — a header card, then one card
+   per channel (or per DM) straight on the window's gray. ── */
 .channel-sidebar {
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
-  width: 240px;
-  flex-shrink: 0;
+  grid-area: side;
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
 }
 
 .server-header {
-  height: 48px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-2) 0 var(--space-4);
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--text-heading);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  gap: var(--space-1);
+  min-height: var(--topbar-height);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
   flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.server-header-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--line-height-tight);
 }
 
 .server-header-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 600;
+  color: var(--text-heading);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   letter-spacing: -0.01em;
+}
+
+.server-header-meta {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
 }
 
 .invite-people-btn {
   position: relative;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 16px;
-  cursor: pointer;
-  padding: var(--space-1-5);
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-size-sm);
+  height: var(--control-size-sm);
   flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
 
 .invite-people-btn:hover {
-  color: var(--text-normal);
-  background: var(--bg-primary);
+  background: var(--bg-hover);
+  color: var(--text-heading);
 }
 
 .leave-server-btn {
-  color: var(--danger);
-  margin-left: auto;
+  color: var(--danger-text);
 }
 
 .leave-server-btn:hover {
+  background: var(--danger);
   color: var(--interactive-active);
+}
+
+/* New-report marker on the server settings button (see useServerStore's reportServerIds). */
+.settings-report-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-primary);
   background: var(--danger);
 }
 
-/* ── DM header block-user confirmation ── */
+.channel-list {
+  overscroll-behavior: contain;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  min-height: 0;
+  padding: var(--space-1) 2px var(--space-1) 0;
+  overflow-y: auto;
+}
+
+.channel-list .list-empty-hint {
+  padding: var(--space-2) var(--space-3);
+}
+
+.channel-category-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.channel-category-group + .channel-category-group {
+  margin-top: var(--space-2);
+}
+
+.channel-category-row,
+.channel-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  padding: 0 var(--space-1) 0 var(--space-2);
+}
+
+.channel-category-label {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.channel-category-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.channel-category-toggle:hover .channel-category-label {
+  color: var(--text-normal);
+}
+
+.category-chevron {
+  color: var(--text-muted);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.category-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.channel-category-add-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* One card per channel: a round icon tile, the name, an unread dot. The
+   open channel gets a lighter card and an accent-filled tile. */
+.channel-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-1-5) var(--space-3);
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.channel-item:hover {
+  background: var(--bg-secondary);
+  color: var(--text-normal);
+}
+
+.channel-item.active {
+  background: var(--bg-secondary);
+  color: var(--text-heading);
+}
+
+.channel-hash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+
+.channel-item:hover .channel-hash {
+  background: var(--bg-elevated);
+}
+
+.channel-item.active .channel-hash {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.channel-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channel-name-unread {
+  color: var(--text-heading);
+  font-weight: var(--font-weight-semibold);
+}
+
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.unread-badge {
+  font-variant-numeric: tabular-nums;
+  min-width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  line-height: 20px;
+  text-align: center;
+}
+
+/* ── Voice channel card: the row plus who's inside. The room you're in
+   gets the lighter card and the accent tile. ── */
+.voice-channel-card {
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+}
+
+.voice-channel-card .channel-item {
+  background: transparent;
+}
+
+.voice-channel-card:hover,
+.voice-channel-card.active {
+  background: var(--bg-secondary);
+}
+
+.voice-channel-card:hover .channel-hash {
+  background: var(--bg-elevated);
+}
+
+.voice-channel-card.active .channel-hash {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* "Sessiz katıl": a small mic-off button over the card's right edge,
+   shown on hover or keyboard focus (always on touch screens), taking the
+   people count's place meanwhile. */
+.voice-channel-card {
+  position: relative;
+}
+
+.voice-join-muted-btn {
+  position: absolute;
+  top: 8px;
+  right: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-size-sm);
+  height: var(--control-size-sm);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  color: var(--text-normal);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.voice-join-muted-btn:hover {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.voice-channel-card:hover .voice-join-muted-btn,
+.voice-channel-card:focus-within .voice-join-muted-btn {
+  opacity: 1;
+}
+
+.voice-channel-card:not(.active):not(.joining):hover .voice-channel-count,
+.voice-channel-card:not(.active):not(.joining):focus-within .voice-channel-count {
+  visibility: hidden;
+}
+
+@media (hover: none) {
+  .voice-join-muted-btn {
+    opacity: 1;
+  }
+
+  .voice-channel-card:not(.active):not(.joining) .voice-channel-count {
+    visibility: hidden;
+  }
+}
+
+/* "Bağlanıyor…" while the microphone and the room are being set up. */
+.voice-channel-card.joining {
+  background: var(--bg-secondary);
+}
+
+.voice-joining {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) var(--space-3) 58px;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.voice-joining-spinner {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent-text);
+  animation: search-bar-spin 0.8s linear infinite;
+}
+
+.voice-channel-count {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Lines the people up under the channel name (tile 34px + gap 12px +
+   card padding 12px). */
+.voice-participant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 var(--space-3) var(--space-3) 58px;
+}
+
+.voice-participant-list .voice-participant-avatar.speaking {
+  box-shadow: 0 0 0 2px var(--bg-secondary), 0 0 0 4px var(--voice-speaking);
+}
+
+/* Who's in a room you haven't joined — the same rows, quieter. */
+.voice-occupants-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  padding: 0 var(--space-3) var(--space-3) 58px;
+}
+
+.voice-occupant-preview-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.voice-occupant-preview-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--interactive-active);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+}
+
+.voice-occupant-preview-name {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The circle layout (VoiceOrbit's default) isn't used in the channel
+   column anymore, but keeps its speaking glow in the accent. */
+.voice-orbit-avatar.speaking {
+  animation: voice-activity-glow 1.4s ease-in-out infinite;
+}
+
+@keyframes voice-activity-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--voice-speaking), 0 0 6px 1px var(--voice-speaking);
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--voice-speaking), 0 0 12px 4px var(--voice-speaking);
+  }
+}
+
+/* ── Direct messages: one card per conversation — avatar, name, presence
+   line, unread count. ── */
+.dm-room-item {
+  min-height: 60px;
+}
+
+.dm-room-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dm-room-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--interactive-active);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+}
+
+.dm-room-status-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  box-shadow: 0 0 0 2px var(--bg-card);
+}
+
+.dm-room-item:hover .dm-room-status-dot,
+.dm-room-item.active .dm-room-status-dot {
+  box-shadow: 0 0 0 2px var(--bg-secondary);
+}
+
+.dm-room-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--line-height-tight);
+}
+
+.dm-room-item .channel-name {
+  color: var(--text-normal);
+}
+
+.dm-room-item .channel-name-unread,
+.dm-room-item.active .channel-name {
+  color: var(--text-heading);
+}
+
+.dm-room-status {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+/* ── DM block-user confirmation (top of the DM conversation) ── */
 .dm-block-confirm {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2-5) var(--space-4);
-  background: var(--bg-tertiary);
+  padding: var(--space-2-5) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
   color: var(--text-normal);
-  font-size: 13px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  font-size: var(--font-size-sm);
 }
 
 .dm-block-confirm-btn,
 .dm-block-cancel-btn {
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: var(--space-1-5) var(--space-2-5);
-  cursor: pointer;
   flex-shrink: 0;
+  height: var(--control-size-sm);
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
 }
 
 .dm-block-confirm-btn {
@@ -135,7 +616,7 @@
 }
 
 .dm-block-cancel-btn {
-  background: var(--bg-input);
+  background: var(--bg-secondary);
   color: var(--text-normal);
 }
 
@@ -145,349 +626,51 @@
   cursor: default;
 }
 
-.channel-list {
-  flex: 1;
-  padding: var(--space-4) var(--space-2) var(--space-2);
-  overflow-y: auto;
-}
-
-/* .channel-item rows add their own var(--space-2) horizontal padding on top
-   of this container's, for 16px total from the sidebar edge — .list-empty-hint's
-   shared base padding (var(--space-1) horizontal) falls 4px short of that, so
-   it's bumped here to match the row alignment instead of sitting closer to
-   the edge than everything else in this list. */
-.channel-list .list-empty-hint {
-  padding: var(--space-2);
-}
-
-.channel-category-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-1) var(--space-1) var(--space-2);
-}
-
-.channel-category-label {
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/* Mirrors .channel-category-row's layout/padding (label left, add-action
-   right) so the top-level "+" reads as "belongs to the channel list below"
-   instead of a floating, unlabeled icon — and so the gap before the first
-   channel row matches the gap between category groups rather than being
-   its own, larger one. */
-.channel-list-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-1) var(--space-1) var(--space-2);
-}
-
-.channel-category-group {
-  margin-top: var(--space-4);
-}
-
-.channel-category-group:first-child {
-  margin-top: 0;
-}
-
-.channel-category-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-.category-chevron {
-  color: var(--text-muted);
-  font-size: 10px;
-  transition: transform 0.1s;
-}
-
-.category-chevron.collapsed {
-  transform: rotate(-90deg);
-}
-
-.channel-category-add-actions {
-  display: flex;
-  gap: var(--space-1);
-}
-
-.channel-category-label-plain {
-  text-transform: none;
-  letter-spacing: normal;
-  font-weight: 600;
-  font-size: 12px;
-}
-
-.channel-item {
-  display: flex;
-  align-items: center;
-  border-radius: 4px;
-  color: var(--interactive-normal);
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 500;
-  padding: var(--space-1-5) var(--space-2);
-  gap: var(--space-1-5);
-  transition: background 0.1s, color 0.1s;
-  user-select: none;
-}
-
-.channel-item:hover {
-  background: rgba(79, 84, 92, 0.24);
-  color: var(--interactive-hover);
-}
-
-.channel-item.active {
-  background: rgba(114, 137, 218, 0.2);
-  /* Not --interactive-active — that token is pinned to a constant light
-     color for the (unrelated) colored-avatar/danger-button text it mostly
-     serves, so it doesn't invert for the light theme. --text-heading is
-     the token that actually means "brightest neutral text" per theme. */
-  color: var(--text-heading);
-}
-
-.channel-hash {
-  font-size: 20px;
-  line-height: 1;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.channel-item.active .channel-hash {
-  color: var(--text-normal);
-}
-
-.dm-room-item {
-  font-size: 14px;
-}
-
-.dm-room-avatar-wrapper {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.dm-room-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--interactive-active);
-  text-transform: uppercase;
-}
-
-.dm-room-status-dot {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-}
-
-/* ── User panel — sits between the workspace header and the channel list,
-   not at the bottom of the sidebar, so it reads as "who you are" rather
-   than a footer. */
-.user-panel {
-  background: rgba(0, 0, 0, 0.22);
-  padding: var(--space-2) var(--space-3);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  height: 52px;
-  flex-shrink: 0;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
-}
-
-.user-avatar-sm {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--interactive-active);
-  flex-shrink: 0;
-  text-transform: uppercase;
-}
-
-.user-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.user-name-sm {
-  color: var(--text-heading);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.user-status-sm {
-  color: var(--success);
-  font-size: 11px;
-}
-
-.user-status-sm.user-status-offline {
-  color: var(--text-muted);
-}
-
-.user-settings-btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-1) var(--space-1-5);
-  border-radius: 4px;
-  line-height: 1;
-  transition: color 0.15s, background 0.15s;
-  flex-shrink: 0;
-}
-
-.user-settings-btn:hover {
-  color: var(--text-normal);
-  background: var(--bg-input);
-}
-
-.logout-btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-1) var(--space-1-5);
-  border-radius: 4px;
-  line-height: 1;
-  transition: color 0.15s, background 0.15s;
-  flex-shrink: 0;
-}
-
-.logout-btn:hover {
-  color: var(--text-normal);
-  background: var(--bg-input);
-}
-
-/* ── Main chat area ── */
+/* ── Conversation panel ── */
 .chat-main {
-  flex: 1;
+  grid-area: main;
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  position: relative;
-}
-
-.chat-header {
-  height: 48px;
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-4);
-  gap: var(--space-2);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.chat-header-hash {
-  color: var(--text-muted);
-  font-size: 22px;
-  line-height: 1;
-}
-
-.chat-header-name {
-  color: var(--text-heading);
-  font-size: 15px;
-  font-weight: 700;
-}
-
-/* Toggles .chat-search-row below — margin-left: auto pushes it (and any
-   header button after it, e.g. DMChatView's block button) to the header's
-   right edge regardless of what else is/isn't rendered before it. */
-.chat-header-search-btn {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: var(--space-1-5);
-  border-radius: 4px;
-}
-
-.chat-header-search-btn:hover {
-  color: var(--text-normal);
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
   background: var(--bg-primary);
+  overflow: hidden;
 }
 
-.chat-header-search-btn.active {
-  color: var(--on-accent);
-  background: var(--accent);
-}
-
-/* ── Search bar — its own centered row directly under the header, instead
-   of squeezed into the header next to the channel name. That header row is
-   already busy (name + invite/settings icons) and only had room for a
-   ~220px sliver, which read as a decorative placeholder rather than a
-   usable search field. Giving it a dedicated, centered, wider pill makes it
-   discoverable without competing with the header for space. ── */
-.chat-search-row {
-  display: flex;
-  justify-content: center;
-  padding: var(--space-2-5) var(--space-4);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
-  flex-shrink: 0;
-}
-
+/* ── Search bar (inside the top bar's search pill, see TopBar.css) ── */
 .search-bar {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  background: var(--bg-input);
-  border: 1px solid transparent;
-  border-radius: 18px;
-  padding: 0 var(--space-4);
-  height: 36px;
   width: 100%;
   max-width: 480px;
-  transition: border-color 0.1s;
+  height: 36px;
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
 }
 
 .search-bar:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .search-bar-icon {
-  font-size: 15px;
-  color: var(--text-muted);
   flex-shrink: 0;
+  color: var(--text-muted);
 }
 
 .search-bar-input {
   flex: 1;
   min-width: 0;
-  background: transparent;
   border: none;
+  outline: none;
+  background: transparent;
   color: var(--text-normal);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .search-bar-input::placeholder {
@@ -495,24 +678,26 @@
 }
 
 .search-bar-filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
-  background: transparent;
+  padding: 0;
   border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  padding: var(--space-1);
-  border-radius: 3px;
-  opacity: 0.6;
 }
 
 .search-bar-filter-btn:hover {
-  opacity: 1;
-  background: rgba(79, 84, 92, 0.24);
+  background: var(--bg-hover);
+  color: var(--text-heading);
 }
 
 .search-bar-filter-btn.active {
-  opacity: 1;
   background: var(--accent);
   color: var(--on-accent);
 }
@@ -522,7 +707,7 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid rgba(79, 84, 92, 0.4);
+  border: 2px solid var(--border-strong);
   border-top-color: var(--text-muted);
   animation: search-bar-spin 0.7s linear infinite;
 }
@@ -533,10 +718,11 @@
 
 /* ── Messages ── */
 .messages-wrapper {
-  flex: 1;
-  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
+  flex: 1;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 .messages-wrapper::-webkit-scrollbar {
@@ -548,76 +734,85 @@
 }
 
 .messages-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(32, 34, 37, 0.7);
   border-radius: 4px;
+  background: var(--bg-secondary);
 }
 
 .messages-list {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
   justify-content: flex-end;
-  padding: var(--space-4) 0 var(--space-2);
-  min-height: min-content;
   width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
+  min-height: min-content;
+  padding: var(--space-5) 0 var(--space-2);
 }
 
 .channel-intro {
-  padding: var(--space-4) var(--space-4) var(--space-6);
-  border-bottom: 1px solid rgba(79, 84, 92, 0.2);
-  margin-bottom: var(--space-4);
+  margin: 0 var(--space-6) var(--space-4);
+  padding: var(--space-4) 0 var(--space-5);
+  border-bottom: 1px solid var(--border);
 }
 
 .channel-intro h2 {
-  color: var(--text-heading);
-  font-size: 32px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  text-wrap: balance;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0 0 var(--space-2);
+  color: var(--text-heading);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-tight);
 }
 
 .channel-intro p {
-  color: var(--text-muted);
-  font-size: 15px;
   margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
 }
 
 .message {
   position: relative;
   display: flex;
   align-items: flex-start;
-  padding: var(--space-1) var(--space-4);
-  gap: var(--space-4);
-  transition: background 0.05s;
+  gap: var(--space-3);
+  padding: var(--space-1-5) var(--space-6);
+  transition: background var(--duration-instant) var(--ease-out);
 }
 
 .message:hover {
-  background: rgba(4, 4, 5, 0.07);
+  background: var(--bg-hover);
 }
 
 /* Flashed briefly on the target of a search-result "jump to message". */
 .message-highlighted {
-  background: rgba(114, 137, 218, 0.15);
-  transition: background 0.3s;
+  background: var(--accent-soft);
+  transition: background var(--duration-slow);
+}
+
+/* A message that mentions you: tinted, with an accent bar on its left. */
+.message-mentioned {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent-text);
 }
 
 .message-reaction-picker {
   position: absolute;
   top: -14px;
-  right: 16px;
+  right: var(--space-6);
+  z-index: 1;
   display: flex;
-  background: var(--bg-secondary);
-  border: 1px solid var(--bg-tertiary);
-  border-radius: 8px;
-  padding: var(--space-1);
   gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-md);
   opacity: 0;
   pointer-events: none;
   transform: translateY(2px);
-  transition: opacity 0.1s, transform 0.1s;
-  z-index: 1;
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
 }
 
 /* Opens only via MessageContextMenu's "İfade Bırak" (see MessageItem.tsx's
@@ -630,18 +825,18 @@
 }
 
 .message-reaction-picker-btn {
-  background: transparent;
+  padding: var(--space-1) var(--space-1-5);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-full);
+  background: transparent;
   font-size: 16px;
   line-height: 1;
-  padding: var(--space-1) var(--space-1-5);
   cursor: pointer;
-  transition: background 0.1s, transform 0.1s;
+  transition: background var(--duration-fast), transform var(--duration-fast);
 }
 
 .message-reaction-picker-btn:hover {
-  background: var(--bg-tertiary);
+  background: var(--bg-elevated);
   transform: scale(1.15);
 }
 
@@ -649,28 +844,29 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1-5);
-  margin-top: var(--space-1-5);
+  margin-top: var(--space-2);
 }
 
 .message-reaction-pill {
   display: flex;
   align-items: center;
   gap: var(--space-1-5);
-  background: var(--bg-tertiary);
+  height: 28px;
+  padding: 0 var(--space-2-5);
   border: 1px solid transparent;
-  border-radius: 10px;
-  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
   cursor: pointer;
-  transition: background 0.1s, border-color 0.1s;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
 }
 
 .message-reaction-pill:hover {
-  border-color: var(--text-muted);
+  border-color: var(--border-strong);
 }
 
 .message-reaction-pill.mine {
-  background: rgba(88, 101, 242, 0.16);
-  border-color: var(--accent);
+  border-color: var(--accent-text);
+  background: var(--accent-soft);
 }
 
 .message-reaction-emoji {
@@ -679,55 +875,55 @@
 }
 
 .message-reaction-count {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-normal);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
 }
 
 .message-reaction-pill.mine .message-reaction-count {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .message-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--interactive-active);
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
-  margin-top: var(--space-1);
+  margin-top: 2px;
+  border-radius: 50%;
+  color: var(--interactive-active);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
   text-transform: uppercase;
 }
 
 .message-body {
   flex: 1;
   min-width: 0;
-  padding: var(--space-1) 0;
 }
 
 /* Grouped messages skip .message-avatar entirely (not just hide it), so
-   this stands in for its width (40px, see .message-avatar) plus .message's
-   own gap (var(--space-4)) to keep content lined up with ungrouped rows
-   above/below it. */
+   this stands in for its width (40px) plus .message's own gap to keep
+   content lined up with ungrouped rows above/below it. */
 .message-content-grouped {
-  padding-left: calc(40px + var(--space-4));
+  padding-left: calc(40px + var(--space-3));
 }
 
+/* Name on the left, time pushed to the right edge. */
 .message-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-2);
-  margin-bottom: var(--space-1);
-  flex-wrap: wrap;
+  margin-bottom: 2px;
 }
 
 .message-author {
-  font-size: 15px;
-  font-weight: 600;
+  color: var(--text-heading);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
 }
 
@@ -736,22 +932,26 @@
 }
 
 .message-timestamp {
-  color: var(--text-muted);
-  font-size: 11px;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  order: 2;
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
 }
 
 .message-edited-tag {
-  color: var(--text-muted);
-  font-size: 10px;
   flex-shrink: 0;
+  order: 1;
+  color: var(--text-muted);
+  font-size: 11px;
 }
 
 .message-deleted-placeholder {
-  color: var(--text-muted);
-  font-style: italic;
-  font-size: var(--font-size-sm);
   margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
 }
 
 .message-edit-box {
@@ -763,15 +963,15 @@
 
 .message-edit-input {
   width: 100%;
-  resize: none;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--accent);
-  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--accent-text);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
   color: var(--text-normal);
-  font-size: 15px;
   font-family: inherit;
+  font-size: var(--font-size-base);
   line-height: 1.4;
-  padding: var(--space-2) var(--space-2-5);
+  resize: none;
 }
 
 .message-edit-actions {
@@ -781,11 +981,12 @@
 
 .message-edit-save-btn,
 .message-edit-cancel-btn {
+  height: 28px;
+  padding: 0 var(--space-3);
   border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: var(--space-1) var(--space-2-5);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
 }
 
@@ -810,14 +1011,14 @@
 
 .message-content {
   color: var(--text-normal);
-  font-size: 15px;
-  line-height: 1.4;
-  word-break: break-word;
+  font-size: var(--font-size-base);
+  line-height: 1.45;
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .message-link {
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: none;
 }
 
@@ -826,89 +1027,138 @@
 }
 
 .message-inline-code {
-  background: var(--bg-tertiary);
-  color: var(--text-normal);
-  font-family: 'Courier New', Consolas, Monaco, monospace;
-  font-size: 0.85em;
   padding: 0.15em 0.4em;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-secondary);
+  color: var(--text-normal);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.85em;
 }
 
 .message-code-block {
   position: relative;
-  background: var(--bg-tertiary);
-  border: 1px solid rgba(0, 0, 0, 0.25);
-  border-radius: 6px;
   margin: var(--space-1-5) 0 var(--space-1);
   padding: var(--space-2-5) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
   overflow-x: auto;
   white-space: pre;
 }
 
 .message-code-block code {
   color: var(--text-normal);
-  font-family: 'Courier New', Consolas, Monaco, monospace;
+  font-family: ui-monospace, Consolas, monospace;
   font-size: 13px;
   line-height: 1.5;
 }
 
 .message-code-lang {
+  margin-bottom: var(--space-1-5);
   color: var(--text-muted);
   font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  margin-bottom: var(--space-1-5);
+  font-weight: var(--font-weight-semibold);
 }
 
-/* ── Input area — same ~720px reading column as the message list above it,
-   centered, instead of stretching edge-to-edge in wide windows. ── */
-.message-input-area {
-  padding: 0 var(--space-4) var(--space-6);
+/* ── Replies and @mentions ── */
+.message-reply-quote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 0 0 2px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  text-align: left;
+  cursor: pointer;
+}
+
+.message-reply-quote:hover .message-reply-text {
+  color: var(--text-normal);
+}
+
+.message-reply-author {
   flex-shrink: 0;
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
+  font-weight: var(--font-weight-semibold);
+}
+
+.message-reply-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-mention {
+  padding: 0 4px;
+  border-radius: var(--radius-xs);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ── Composer: a pill at the bottom of the conversation panel ── */
+.message-input-area {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-5) var(--space-5);
   box-sizing: border-box;
 }
 
 .message-input-box {
-  background: var(--bg-input);
-  border-radius: 8px;
   display: flex;
   align-items: flex-end;
-  padding: 0 var(--space-4);
   gap: var(--space-2);
+  min-height: 52px;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: 26px;
+  background: var(--bg-secondary);
+  box-sizing: border-box;
+}
+
+.message-input-box:focus-within {
+  border-color: var(--accent-text);
 }
 
 .message-input {
-  background: transparent;
-  border: none;
-  color: var(--text-normal);
   flex: 1;
-  font-size: 15px;
-  line-height: 1.4;
-  padding: var(--space-3) 0;
-  font-family: inherit;
-  resize: none;
   max-height: 168px;
+  padding: 7px 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-normal);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  line-height: 1.4;
   overflow-y: auto;
+  resize: none;
+}
+
+.message-input::placeholder {
+  color: var(--text-muted);
 }
 
 .attach-btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 18px;
-  cursor: pointer;
-  padding: var(--space-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
-  line-height: 1;
-  margin-bottom: var(--space-2-5);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
 }
 
 .attach-btn:hover:not(:disabled) {
-  color: var(--text-normal);
+  background: var(--bg-hover);
+  color: var(--text-heading);
 }
 
 .attach-btn:disabled {
@@ -916,25 +1166,114 @@
   cursor: not-allowed;
 }
 
+.send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), opacity var(--duration-fast);
+}
+
+.send-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.send-btn:disabled {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.reply-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1-5);
+  padding: var(--space-1-5) var(--space-3) var(--space-1-5) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.reply-banner span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reply-banner strong {
+  color: var(--text-normal);
+}
+
+.reply-banner button {
+  display: flex;
+  padding: 2px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.reply-banner button:hover {
+  color: var(--text-normal);
+}
+
+.mention-suggestions {
+  max-height: 220px;
+  margin: 0 0 var(--space-1-5);
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-md);
+  list-style: none;
+  overflow-y: auto;
+}
+
+.mention-suggestion {
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  color: var(--text-normal);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.mention-suggestion.active,
+.mention-suggestion:hover {
+  background: var(--bg-hover);
+}
+
 /* ── Media upload ── */
 .upload-status {
-  padding: var(--space-1-5) var(--space-1) 0;
+  padding: var(--space-1-5) var(--space-3) 0;
   color: var(--text-muted);
-  font-size: 12.5px;
+  font-size: var(--font-size-xs);
 }
 
 .upload-status-error {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .message-attachment-image {
   display: block;
-  max-width: 320px;
+  max-width: min(420px, 100%);
   max-height: 320px;
-  margin-top: var(--space-1-5);
-  border-radius: 8px;
-  cursor: pointer;
+  margin-top: var(--space-2);
+  border-radius: var(--radius-lg);
   object-fit: contain;
+  cursor: pointer;
 }
 
 .message-attachment-file {
@@ -943,23 +1282,23 @@
   gap: var(--space-2);
   width: fit-content;
   max-width: min(400px, 100%);
-  margin-top: var(--space-1-5);
+  margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
   color: inherit;
   text-decoration: none;
 }
 
 .message-attachment-file:hover,
 .message-attachment-file:focus-visible {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 
 .message-attachment-file-icon {
   flex-shrink: 0;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .message-attachment-file-meta {
@@ -970,7 +1309,7 @@
 
 .message-attachment-file-name {
   overflow: hidden;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -992,38 +1331,38 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(114, 137, 218, 0.15);
-  border: 3px dashed var(--accent);
-  border-radius: 8px;
+  border: 2px dashed var(--accent-text);
+  border-radius: var(--radius-xl);
+  background: var(--accent-soft);
   pointer-events: none;
 }
 
 .drag-drop-message {
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-full);
   background: var(--bg-secondary);
   color: var(--text-heading);
-  font-size: 16px;
-  font-weight: 600;
-  padding: var(--space-3) var(--space-5);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-md);
 }
 
 .image-lightbox-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2000;
-  background: rgba(0, 0, 0, 0.85);
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
   cursor: zoom-out;
 }
 
 .image-lightbox-img {
   max-width: 90vw;
   max-height: 90vh;
-  border-radius: 4px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
 }
 
 /* ── Typing indicator ── */
@@ -1031,9 +1370,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-1-5);
-  padding: var(--space-1-5) var(--space-1) 0;
+  padding: var(--space-1-5) var(--space-3) 0;
   color: var(--text-muted);
-  font-size: 12.5px;
+  font-size: var(--font-size-xs);
   font-style: italic;
 }
 
@@ -1069,99 +1408,75 @@
   }
 }
 
-.message-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.7;
-}
-
-.send-btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: var(--space-1-5);
-  margin-bottom: var(--space-1-5);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.1s, background 0.1s;
-  flex-shrink: 0;
-}
-
-.send-btn:hover:not(:disabled) {
-  color: var(--text-normal);
-  background: rgba(79, 84, 92, 0.24);
-}
-
-.send-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-/* ── Status bar ── */
+/* ── Status line (loading older messages, errors) ── */
 .channel-status {
-  padding: var(--space-1) var(--space-4) 0;
-  font-size: 12px;
   min-height: 18px;
+  padding: var(--space-1) var(--space-6) 0;
+  font-size: var(--font-size-xs);
 }
 
 .channel-status.error {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .channel-status.ok {
   color: transparent;
 }
 
-/* ── Right sidebar: search results ── */
+/* ── Search results: the right column's card while a search is open ── */
 .search-results-panel {
-  background: var(--bg-secondary);
-  width: 280px;
-  flex-shrink: 0;
+  grid-area: members;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--bg-primary);
+  overflow: hidden;
 }
 
 .search-results-header {
-  height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-4);
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--text-muted);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
+  min-height: 56px;
+  padding: 0 var(--space-3) 0 var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
 }
 
 .search-results-close-btn {
-  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-size-sm);
+  height: var(--control-size-sm);
+  padding: 0;
   border: none;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-normal);
   cursor: pointer;
-  color: var(--text-muted);
-  font-size: 14px;
-  line-height: 1;
-  padding: var(--space-1);
 }
 
 .search-results-close-btn:hover {
-  color: var(--text-normal);
+  background: var(--bg-elevated);
+  color: var(--text-heading);
 }
 
 .search-results-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-2);
+  overscroll-behavior: contain;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--space-1);
+  padding: var(--space-2);
+  overflow-y: auto;
 }
 
-/* Same rationale as .channel-list .list-empty-hint above: .search-result-item
-   rows add their own var(--space-2) horizontal padding on top of this
-   container's, so the shared class's default is bumped to match. */
 .search-results-list .list-empty-hint {
   padding: var(--space-2);
 }
@@ -1170,30 +1485,30 @@
   display: flex;
   gap: var(--space-2-5);
   padding: var(--space-2);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
 .search-result-item:hover {
-  background: rgba(79, 84, 92, 0.24);
+  background: var(--bg-hover);
 }
 
 .search-result-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
   color: var(--interactive-active);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
 }
 
 .search-result-body {
-  min-width: 0;
   flex: 1;
+  min-width: 0;
 }
 
 .search-result-meta {
@@ -1203,68 +1518,36 @@
 }
 
 .search-result-author {
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--text-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .search-result-time {
-  font-size: 11px;
-  color: var(--text-muted);
   flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 11px;
 }
 
 .search-result-content {
-  font-size: 13px;
-  color: var(--text-normal);
-  overflow: hidden;
-  text-overflow: ellipsis;
   display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-normal);
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
 .search-result-file-tag {
-  font-size: 11px;
-  color: var(--text-muted);
   margin-top: var(--space-1);
-}
-
-/* ── Right sidebar: online users — bg-tertiary (not bg-secondary, which
-   search-results-panel already uses and which sits too close to
-   bg-primary to read as a distinct surface) so it visually bookends the
-   layout the same way the server rail does on the far left. The
-   border-left gives it a crisp edge against chat-main since dark-on-dark
-   backgrounds alone don't leave a hard boundary. Stays a direct flex
-   child of .chat-layout (height: 100vh, flex row, default
-   align-items: stretch), so it's already full-height header-to-input;
-   nothing here overrides that. ── */
-.online-sidebar {
-  background: var(--bg-tertiary);
-  border-left: 1px solid var(--border);
-  width: 240px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.online-sidebar-header {
-  height: 48px;
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-4);
-  font-weight: 700;
-  font-size: 13px;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
-  flex-shrink: 0;
+  font-size: 11px;
 }
 
+/* ── Member rows (MembersPanel) — base look; MembersPanel.css sizes them
+   for the card. ── */
 .online-user-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-3) var(--space-2);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -1275,12 +1558,8 @@
   align-items: center;
   gap: var(--space-2-5);
   padding: var(--space-1-5) var(--space-2);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: default;
-}
-
-.online-user-item:hover {
-  background: rgba(79, 84, 92, 0.24);
 }
 
 .online-user-avatar-wrapper {
@@ -1289,284 +1568,41 @@
 }
 
 .online-user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   color: var(--interactive-active);
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
   text-transform: uppercase;
 }
 
 .online-status-dot {
   position: absolute;
-  bottom: -2px;
   right: -2px;
+  bottom: -2px;
 }
 
 .online-user-name {
+  overflow: hidden;
   color: var(--text-normal);
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── Voice channels ── */
-.voice-channel-item {
-  margin-top: var(--space-1);
-}
-
-.voice-participant-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2) var(--space-2) var(--space-6);
-}
-
-/* Compact "who's in here" preview shown under a voice channel row you
-   haven't joined yet — deliberately smaller/quieter than
-   .voice-participant-avatar (that one's for the real, active-room orbit;
-   this is just a hint). Left-indented to match .voice-participant-list's
-   own padding, so it lines up with the (mutually exclusive, see Chat.tsx)
-   panel it visually replaces. */
-.voice-occupants-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 2px var(--space-2) var(--space-1-5) var(--space-6);
-}
-
-.voice-occupant-preview-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1-5);
-  min-width: 0;
-}
-
-.voice-occupant-preview-avatar {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
-  font-weight: 700;
-  color: var(--interactive-active);
-}
-
-.voice-occupant-preview-name {
-  font-size: 12px;
-  color: var(--text-muted);
-  overflow: hidden;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.voice-participant {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) 0;
-}
-
-.voice-participant-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--interactive-active);
-  text-transform: uppercase;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 2px var(--success);
-  transition: box-shadow 0.15s;
-}
-
-/* Voice activity indicator: a glowing green ring around whoever's currently
- * talking, driven by useVoiceChannel's AnalyserNode-based VAD
- * (speakingUserIds) — applied to any avatar via the shared `.speaking`
- * class, not just the voice-room participant list (see `.user-avatar-sm`
- * below, for the local user's own avatar in the bottom profile panel). */
-.voice-participant-avatar.speaking,
-.user-avatar-sm.speaking,
-.voice-orbit-avatar.speaking {
-  animation: voice-activity-glow 1.4s ease-in-out infinite;
-}
-
-@keyframes voice-activity-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 0 2px var(--success), 0 0 6px 1px var(--success);
-  }
-  50% {
-    box-shadow: 0 0 0 3px var(--success), 0 0 12px 4px var(--success);
-  }
-}
-
-.voice-participant-info {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-
-.voice-participant-name {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--text-normal);
-  font-size: 12.5px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.voice-status-icon {
-  flex-shrink: 0;
-  width: 14px;
-  height: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--danger);
-  font-size: 9px;
-  line-height: 1;
-}
-
-.voice-participant-status {
-  color: var(--success);
-  font-size: 10.5px;
-}
-
-.voice-participant-status.reconnecting {
-  color: var(--warning);
-}
-
-/* ── Mute / deafen controls ── */
-.voice-controls-row {
-  display: flex;
-  gap: var(--space-1-5);
-  margin-top: var(--space-1-5);
-}
-
-.voice-control-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-1-5) 0;
-  border: none;
-  border-radius: 4px;
-  background: rgba(79, 84, 92, 0.32);
-  color: var(--text-normal);
-  font-size: 14px;
-  transition: background 0.1s, color 0.1s;
-}
-
-.voice-control-btn:hover {
-  background: rgba(79, 84, 92, 0.5);
-}
-
-.voice-control-btn.active {
-  background: var(--danger);
-  color: var(--interactive-active);
-}
-
-.voice-control-btn.active:hover {
-  background: var(--danger-hover);
-}
-
-/* ── Unread channel indicator ── */
-.channel-name-unread {
-  color: var(--text-heading);
-  font-weight: 700;
-}
-
-.unread-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--danger);
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-/* Same slot/role as .unread-dot (far right of a .channel-item row), just
-   wide enough to hold a count instead of being a bare dot. */
-.unread-badge {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: var(--danger);
-  color: var(--interactive-active);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 18px;
-  text-align: center;
-  flex-shrink: 0;
-  margin-left: auto;
 }
 
 /* ── Screen share ── */
-.screen-share-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1-5);
-  width: 100%;
-  margin-top: var(--space-1-5);
-  padding: var(--space-1-5) var(--space-2);
-  border: none;
-  border-radius: 4px;
-  background: rgba(79, 84, 92, 0.32);
-  color: var(--text-normal);
-  font-size: 12.5px;
-  font-weight: 600;
-  transition: background 0.1s, color 0.1s;
-}
-
-.screen-share-btn:hover {
-  background: rgba(79, 84, 92, 0.5);
-}
-
-.screen-share-btn.active {
-  background: var(--danger);
-  color: var(--interactive-active);
-}
-
-.screen-share-btn.active:hover {
-  background: var(--danger-hover);
-}
-
-/* "Birlikte İzle" while its panel is showing — on, but not a red "stop" state. */
-.screen-share-btn.active-soft {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.screen-share-btn.active-soft:hover {
-  background: var(--accent-hover);
-}
-
 .screen-share-panel {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border);
 }
 
 /* background: #000 below is bilinçli olarak tema token'larından bağımsız — video letterbox zemini */
@@ -1574,45 +1610,45 @@
   position: relative;
   width: 320px;
   max-width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
+  border-radius: var(--radius-lg);
   background: #000;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 1px var(--border);
+  overflow: hidden;
 }
 
 .screen-share-video {
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
-  object-fit: contain;
   background: #000;
+  object-fit: contain;
 }
 
 .screen-share-label {
   position: absolute;
-  bottom: 6px;
+  bottom: 8px;
   left: 8px;
   padding: var(--space-1) var(--space-2);
-  border-radius: 4px;
+  border-radius: var(--radius-full);
   background: rgba(0, 0, 0, 0.6);
   color: var(--interactive-active);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Sits in the tile's top-right corner, clear of .screen-share-label
    (bottom-left) so the two never overlap. */
 .screen-share-maximize-btn {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 8px;
+  right: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-full);
   background: rgba(0, 0, 0, 0.6);
   color: var(--interactive-active);
   cursor: pointer;
@@ -1628,11 +1664,11 @@
 .screen-share-maximize-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2000;
-  background: rgba(0, 0, 0, 0.85);
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
 }
 
 .screen-share-maximize-box {
@@ -1646,10 +1682,10 @@
   max-width: 90vw;
   max-height: 85vh;
   aspect-ratio: 16 / 9;
-  object-fit: contain;
+  border-radius: var(--radius-md);
   background: #000;
-  border-radius: 4px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-lg);
+  object-fit: contain;
 }
 
 .screen-share-maximize-close-btn {
@@ -1677,219 +1713,131 @@
   bottom: 8px;
   left: 8px;
   padding: var(--space-1) var(--space-2);
-  border-radius: 4px;
+  border-radius: var(--radius-full);
   background: rgba(0, 0, 0, 0.6);
   color: var(--interactive-active);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
-
 /* ── Phone-width layout ──────────────────────────────────────────────────
-   Below 768px there is no room for the server rail (72px), the channel
-   list (240px) and the online list (240px) next to the conversation. The
-   conversation gets the full width; the rail + channel list become a
-   drawer opened by .mobile-nav-toggle (top-left, over the header); the
-   online list is hidden. Desktop is untouched — the toggle and backdrop
-   only exist inside this media query. */
+   Below 768px there is no room for the rail, the channel column and the
+   member card next to the conversation. The conversation gets the full
+   width under the top bar; the rail + channel column become a drawer
+   opened by .mobile-nav-toggle (top-left, in the top bar's row); the
+   member card is hidden and search results float over the conversation;
+   the "Ses bağlı" card spans the bottom. Desktop is untouched — the toggle
+   and backdrop only exist inside this media query. */
 .mobile-nav-toggle,
 .mobile-nav-backdrop {
   display: none;
 }
 
 @media (max-width: 768px) {
-  .chat-layout {
+  .chat-layout,
+  .chat-layout--voice,
+  .chat-layout:has(> .members-panel, > .search-results-panel),
+  .chat-layout--voice:has(> .members-panel, > .search-results-panel) {
     height: 100dvh;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--topbar-height) minmax(0, 1fr);
+    grid-template-areas:
+      'top'
+      'main';
+    gap: var(--space-2);
+    padding: 0 var(--space-2) var(--space-2);
   }
 
-  .online-sidebar {
+  /* Room for the "Ses bağlı" card across the bottom — listed with its
+     :has() twin so it outranks the shared padding above. */
+  .chat-layout--voice,
+  .chat-layout--voice:has(> .members-panel, > .search-results-panel) {
+    padding-bottom: 124px;
+  }
+
+  .members-panel {
     display: none;
   }
 
-  .server-sidebar,
-  .channel-sidebar {
+  .search-results-panel {
+    position: fixed;
+    top: var(--topbar-height);
+    right: var(--space-2);
+    bottom: var(--space-2);
+    z-index: var(--z-sticky);
+    width: min(320px, calc(100vw - 2 * var(--space-2)));
+    box-shadow: var(--shadow-lg);
+  }
+
+  .chat-layout > .server-sidebar,
+  .chat-layout > .channel-sidebar {
     position: fixed;
     top: 0;
     bottom: 0;
     z-index: 60;
-    transition: transform 0.2s ease;
+    margin-top: 0;
+    transition: transform var(--duration-normal) var(--ease-out);
   }
 
-  .server-sidebar {
+  .chat-layout > .server-sidebar {
     left: 0;
+    border-radius: 0;
+    border-width: 0 1px 0 0;
   }
 
-  .channel-sidebar {
-    left: 72px;
-    width: min(240px, calc(100vw - 72px - 48px));
+  .chat-layout > .channel-sidebar {
+    left: var(--rail-width);
+    width: min(var(--sidebar-width), calc(100vw - var(--rail-width) - 48px));
+    padding: var(--space-3) var(--space-2);
+    background: var(--bg-primary);
+    border-right: 1px solid var(--border);
+    box-sizing: border-box;
   }
 
-  .chat-layout:not(.mobile-nav-open) .server-sidebar {
+  .chat-layout:not(.mobile-nav-open) > .server-sidebar {
     transform: translateX(-100%);
   }
 
-  .chat-layout:not(.mobile-nav-open) .channel-sidebar {
-    transform: translateX(calc(-100% - 72px));
+  .chat-layout:not(.mobile-nav-open) > .channel-sidebar {
+    transform: translateX(calc(-100% - var(--rail-width)));
   }
 
   .mobile-nav-open .mobile-nav-backdrop {
-    display: block;
     position: fixed;
     inset: 0;
     z-index: 55;
+    display: block;
     background: rgba(0, 0, 0, 0.45);
   }
 
   .mobile-nav-toggle {
+    position: fixed;
+    top: calc((var(--topbar-height) - var(--control-size-md)) / 2);
+    left: var(--space-2);
+    z-index: 40;
     display: flex;
     align-items: center;
     justify-content: center;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 40;
-    width: 48px;
-    height: 48px;
-    border: none;
-    background: transparent;
+    width: var(--control-size-md);
+    height: var(--control-size-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    background: var(--bg-card);
     color: var(--text-normal);
     cursor: pointer;
   }
 
-  /* Room for the menu button in every header that sits under it. */
-  .chat-main {
-    padding-top: 0;
+  .chat-layout > .topbar {
+    padding-left: calc(var(--control-size-md) + var(--space-2));
   }
 
-  .chat-header {
-    padding-left: 48px;
+  .chat-layout > .voice-status-bar-fixed {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-width: 1px 0 0;
   }
-
-  .chat-main > .empty-state,
-  .chat-main > :first-child:not(.chat-header) {
-    margin-top: 48px;
-  }
-
-  /* The active-call bar spans the bottom instead of sitting under the
-     (now hidden) sidebars, and the conversation leaves room for it. */
-  .voice-status-bar-fixed {
-    width: 100%;
-  }
-
-  .chat-layout--voice .chat-main {
-    padding-bottom: 64px;
-  }
-}
-
-/* New-report marker on the server settings button (see useServerStore's reportServerIds). */
-.settings-report-dot {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--danger);
-}
-
-/* ---- Replies and @mentions ---- */
-.message-reply-quote {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  background: none;
-  border: none;
-  padding: 0 0 2px;
-  color: var(--text-muted);
-  font-size: 12px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.message-reply-quote:hover .message-reply-text {
-  color: var(--text-normal);
-}
-
-.message-reply-author {
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.message-reply-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.message-mention {
-  background: color-mix(in srgb, var(--brand, #5865f2) 25%, transparent);
-  color: var(--text-normal);
-  border-radius: 3px;
-  padding: 0 2px;
-  font-weight: 500;
-}
-
-.message-mentioned {
-  background: color-mix(in srgb, #f0b232 10%, transparent);
-  box-shadow: inset 2px 0 0 #f0b232;
-}
-
-.reply-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  background: var(--bg-secondary);
-  color: var(--text-muted);
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 8px 8px 0 0;
-}
-
-.reply-banner span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-}
-
-.reply-banner strong {
-  color: var(--text-normal);
-}
-
-.reply-banner button {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 2px;
-}
-
-.reply-banner button:hover {
-  color: var(--text-normal);
-}
-
-.mention-suggestions {
-  list-style: none;
-  margin: 0 0 4px;
-  padding: 4px;
-  background: var(--bg-secondary);
-  border-radius: 8px;
-  max-height: 220px;
-  overflow-y: auto;
-}
-
-.mention-suggestion {
-  padding: 6px 10px;
-  border-radius: 4px;
-  color: var(--text-normal);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.mention-suggestion.active,
-.mention-suggestion:hover {
-  background: var(--bg-tertiary);
 }

@@ -113,12 +113,12 @@ describe('VoiceOrbit', () => {
     participants[0].isMuted = true;
     participants[1].isDeafened = true;
     participants[2].isReconnecting = true;
-    participants[2].statusText = 'Yeniden Bağlanıyor...';
+    participants[2].statusText = 'Yeniden Bağlanıyor…';
     const { container } = render(<VoiceOrbit participants={participants} />);
     expect(container.querySelectorAll('.mute-icon')).toHaveLength(1);
     expect(container.querySelectorAll('.deafen-icon')).toHaveLength(1);
     expect(container.querySelector('.voice-participant-status.reconnecting')?.textContent).toContain(
-      'Yeniden Bağlanıyor...',
+      'Yeniden Bağlanıyor…',
     );
   });
 });

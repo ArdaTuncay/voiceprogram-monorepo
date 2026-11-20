@@ -5,7 +5,7 @@
    z-index so a simultaneous disconnect still takes visual priority. ── */
 .notification-permission-banner {
   position: fixed;
-  top: 0;
+  top: var(--titlebar-height);
   left: 0;
   right: 0;
   z-index: 2500;

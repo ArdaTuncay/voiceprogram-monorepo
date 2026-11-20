@@ -1,35 +1,33 @@
-import { Hash, Headphones, Mic, MicOff, PhoneOff, VolumeX } from 'lucide-react';
+import { Clapperboard, Headphones, Mic, MicOff, PhoneOff, ScreenShare, ScreenShareOff, VolumeX } from 'lucide-react';
 import { useT } from '../i18n';
 import './VoiceStatusBar.css';
 
 interface Props {
-  /** Shown above the controls when provided. The persistent bottom-left bar
-   * needs it (there's no channel-list row alongside it to label the
-   * connection); the in-channel panel (under the active voice channel's own
-   * row — see Chat.tsx's renderChannelRow) omits it, since that row already
-   * shows the name right above. */
+  /** Shown above the controls when provided — the "Ses bağlı" card names the
+   * room it's connected to, since it stays visible from every view. */
   roomName?: string | null;
   serverName?: string | null;
-  /** 'fixed' pins this to the bottom-left of the whole layout (the always-
-   * visible bar); 'inline' (default) embeds it wherever it's placed, no
-   * positioning/background/border of its own — the in-channel panel's
-   * existing container already provides that. */
+  /** 'fixed' is the always-visible "Ses bağlı" card (Chat.tsx places it at
+   * the bottom of the channel column, or across the bottom on phones);
+   * 'inline' (default) is the bare button row, no card of its own. */
   variant?: 'fixed' | 'inline';
   isMuted: boolean;
   isDeafened: boolean;
   onToggleMute: () => void;
   onToggleDeafen: () => void;
   onLeave: () => void;
+  /** Screen sharing and "Birlikte İzle" — optional, so the card only shows
+   * them where they're wired up. */
+  isScreenSharing?: boolean;
+  onToggleScreenShare?: () => void;
+  isWatchPartyOpen?: boolean;
+  onToggleWatchParty?: () => void;
 }
 
-/** Mic/deafen/leave controls for the active voice room — shared by the
- * always-visible VoiceStatusBar (rendered once in Chat.tsx's main layout,
- * regardless of which server/DM/Arkadaşlar view is on screen) and the
- * in-channel panel under the active voice channel's own row in the channel
- * list. Screen sharing deliberately stays its own button outside this
- * component: it's only meaningful while actually looking at the channel
- * (the screen-share tiles/overlay only render there), unlike mute/deafen/
- * leave, which make sense from anywhere. */
+/** Mic/deafen/leave controls for the active voice room, plus screen sharing
+ * and Birlikte İzle when given — one row of round buttons. The mic button is
+ * filled with the accent while it's live, so "they can hear me" is obvious
+ * at a glance; muted, deafened and leave use red. */
 export default function VoiceStatusBar({
   roomName,
   serverName,
@@ -39,48 +37,88 @@ export default function VoiceStatusBar({
   onToggleMute,
   onToggleDeafen,
   onLeave,
+  isScreenSharing = false,
+  onToggleScreenShare,
+  isWatchPartyOpen = false,
+  onToggleWatchParty,
 }: Props) {
   const t = useT();
   return (
-    <div className={`voice-status-bar voice-status-bar-${variant}`}>
+    <section
+      className={`voice-status-bar voice-status-bar-${variant}`}
+      aria-label={t('Ses bağlantısı')}
+    >
       {roomName && (
         <div className="voice-status-bar-room">
-          <Hash size={14} className="voice-status-bar-room-icon" />
-          <div className="voice-status-bar-room-text">
+          <span className="voice-status-bar-state">{t('Ses bağlı')}</span>
+          <span className="voice-status-bar-room-text">
             <span className="voice-status-bar-room-name">{roomName}</span>
-            {serverName && <span className="voice-status-bar-server-name">{serverName}</span>}
-          </div>
+            {serverName && (
+              <>
+                <span className="voice-status-bar-separator" aria-hidden="true"> / </span>
+                <span className="voice-status-bar-server-name">{serverName}</span>
+              </>
+            )}
+          </span>
         </div>
       )}
 
       <div className="voice-status-bar-controls">
-        <div className="voice-status-bar-col">
-          <button
-            className={`voice-control-btn${isMuted ? ' active' : ''}`}
-            onClick={onToggleMute}
-            title={isMuted ? t('Mikrofonu Aç') : t('Mikrofonu Kapat')}
-            aria-label={isMuted ? t('Mikrofonu Aç') : t('Mikrofonu Kapat')}
-          >
-            {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
-          </button>
-          <button
-            className="voice-control-btn voice-leave-btn"
-            onClick={onLeave}
-            title={t('Kanaldan Ayrıl')}
-            aria-label={t('Kanaldan Ayrıl')}
-          >
-            <PhoneOff size={16} />
-          </button>
-        </div>
         <button
+          type="button"
+          className={`voice-control-btn${isMuted ? ' active' : ' on'}`}
+          onClick={onToggleMute}
+          title={isMuted ? t('Mikrofonu Aç') : t('Mikrofonu Kapat')}
+          aria-label={isMuted ? t('Mikrofonu Aç') : t('Mikrofonu Kapat')}
+        >
+          {isMuted ? <MicOff size={18} strokeWidth={1.75} /> : <Mic size={18} strokeWidth={1.75} />}
+        </button>
+        <button
+          type="button"
           className={`voice-control-btn${isDeafened ? ' active' : ''}`}
           onClick={onToggleDeafen}
           title={isDeafened ? t('Sağırlaştırmayı Kaldır') : t('Sağırlaştır')}
           aria-label={isDeafened ? t('Sağırlaştırmayı Kaldır') : t('Sağırlaştır')}
         >
-          {isDeafened ? <VolumeX size={16} /> : <Headphones size={16} />}
+          {isDeafened ? <VolumeX size={18} strokeWidth={1.75} /> : <Headphones size={18} strokeWidth={1.75} />}
+        </button>
+        {onToggleScreenShare && (
+          <button
+            type="button"
+            className={`voice-control-btn${isScreenSharing ? ' on' : ''}`}
+            onClick={onToggleScreenShare}
+            title={isScreenSharing ? t('Ekranı Durdur') : t('Ekranı Paylaş')}
+            aria-label={isScreenSharing ? t('Ekranı Durdur') : t('Ekranı Paylaş')}
+          >
+            {isScreenSharing ? (
+              <ScreenShareOff size={18} strokeWidth={1.75} />
+            ) : (
+              <ScreenShare size={18} strokeWidth={1.75} />
+            )}
+          </button>
+        )}
+        {onToggleWatchParty && (
+          <button
+            type="button"
+            className={`voice-control-btn${isWatchPartyOpen ? ' on' : ''}`}
+            onClick={onToggleWatchParty}
+            title={t('Birlikte İzle')}
+            aria-label={t('Birlikte İzle')}
+            aria-pressed={isWatchPartyOpen}
+          >
+            <Clapperboard size={18} strokeWidth={1.75} />
+          </button>
+        )}
+        <button
+          type="button"
+          className="voice-control-btn voice-leave-btn"
+          onClick={onLeave}
+          title={t('Kanaldan Ayrıl')}
+          aria-label={t('Kanaldan Ayrıl')}
+        >
+          <PhoneOff size={18} strokeWidth={1.75} />
         </button>
       </div>
-    </div>
+    </section>
   );
 }

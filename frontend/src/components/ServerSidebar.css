@@ -1,118 +1,137 @@
+/* ── Server rail: an outlined panel in the window's own gray. Zircle mark
+   on top, Direkt Mesajlar and Arkadaşlar, the servers, and the green "+"
+   at the bottom. Its place in the page is Chat.css's grid ("rail"). ── */
 .server-sidebar {
-  background: var(--bg-tertiary);
-  border-right: 1px solid var(--border);
-  width: 72px;
-  flex-shrink: 0;
+  grid-area: rail;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 0;
-  gap: 8px;
+  gap: var(--space-2-5);
+  width: var(--rail-width);
+  min-height: 0;
+  padding: var(--space-3) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--bg-primary);
   overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.server-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.server-sidebar-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .home-icon {
-  font-size: 20px;
   flex-shrink: 0;
 }
 
 .server-sidebar-divider {
-  width: 32px;
+  width: 24px;
   height: 2px;
+  flex-shrink: 0;
+  margin: var(--space-1) 0;
   border-radius: 1px;
   background: var(--bg-secondary);
-  flex-shrink: 0;
 }
 
 .server-icon-list {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2-5);
   width: 100%;
+  flex: 1;
 }
 
 .server-icon {
   position: relative;
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  border: none;
-  background: var(--bg-secondary);
-  color: var(--text-normal);
-  font-size: 16px;
-  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-radius 0.15s, background 0.15s, color 0.15s;
-}
-
-.server-unread-badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--danger);
-  border: 3px solid var(--bg-tertiary);
-  box-sizing: content-box;
+  width: var(--control-size-md);
+  height: var(--control-size-md);
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-normal);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
 
 .server-icon:hover {
-  border-radius: 16px;
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--bg-elevated);
+  color: var(--text-heading);
 }
 
+/* The place you're in: filled with the accent, like the selected channel. */
 .server-icon.active {
-  border-radius: 16px;
   background: var(--accent);
   color: var(--on-accent);
 }
 
-/* "Which tab am I on" indicator — a thin vertical bar inset from the
-   active icon's own left edge. An earlier version placed this just
-   outside the icon, in the rail's left gutter (`left: -10px`) — that
-   landed at document x≈2px, which `.server-sidebar`'s `overflow-y: auto`
-   silently turns into `overflow-x: auto` for too (per the CSS Overflow
-   spec, a scrolling value on one axis forces the other away from
-   `visible`, even if `overflow-x: visible` is explicitly authored), and
-   with the rail flush against the viewport's left edge that made the bar
-   invisible in practice. Keeping the bar fully inside the icon's own box
-   sidesteps that entirely — nothing here depends on a parent's overflow
-   behavior or how close to the viewport edge the rail sits. Needs
-   `--on-accent` (not `--accent`) for contrast, since the active icon's own
-   background is already `--accent`. */
-.server-icon.active::before {
-  content: '';
+/* Something new in a server you're not looking at. */
+.server-unread-badge {
   position: absolute;
-  left: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 22px;
-  border-radius: 2px;
-  background: var(--on-accent);
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-primary);
+  background: var(--accent);
+  box-sizing: content-box;
+}
+
+.server-count-badge {
+  font-variant-numeric: tabular-nums;
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-primary);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  line-height: 18px;
+  text-align: center;
 }
 
 .server-create-area {
-  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 8px;
+  width: 100%;
+  padding: 0 var(--space-2);
 }
 
 .server-icon-create {
-  font-size: 24px;
-  font-weight: 400;
-  color: var(--success);
+  width: 48px;
+  height: 48px;
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .server-icon-create:hover {
-  background: var(--success);
-  color: var(--interactive-active);
+  background: var(--accent-hover);
+  color: var(--on-accent);
 }

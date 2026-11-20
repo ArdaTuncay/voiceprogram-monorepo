@@ -49,6 +49,7 @@ import {
   sendVoiceOffer,
   sendIceDiagnostics,
   sendScreenShareStopped,
+  sendVoiceStatus,
 } from '../../services/socket';
 import { fetchTurnCredentials } from '../../services/api';
 import { getPeerVolumes, setPeerVolumes } from '../../services/voicePreferences';
@@ -1144,6 +1145,69 @@ describe.sequential('useVoiceChannel — user-facing error messages', () => {
     expect(result.current.error).not.toContain('Permission denied');
     // A microphone failure never got as far as the server.
     expect(joinVoiceChannel).not.toHaveBeenCalled();
+  });
+
+  it('a denied microphone sets micBlocked and clears the connecting state', async () => {
+    getUserMedia.mockRejectedValue(new DOMException('Permission denied', 'NotAllowedError'));
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    expect(result.current.micBlocked).toBe(true);
+    expect(result.current.joiningRoomId).toBeNull();
+  });
+
+  it('a microphone that is merely busy is an error but not micBlocked', async () => {
+    getUserMedia.mockRejectedValue(new DOMException('Busy', 'NotReadableError'));
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA');
+    });
+
+    expect(result.current.error).not.toBe('');
+    expect(result.current.micBlocked).toBe(false);
+  });
+
+  it('joiningRoomId is set while connecting and cleared once the room is active', async () => {
+    let releaseMic: (stream: MediaStream) => void = () => {};
+    getUserMedia.mockReturnValue(new Promise<MediaStream>((resolve) => (releaseMic = resolve)));
+    vi.mocked(joinVoiceChannel).mockReturnValue(resolvedChannel());
+    const { result } = renderVoiceChannel(testUser);
+
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = result.current.join('roomA');
+    });
+    expect(result.current.joiningRoomId).toBe('roomA');
+    expect(result.current.activeRoomId).toBeNull();
+
+    await act(async () => {
+      releaseMic(makeFakeStream() as unknown as MediaStream);
+      await pending;
+    });
+    expect(result.current.joiningRoomId).toBeNull();
+    expect(result.current.activeRoomId).toBe('roomA');
+  });
+
+  it('a muted join switches the mic track off before joining and reports muted', async () => {
+    const stream = makeFakeStream();
+    getUserMedia.mockResolvedValue(stream);
+    vi.mocked(joinVoiceChannel).mockImplementation(() => {
+      // The track is already off by the time the server join starts.
+      expect(stream.getAudioTracks()[0].enabled).toBe(false);
+      return resolvedChannel();
+    });
+    const { result } = renderVoiceChannel(testUser);
+
+    await act(async () => {
+      await result.current.join('roomA', { muted: true });
+    });
+
+    expect(result.current.isMuted).toBe(true);
+    expect(sendVoiceStatus).toHaveBeenCalledWith(true, false);
   });
 
   async function joinedHook() {

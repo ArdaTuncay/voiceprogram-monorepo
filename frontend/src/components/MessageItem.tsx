@@ -161,9 +161,7 @@ export default function MessageItem({
         )}
         {!grouped && (
           <div className="message-header">
-            <span className="message-author" style={{ color }}>
-              {name}
-            </span>
+            <span className="message-author">{name}</span>
             <span className="message-timestamp">{formatMessageTime(message.inserted_at)}</span>
             {!message.is_deleted && message.is_edited && (
               <span className="message-edited-tag">{t('(düzenlendi)')}</span>

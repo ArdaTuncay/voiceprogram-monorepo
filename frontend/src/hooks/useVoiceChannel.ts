@@ -17,6 +17,7 @@ import { getPeerVolumes, updatePeerVolume } from '../services/voicePreferences';
 import { t } from '../i18n';
 import {
   microphoneErrorMessage,
+  isMicrophonePermissionError,
   screenShareErrorMessage,
   voiceJoinErrorMessage,
 } from '../utils/errorMessages';
@@ -280,6 +281,13 @@ export function useVoiceChannel(user: User) {
   const [isDeafened, setIsDeafened] = useState(false);
   const [reconnectingPeerIds, setReconnectingPeerIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
+  // The room a join() is still connecting to (mic permission, server join)
+  // — the UI shows "Bağlanıyor…" for it. Cleared once the room is active,
+  // when the join fails, or by any leave().
+  const [joiningRoomId, setJoiningRoomId] = useState<string | null>(null);
+  // The last join failed because the microphone permission was refused —
+  // the UI shows how to allow it instead of just an error line.
+  const [micBlocked, setMicBlocked] = useState(false);
 
   const leaveVoiceRef = useRef<(() => void) | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -814,6 +822,7 @@ export function useVoiceChannel(user: User) {
     screenStreamRef.current = null;
 
     knownPeerIdsRef.current = new Set();
+    setJoiningRoomId(null);
     setActiveRoomId(null);
     setParticipants([]);
     setRemoteStreams({});
@@ -975,13 +984,17 @@ export function useVoiceChannel(user: User) {
     }
   }
 
-  async function join(roomId: string) {
+  /** Joins a voice room. `muted` ("Sessiz katıl") switches the microphone
+   * track off before the room is even joined, so it is never live. */
+  async function join(roomId: string, options: { muted?: boolean } = {}) {
     // leave() itself bumps joinGenerationRef (see above) — capturing the
     // generation right after means "this join" and "whatever the most
     // recent leave() just invalidated" can never collide.
     leave();
     const myGeneration = joinGenerationRef.current;
     setError('');
+    setMicBlocked(false);
+    setJoiningRoomId(roomId);
 
     let stream: MediaStream | null = null;
     // Which step a failure in the catch below came from — the microphone or
@@ -1018,6 +1031,11 @@ export function useVoiceChannel(user: User) {
         return;
       }
 
+      if (options.muted) {
+        stream.getAudioTracks().forEach((track) => {
+          track.enabled = false;
+        });
+      }
       localStreamRef.current = stream;
       watchSpeaking(user.id, stream);
 
@@ -1052,7 +1070,12 @@ export function useVoiceChannel(user: User) {
       }
 
       leaveVoiceRef.current = leaveChannel;
+      setJoiningRoomId(null);
       setActiveRoomId(roomId);
+      if (options.muted) {
+        setIsMuted(true);
+        sendVoiceStatus(true, false);
+      }
 
       if (sfu) {
         await startSfu(stream, myGeneration);
@@ -1076,6 +1099,8 @@ export function useVoiceChannel(user: User) {
 
       if (joinGenerationRef.current === myGeneration) {
         setError(failedStep === 'join' ? voiceJoinErrorMessage(err) : microphoneErrorMessage(err));
+        setMicBlocked(failedStep === 'microphone' && isMicrophonePermissionError(err));
+        setJoiningRoomId(null);
         localStreamRef.current = null;
       }
     }
@@ -1093,6 +1118,8 @@ export function useVoiceChannel(user: User) {
     isDeafened,
     reconnectingPeerIds,
     error,
+    joiningRoomId,
+    micBlocked,
     join,
     leave,
     startScreenShare,

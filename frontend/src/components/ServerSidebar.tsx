@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Home, Users } from 'lucide-react';
 import { useServerStore } from '../stores/useServerStore';
+import { useDMStore } from '../stores/useDMStore';
 import { serverInitials } from '../utils';
 import { useT } from '../i18n';
 import AvatarFace from './AvatarFace';
@@ -28,6 +29,10 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
   const activeServerId = useServerStore((s) => s.activeServerId);
   const setActiveServerId = useServerStore((s) => s.setActiveServerId);
   const unreadServerIds = useServerStore((s) => s.unreadServerIds);
+  // Unread direct messages across every DM room — the Home button's badge.
+  const unreadDmTotal = useDMStore((s) =>
+    Object.values(s.unreadCounts).reduce((sum, count) => sum + count, 0),
+  );
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -35,6 +40,13 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
 
   return (
     <aside className="server-sidebar">
+      <div className="server-sidebar-logo" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+          <circle cx="14" cy="14" r="11" stroke="currentColor" strokeWidth="3" />
+          <circle cx="14" cy="14" r="4" fill="currentColor" />
+        </svg>
+      </div>
+
       <button
         ref={homeButtonRef}
         className={`server-icon home-icon${activeServerId === null && !friendsActive ? ' active' : ''}`}
@@ -43,9 +55,18 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
           setActiveServerId(null);
         }}
         title={t('Direkt Mesajlar')}
-        aria-label={t('Direkt Mesajlar')}
+        aria-label={
+          unreadDmTotal > 0
+            ? t('Direkt Mesajlar: {count} okunmamış mesaj', { count: unreadDmTotal })
+            : t('Direkt Mesajlar')
+        }
       >
-        <Home size={20} strokeWidth={2} />
+        <Home size={20} strokeWidth={1.75} />
+        {unreadDmTotal > 0 && (
+          <span className="server-count-badge" aria-hidden="true">
+            {unreadDmTotal > 9 ? '9+' : unreadDmTotal}
+          </span>
+        )}
       </button>
 
       <button
@@ -54,7 +75,7 @@ export default function ServerSidebar({ friendsActive, onSelectFriends, onNaviga
         title={t('Arkadaşlar')}
         aria-label={t('Arkadaşlar')}
       >
-        <Users size={20} strokeWidth={2} />
+        <Users size={20} strokeWidth={1.75} />
       </button>
 
       <div className="server-sidebar-divider" />
