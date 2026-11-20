@@ -9,7 +9,7 @@ defmodule Backend.UploadsTest do
   particular anything a browser would run or render as a page (.exe, .html,
   .svg) — is refused.
   """
-  use ExUnit.Case, async: true
+  use Backend.DataCase, async: true
 
   alias Backend.Uploads
 

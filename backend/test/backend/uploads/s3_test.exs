@@ -5,7 +5,7 @@ defmodule Backend.Uploads.S3Test do
   never reaches a client, so the bucket's public URL for it is never known.
   """
   # :uploads config is global application env.
-  use ExUnit.Case, async: false
+  use Backend.DataCase, async: false
 
   alias Backend.Uploads
 

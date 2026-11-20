@@ -465,3 +465,7 @@ msgstr "Bir dosya gönderdi"
 #, elixir-autogen, elixir-format
 msgid "Someone"
 msgstr "Biri"
+
+#, elixir-autogen, elixir-format
+msgid "Storage is full, so new files can't be uploaded right now"
+msgstr "Depolama alanı doldu, şu an yeni dosya yüklenemiyor"

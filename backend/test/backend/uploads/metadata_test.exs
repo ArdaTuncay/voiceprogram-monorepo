@@ -6,7 +6,7 @@ defmodule Backend.Uploads.MetadataTest do
   are real images written by Pillow with location data, device names and an
   XMP packet; the pixel data itself is never touched.
   """
-  use ExUnit.Case, async: true
+  use Backend.DataCase, async: true
 
   alias Backend.Uploads
   alias Backend.Uploads.Metadata
