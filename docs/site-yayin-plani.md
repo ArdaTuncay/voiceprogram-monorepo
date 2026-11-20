@@ -6,11 +6,11 @@ Bu dosya, Zircle tanıtım sitesinin nerede kaldığını ve yayına almadan ön
 
 ## Nerede kaldık
 
-Sitenin tüm sayfaları yerelde kuruldu ve testleri geçiyor. Yerelde commit'lendi ("Tanıtım sitesinin kalan sayfalarını ekle"), ama GitHub'a gönderilmedi.
+Sitenin tüm sayfaları yerelde kuruldu ve testleri geçiyor. GitHub'a gönderildi ve taslak PR #44 olarak açıldı (20 Kasım).
 
-- **Dal:** `feat/site-sayfalar`. Değişiklikler bu dalda tek commit olarak duruyor; push edilmedi.
+- **Dal:** `feat/site-sayfalar`, taslak PR #44.
 - **Dalların sırası:** `main` ← #41 `feat/site-ana-sayfa` (ana sayfa) ← #42 `feat/site-ozellikler` (Özellikler) ← `feat/site-sayfalar` (diğer tüm sayfalar)
-- **Açık PR'lar:** #41 ve #42. İkisi de merge edilmedi.
+- **Açık PR'lar:** #41, #42 ve taslak #44. Hiçbiri merge edilmedi.
 - **Testler:** Sunucu tarafında 635, ön yüzde 601 testin hepsi geçti. Tip kontrolü, lint ve derleme temiz.
 - **Tarayıcı kontrolü:** 13 adres hem geniş ekranda hem 390 piksel genişlikte açıldı. Hata ekranı, yatay taşma ya da konsol hatası yok.
 - **Sıradaki adım:** Kullanıcı siteyi yerelde inceleyecek, istediği değişiklikleri söyleyecek.
@@ -76,7 +76,7 @@ Taslak: https://claude.ai/artifact/YBkxVqBF1ezQ5eYUKmZ1a5. Sayfalarda sarı işa
 
 ### 4. Kayıt ve PR'lar
 - [x] `feat/site-sayfalar` dalını yerelde commit'lemek (20 Kasım).
-- [ ] Dalı push edip PR açmak. Taban dalı #42 olacak.
+- [x] Dalı push edip taslak PR açmak: #44, tabanı #42'nin dalı (20 Kasım).
 - [ ] Merge sırası: önce #41, sonra #42, sonra yeni PR. Her merge'den sonra sıradaki PR'ın tabanını `main` yap, CI'ı tetiklemek için PR'ı kapatıp yeniden aç. Ayrıntısı hafıza notunda (zircle-launch-roadmap).
 - **Dikkat:** #41 merge edildiği anda zircle.vercel.app'in ana adresi siteye döner. Hepsi hazır olmadan merge etme.
 
