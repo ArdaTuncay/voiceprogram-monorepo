@@ -81,7 +81,7 @@ Taslak: https://claude.ai/artifact/YBkxVqBF1ezQ5eYUKmZ1a5. Sayfalarda sarı işa
 - **Dikkat:** #41 merge edildiği anda zircle.vercel.app'in ana adresi siteye döner. Hepsi hazır olmadan merge etme.
 
 ### 5. Teknik engeller
-- [ ] **`idna` güvenlik uyarısı (EEF-CVE-2026-117678):** Düzeltme hazır: `main`'den açılan `fix/idna-guncelle` dalında yerel commit (idna 8.0.0 ve swoosh 1.30.0; diğer paketler aynı). `mix precommit` geçti, 630 test. Push ve PR için kullanıcı onayı bekleniyor.
+- [ ] **`idna` güvenlik uyarısı (EEF-CVE-2026-117678):** Düzeltme hazır: `main`'den açılan `fix/idna-guncelle` dalında yerel commit (idna 8.0.0 ve swoosh 1.30.0; diğer paketler aynı). `mix precommit` geçti, 630 test. PR #43 açıldı (20 Kasım); merge bekliyor.
 - [ ] **Alan adı:** `*.vercel.app` yurt ağında (GSBWIFI) engelli. Alan adı alınınca:
   - sunucunun CORS ve `check_origin` ayarlarına eklenecek,
   - CSP kontrol edilecek,
