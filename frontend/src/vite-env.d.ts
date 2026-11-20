@@ -28,6 +28,11 @@ interface ImportMetaEnv {
   readonly VITE_TURN_URL?: string;
   readonly VITE_TURN_USERNAME?: string;
   readonly VITE_TURN_PASSWORD?: string;
+
+  /** The public website's address, for links the desktop app (served from
+   * file://) hands out — invite links (components/InviteModal.tsx).
+   * Defaults to the production site. */
+  readonly VITE_SITE_URL?: string;
 }
 
 interface ImportMeta {

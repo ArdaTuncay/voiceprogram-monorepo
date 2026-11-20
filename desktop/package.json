@@ -1,7 +1,7 @@
 {
   "name": "zircle-desktop",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Zircle - sesli+yazılı sohbet uygulaması (masaüstü istemcisi)",
   "author": "Arda Tuncay",
   "main": "main.js",
@@ -17,7 +17,8 @@
     "appId": "com.zircle.desktop",
     "productName": "Zircle",
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "artifactName": "Zircle-Setup-${version}.${ext}"
     },
     "extraResources": [
       { "from": "../frontend/dist-electron", "to": "dist-electron" }

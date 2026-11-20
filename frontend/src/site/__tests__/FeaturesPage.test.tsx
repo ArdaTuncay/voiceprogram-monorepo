@@ -23,10 +23,11 @@ describe('FeaturesPage', () => {
     expect(within(menu).getByRole('link', { name: 'Özellikler' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('sends "Tarayıcıda aç" to the sign-in card on the home page', () => {
+  it('sends "Tarayıcıda aç" to the sign-in page, and "Windows için indir" to the download page', () => {
     render(<FeaturesPage />);
     const main = screen.getByRole('main');
-    expect(within(main).getByRole('link', { name: 'Tarayıcıda aç' })).toHaveAttribute('href', '/#giris');
+    expect(within(main).getByRole('link', { name: 'Tarayıcıda aç' })).toHaveAttribute('href', '/giris');
+    expect(within(main).getByRole('link', { name: 'Windows için indir' })).toHaveAttribute('href', '/indir');
   });
 
   it('is in English when English is picked', () => {

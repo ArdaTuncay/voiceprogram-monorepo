@@ -29,6 +29,7 @@ defmodule BackendWeb.Router do
     post "/password-reset", PasswordResetController, :create
     post "/password-reset/confirm", PasswordResetController, :confirm
     post "/account/email/confirm", EmailChangeController, :confirm
+    get "/invites/:code", InviteController, :preview
   end
 
   # Private files (DM attachments) behind expiring links — no :api pipeline:

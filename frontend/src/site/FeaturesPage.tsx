@@ -1,18 +1,20 @@
 import type { ReactNode } from 'react';
 import { useT } from '../i18n';
-import SiteLayout from './SiteLayout';
+import { getStoredToken } from '../services/tokenStorage';
+import SiteLayout, { DownloadIcon, PageHero } from './SiteLayout';
 
 interface Group {
   icon: ReactNode;
   title: string;
   text: string;
-  items: [string, string][];
+  items: [string, ReactNode][];
 }
 
 /** The public features page (`/ozellikler`): everything Zircle does, in four
  * groups. Only features that exist in the app are listed here. */
 export default function FeaturesPage() {
   const t = useT();
+  const signedIn = Boolean(getStoredToken());
 
   const groups: Group[] = [
     {
@@ -62,18 +64,23 @@ export default function FeaturesPage() {
         [t('Bildirimler'), t('Uygulama kapalıyken de özel mesaj ve bahsetmelerden haberin olur.')],
         [t('Tema'), t('Koyu, açık ya da sistem ayarına göre.')],
         [t('Dil'), t('Türkçe ya da İngilizce.')],
-        [t('Hesap güvenliği'), t('İki adımlı doğrulama ve açık oturum yönetimi.')],
+        [
+          t('Hesap güvenliği'),
+          <>
+            {t('İki adımlı doğrulama ve açık oturum yönetimi.')} <a href="/guvenlik">{t('Ayrıntılar')}</a>
+          </>,
+        ],
       ],
     },
   ];
 
   return (
-    <SiteLayout current="features">
-      <section className="site-container site-page-hero">
-        <p className="site-eyebrow">{t('Özellikler')}</p>
-        <h1>{t('Sohbet için gereken her şey.')}</h1>
-        <p className="site-lead">{t('Sesli kanallar, mesajlaşma ve sunucu yönetimi tek uygulamada.')}</p>
-      </section>
+    <SiteLayout current="features" title={t('Özellikler')}>
+      <PageHero
+        eyebrow={t('Özellikler')}
+        title={t('Sohbet için gereken her şey.')}
+        lead={t('Sesli kanallar, mesajlaşma ve sunucu yönetimi tek uygulamada.')}
+      />
 
       {groups.map((group, i) => (
         <section key={group.title} className={i % 2 === 1 ? 'site-fgroup site-fgroup-deep' : 'site-fgroup'}>
@@ -100,9 +107,15 @@ export default function FeaturesPage() {
       <section className="site-page-cta">
         <div className="site-container site-page-cta-inner">
           <h2>{t('Hemen dene.')}</h2>
-          <a href="/#giris" className="site-btn site-btn-primary site-btn-large">
-            {t('Tarayıcıda aç')}
-          </a>
+          <div className="site-cta-actions">
+            <a href={signedIn ? '/' : '/giris'} className="site-btn site-btn-primary site-btn-large">
+              {t('Tarayıcıda aç')}
+            </a>
+            <a href="/indir" className="site-btn site-btn-outline site-btn-large">
+              <DownloadIcon />
+              {t('Windows için indir')}
+            </a>
+          </div>
         </div>
       </section>
     </SiteLayout>

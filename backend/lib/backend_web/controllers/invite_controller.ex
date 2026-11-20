@@ -11,6 +11,36 @@ defmodule BackendWeb.InviteController do
   plug BackendWeb.RateLimiterPlug,
        [scale: :timer.minutes(1), limit: 10, key: {:param, "server_id"}] when action in [:create]
 
+  # The invite preview needs no sign-in, so a plain per-IP limit keeps
+  # anyone from guessing codes in bulk.
+  plug BackendWeb.RateLimiterPlug, [scale: :timer.minutes(1), limit: 30] when action in [:preview]
+
+  @doc """
+  GET /api/invites/:code — public: the server name, icon and inviter the
+  site's invite page (/davet/:code) shows before the visitor signs in.
+  """
+  def preview(conn, %{"code" => code}) do
+    case Servers.preview_invite(code) do
+      {:ok, invite} ->
+        json(conn, %{
+          server_name: invite.server.name,
+          server_icon_url: invite.server.icon_url,
+          inviter_username: Backend.Accounts.display_username(invite.inviter)
+        })
+
+      {:error, :not_found} ->
+        conn |> put_status(:not_found) |> json(%{error: gettext("Invite not found")})
+
+      {:error, :expired} ->
+        conn |> put_status(:unprocessable_entity) |> json(%{error: gettext("Invite has expired")})
+
+      {:error, :max_uses_reached} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: gettext("Invite has reached its maximum number of uses")})
+    end
+  end
+
   @doc "POST /api/servers/:server_id/invites — creates a new invite code for the server."
   def create(conn, %{"server_id" => server_id} = params) do
     with %Server{} = server <- Servers.get_server(server_id),

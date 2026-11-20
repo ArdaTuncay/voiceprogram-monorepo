@@ -100,8 +100,6 @@ export const en = {
   'Sadece dosyalı mesajlar': 'Only messages with files',
   'Davet kodu oluşturulamadı': "Couldn't create an invite code",
   'İnsanları Davet Et': 'Invite People',
-  'Bu kodu paylaşarak arkadaşlarını sunucuna davet edebilirsin.':
-    'Share this code to invite your friends to your server.',
   'Davet kodu oluşturuluyor…': 'Creating invite code…',
   'Kopyalandı!': 'Copied!',
   'Kopyala': 'Copy',
@@ -563,8 +561,6 @@ export const en = {
   'Mesajlar, özel sohbetler ve dosyalar': 'Messages, direct chats and files',
   "Tarayıcıda ve Windows'ta tek hesap": 'One account in the browser and on Windows',
   'Giriş yap ve tarayıcıda aç': 'Sign in and open in browser',
-  'Kayıt olduktan sonra e-postana bir doğrulama bağlantısı gönderilir.':
-    "After you sign up, we'll email you a verification link.",
   'Tarayıcıdan ya da masaüstünden.': 'In the browser or on the desktop.',
   'Hangisinden girersen gir, her şey aynı yerde.': 'Whichever you use, everything is in the same place.',
   'Tarayıcıdan': 'In the browser',
@@ -572,7 +568,6 @@ export const en = {
     'Nothing to install. On your phone, add it to your home screen and use it like an app.',
   'Masaüstünden': 'On the desktop',
   'Windows uygulamasını kur, aynı hesapla giriş yap.': 'Install the Windows app and sign in with the same account.',
-  'İndirme yakında · Windows 10 ve 11': 'Download coming soon · Windows 10 and 11',
   'Nasıl başlanır?': 'How to get started',
   'E-posta adresini doğrula, hesabın hazır.': 'Verify your email address and your account is ready.',
   'Sunucu kur ya da katıl': 'Create or join a server',
@@ -671,4 +666,153 @@ export const en = {
   'Hesap güvenliği': 'Account security',
   'İki adımlı doğrulama ve açık oturum yönetimi.': 'Two-step verification and active session management.',
   'Hemen dene.': 'Try it now.',
+  // Site pages (site/*.tsx) and the invite link (components/InviteModal.tsx)
+  'Ana sayfaya dön': 'Back to the home page',
+  'Aradığın sayfa taşınmış ya da hiç var olmamış olabilir. Adresi kontrol et ya da ana sayfadan devam et.':
+    "The page you're looking for may have moved or never existed. Check the address or continue from the home page.",
+  'Arkadaşlar ve özel mesajlar.': 'Friends and direct messages.',
+  'Ayrıca bak:': 'See also:',
+  'Ayrıntılar': 'Details',
+  'Bağlantılar': 'Links',
+  'Bağlantının süresi dolmuş ya da bağlantı iptal edilmiş olabilir. Seni davet eden kişiden yeni bir bağlantı iste.':
+    'The link may have expired or been revoked. Ask the person who invited you for a new one.',
+  'Başka bir cihazda mısın?': 'On another device?',
+  'Beni duymuyorlar': "People can't hear me",
+  'Bilmen gerekenler': 'Good to know',
+  'Bir davet bağlantısıyla geldiysen bağlantının süresi dolmuş olabilir; seni davet eden kişiden yenisini iste.':
+    'If you came from an invite link, it may have expired; ask the person who invited you for a new one.',
+  'Bu bağlantıyı ya da kodu paylaşarak arkadaşlarını sunucuna davet edebilirsin.':
+    'Share this link or code to invite your friends to your server.',
+  'Bu davet bağlantısı sunucu sahibi tarafından iptal edilebilir.': 'The server owner can revoke this invite link.',
+  'Bu davet geçerli değil': "This invite isn't valid",
+  'Bu sayfa şimdilik yalnızca Türkçe.': 'This page is only available in Turkish for now.',
+  'Burada kimse yok.': "Nobody's here.",
+  'Davet': 'Invite',
+  'Davet bağlantısı': 'Invite link',
+  'Davet bağlantısı çalışmıyor': "The invite link doesn't work",
+  'Davet yükleniyor…': 'Loading the invite…',
+  'Diğer sorular için Destek': 'More questions? See Support',
+  'Dosya boyutu': 'File size',
+  'Dosyayı indir': 'Download the file',
+  'Doğrulama e-postası gelmedi': "I didn't get the verification email",
+  'En sık sorulanlar aşağıda.': 'The most common questions are below.',
+  'En yeni': 'Latest',
+  'En yeni sürümü kullanmak için tarayıcıda sayfayı yenilemen yeter. Masaüstü uygulamasının yeni sürümü İndir sayfasındadır.':
+    "In the browser, just reload the page to get the latest version. The desktop app's latest version is on the Download page.",
+  'Engelleme ve istek gizliliği': 'Blocking and request privacy',
+  'Giriş ekranındaki "Şifremi unuttum" bağlantısına tıkla; e-postana şifreni yenileyeceğin bir bağlantı gelir.':
+    'Click "Forgot password" on the sign-in screen; we\'ll email you a link to set a new password.',
+  'Gizlilik': 'Privacy',
+  'Gizlilik Politikası': 'Privacy Policy',
+  'Güvenlik sayfası': 'Security page',
+  'Güvenlik ve gizlilik': 'Security and privacy',
+  'Her işletim sisteminde çalışır. Giriş yap, Zircle o sekmede açılsın.':
+    'Works on any operating system. Sign in and Zircle opens in that tab.',
+  'Her sürümde eklenenler, iyileştirilenler ve düzeltilenler.': 'What each release added, improved and fixed.',
+  'Hesabına kimin girdiğini sen bilirsin.': "You know who's signed in to your account.",
+  'Hesabını ayarlardan istediğin zaman kalıcı olarak silebilirsin.':
+    'You can permanently delete your account in Settings at any time.',
+  'Hesabını silme': 'Deleting your account',
+  'Hesabının açık olduğu her cihazı son etkinlik zamanıyla görürsün. Tanımadığın oturumu tek tıkla kapatırsın.':
+    "See every device you're signed in on, with when it was last active. Sign out of one you don't recognize with one click.",
+  'Hesap ve giriş': 'Account and sign-in',
+  'Katılmak için giriş yap ya da hesap oluştur. Bir şey kurman gerekmiyor.':
+    'Sign in or create an account to join. Nothing to install.',
+  "Kayıt olarak {terms}'nı ve {privacy}'nı kabul edersin. E-postana bir doğrulama bağlantısı gönderilir.":
+    "By signing up you accept the {terms} and the {privacy}. We'll email you a verification link.",
+  'Kendi penceresinde açılır, tarayıcı sekmelerinin arasında kaybolmaz. Hesabın ve her şeyin tarayıcıdakiyle aynıdır.':
+    "It opens in its own window, so it doesn't get lost among your browser tabs. Your account and everything in it are the same as in the browser.",
+  'Kendi sunucumu nasıl kurarım?': 'How do I set up my own server?',
+  'Kimseyi duyamıyorum': "I can't hear anyone",
+  'Kod yerine kurtarma kodlarından birini gir. Her kurtarma kodu yalnızca bir kez kullanılır.':
+    'Enter one of your recovery codes instead of the code. Each recovery code works only once.',
+  'Kullanım Koşulları': 'Terms of Use',
+  'Kurmadan tarayıcıda aç': 'Open in the browser without installing',
+  'Kurulum üç adım.': 'Three steps to install.',
+  'Kurulumu çalıştır': 'Run the installer',
+  'Masaüstü uygulaması': 'Desktop app',
+  "Masaüstü uygulaması şimdilik yalnızca Windows için. Bu sistemlerde Zircle'ı tarayıcıdan kullanabilirsin.":
+    'The desktop app is Windows-only for now. On these systems you can use Zircle in the browser.',
+  'Mesajların uçtan uca şifreli değildir; sunucularımızda saklanır. Raporlanan bir mesajın kopyası, inceleme için raporla birlikte tutulur.':
+    'Your messages are not end-to-end encrypted; they are stored on our servers. A copy of a reported message is kept with the report for review.',
+  'Mesajın menüsünü aç ve "Raporla"yı seç. Bir sebep belirtmen yeterli; istersen açıklama da ekleyebilirsin.':
+    'Open the message\'s menu and choose "Report". Picking a reason is enough; you can add details if you like.',
+  'Nasıl yardımcı olabiliriz?': 'How can we help?',
+  'Paylaştığın fotoğraflardaki konum, cihaz ve çekim zamanı bilgisi dosya saklanmadan önce silinir.':
+    'Location, device and capture-time details are removed from the photos you share before they are stored.',
+  'Rahatsız edici bir mesajı nasıl bildiririm?': 'How do I report an offensive message?',
+  'Sayfa bulunamadı': 'Page not found',
+  'Ses kesiliyor': 'The sound keeps cutting out',
+  'Ses ve ekran paylaşımı aktarılırken şifrelenir.': 'Voice and screen sharing are encrypted in transit.',
+  'Ses ve mikrofon': 'Voice and microphone',
+  'Sesi kapatma düğmesinin açık kalmadığına ve o kişinin ses düzeyini kısmadığına bak.':
+    "Check that deafen isn't on and that you haven't turned that person's volume down.",
+  'Sesli görüşmeler': 'Voice calls',
+  'Sesli kanallar, ekran paylaşımı ve birlikte izleme.': 'Voice channels, screen sharing and watching together.',
+  'Son güncelleme: {date}': 'Last updated: {date}',
+  "Sunucu listesindeki artı düğmesine tıkla, Sunucu Oluştur'u seç ve sunucuna bir ad ver. Ardından bir davet bağlantısı oluşturup arkadaşlarınla paylaş.":
+    'Click the plus button in the server list, choose Create Server and give your server a name. Then create an invite link and share it with your friends.',
+  'Sunucudaki bir mesajı bildirdiğinde sunucunun sahibi ve moderatörleri, özel mesajı bildirdiğinde Zircle ekibi inceler.':
+    "When you report a message in a server, the server's owner and moderators review it; when you report a direct message, the Zircle team does.",
+  'Sunucular ve davetler': 'Servers and invites',
+  'Sunucular, davet bağlantıları, moderatörler ve raporlama.': 'Servers, invite links, moderators and reporting.',
+  'Sürüm': 'Version',
+  'Sürüm {version}': 'Version {version}',
+  'Tarayıcı': 'Browser',
+  'Tarayıcıda katıl': 'Join in the browser',
+  "Tarayıcıda, telefonda ve Windows'ta kullanım.": 'Use it in the browser, on your phone and on Windows.',
+  'Tarayıcıdan aç, paylaş menüsünden "Ana ekrana ekle"yi seç. Uygulama gibi açılır ve bildirim gönderir.':
+    'Open it in the browser and choose "Add to Home Screen" from the share menu. It opens like an app and sends notifications.',
+  "Tarayıcının bu site için mikrofon iznini verdiğinden emin ol. Sonra Ayarlar'daki Ses & Görüntü bölümünden doğru mikrofonu seçip test et.":
+    'Make sure your browser has given this site microphone permission. Then pick the right microphone in Settings → Voice & Video and test it.',
+  'Telefon': 'Phone',
+  'Tüm özellikleri gör': 'See all features',
+  'Türkçe ve İngilizce arayüz.': 'Turkish and English interface.',
+  'Uygulama henüz bir yayıncı sertifikasıyla imzalanmadı. İlk çalıştırmada "Windows kişisel bilgisayarınızı korudu" penceresi çıkarsa önce "Ek bilgi"ye, sonra "Yine de çalıştır"a tıkla.':
+    'The app isn\'t signed with a publisher certificate yet. If a "Windows protected your PC" window appears the first time you run it, click "More info" and then "Run anyway".',
+  'Uygulama kapalıyken de bildirimler.': 'Notifications even when the app is closed.',
+  'Windows 10 ve 11': 'Windows 10 and 11',
+  'Windows bir uyarı gösterebilir': 'Windows may show a warning',
+  'Windows için indir': 'Download for Windows',
+  'Yasal': 'Legal',
+  'Yayın tarihi': 'Release date',
+  'Yazılı sohbet: yanıt, bahsetme, tepki, arama ve dosya paylaşımı.':
+    'Text chat: replies, mentions, reactions, search and file sharing.',
+  'Yenilikler': "What's new",
+  'Yukarıdaki düğmeye tıkla; kurulum dosyası İndirilenler klasörüne iner.':
+    'Click the button above; the installer lands in your Downloads folder.',
+  'Zircle açılınca hesabınla giriş yap. Sunucuların ve mesajların yerinde.':
+    'When Zircle opens, sign in with your account. Your servers and messages are all there.',
+  'Zircle nedir?': 'What is Zircle?',
+  'Zircle yayında': 'Zircle is live',
+  "Zircle'da neler değişti?": "What's changed in Zircle?",
+  "Zircle'ı aç": 'Open Zircle',
+  "Zircle'ı bilgisayarına kur.": 'Install Zircle on your computer.',
+  "Zircle'ı kullanmak için uygulamaya ihtiyacın yok.": "You don't need the app to use Zircle.",
+  "Zircle'ın hesabını ve paylaştıklarını korumak için yaptıkları, olduğu gibi.":
+    'What Zircle does to protect your account and what you share, as it is.',
+  'macOS ve Linux': 'macOS and Linux',
+  '{name} seni bu sunucuya davet etti': '{name} invited you to this server',
+  'Önce Windows uygulamasını indir': 'Download the Windows app first',
+  'Önce gereksiz e-posta klasörüne bak. Orada da yoksa giriş ekranından doğrulama e-postasını yeniden isteyebilirsin.':
+    "Check your spam folder first. If it isn't there either, you can ask for the verification email again from the sign-in screen.",
+  'Özel mesaj ekleri': 'Direct message attachments',
+  'Özel mesajda gönderdiğin dosyaların herkese açık bir adresi yoktur; yalnızca süresi dolan bağlantılarla açılır.':
+    'Files you send in direct messages have no public address; they open only through links that expire.',
+  'İki adımlı doğrulamada telefonuma erişemiyorum': "I can't get to my phone for two-step verification",
+  'İndir sayfası': 'Download page',
+  'İndirdiğin dosyaya çift tıkla ve kurulum bitene kadar bekle.':
+    'Double-click the file you downloaded and wait for the installation to finish.',
+  'İndirme sayfası': 'Download page',
+  'İnternet bağlantın zayıflamış olabilir. Bağlantı koparsa Zircle kendiliğinden yeniden bağlanmayı dener.':
+    'Your internet connection may have weakened. If the connection drops, Zircle tries to reconnect on its own.',
+  'İstemediğin kişiyi engelle. Kimlerin sana arkadaşlık isteği gönderebileceğini kendin seç.':
+    "Block anyone you don't want to hear from. Choose who can send you friend requests.",
+  'İçindekiler': 'Contents',
+  'İşletim sistemi': 'Operating system',
+  'Şifren': 'Your password',
+  'Şifren düz metin olarak saklanmaz. Şifreni değiştirdiğinde açık oturumların kapanır.':
+    'Your password is never stored as plain text. Changing your password signs out your other sessions.',
+  'Şifrenden sonra telefonundaki doğrulama uygulamasının kodunu sorar. Telefonuna erişemezsen kurtarma kodlarınla girersin.':
+    "After your password, it asks for a code from the authenticator app on your phone. If you can't get to your phone, you sign in with your recovery codes.",
 } satisfies Record<string, Translation>;

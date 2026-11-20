@@ -46,3 +46,20 @@
 .invite-copy-btn:hover {
   background: var(--accent-hover);
 }
+
+.invite-label {
+  display: block;
+  margin: var(--space-3) 0 var(--space-1-5);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.invite-link-input {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  min-width: 0;
+}
