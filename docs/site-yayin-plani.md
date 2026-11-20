@@ -13,7 +13,7 @@ Sitenin tüm sayfaları yerelde kuruldu ve testleri geçiyor. GitHub'a gönderil
 - **Açık PR'lar:** #41, #42 ve taslak #44. Hiçbiri merge edilmedi.
 - **Testler:** Sunucu tarafında 635, ön yüzde 601 testin hepsi geçti. Tip kontrolü, lint ve derleme temiz.
 - **Tarayıcı kontrolü:** 13 adres hem geniş ekranda hem 390 piksel genişlikte açıldı. Hata ekranı, yatay taşma ya da konsol hatası yok.
-- **Sıradaki adım:** Kullanıcının kararıyla (20 Kasım) önce **Zircle uygulamasının tasarımı** yenilenecek. Ardından sitedeki eksikler tamamlanıp yayına çıkılacak. Site işi #44'te bekliyor.
+- **Sıradaki adım:** Uygulamanın yeniden tasarımı 20 Kasım'da **beklemeye alındı**; tuvalde gösterilen örnekler beğenilmedi. Kullanıcı beğendiği bir tasarım bulursa iletecek. Uygulama bugünkü tasarımıyla kalıyor. Sırada sitedeki eksikleri tamamlayıp yayına çıkmak var; site işi #44'te.
 
 ### Yerelde çalıştırma
 
