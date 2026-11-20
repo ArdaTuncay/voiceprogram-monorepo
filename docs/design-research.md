@@ -2,13 +2,47 @@
 
 Son güncelleme: 20 Kasım 2026. Dal: `feat/uygulama-tasarim` (`feat/site-sayfalar` üzerine kurulu).
 
-Bu belge, Zircle uygulamasının yeniden tasarımı için referansları, mevcut kodun durumunu ve önerilen yönü toplar. **Henüz hiçbir şey uygulanmadı.** Sıradaki adım: yönler tasarım tuvalinde örnek olarak gösterilecek, kullanıcı seçecek, onaydan sonra kodlanacak.
+Bu belge, Zircle uygulamasının yeniden tasarımı için referansları, mevcut kodun durumunu ve seçilen kalıpları toplar. **Güncel olan bölüm 0'dır.** Bölüm 1–6 ilk turdan kalma; mevcut durum (bölüm 2) ve kapsam notları (bölüm 5) hâlâ geçerli, renk tabanlı A/B/C yönleri (bölüm 4) ise kullanıcı tarafından reddedildi.
+
+## 0. İkinci tur: kaydedilen referanslar (20 Kasım)
+
+**Kaynak:** Chrome ile Dribbble. Aramalar: "voice chat desktop app", "discord redesign", "voice channel ui", "teamspeak concept". Behance girişe yönlendirdiği için kullanılamadı; "teamspeak concept" Dribbble'da ilgili sonuç vermedi. Görseller `design-refs/`, linkler `design-refs/kaynaklar.md`.
+
+**Güncelleme (20 Kasım, akşam):** Kullanıcı yön değiştirdi. Referanslar artık tasarım kaynağı değil; yalnız "kullanıcıların alıştığı temel işlevler" listesi için kullanılır (`docs/yonler/README.md`). Aşağıdaki tablo kayıt için duruyor.
+
+**Renk kuralı:** Referansların renkleri alınmaz. Zircle siyah ve gri kalır; yalnız yerleşim ve kurgu alınır.
+
+| Alan | Aldığımız kalıp | Referans | Neden |
+|---|---|---|---|
+| İskelet | Üç sütun kalır: sunucu şeridi, kanal listesi, içerik, sağda üyeler | `ana-pencere-klasik-uc-sutun-rotuslu` | Kullanıcı Discord ve TeamSpeak düzenini istiyor; alışkanlık bozulmaz |
+| Panel biçimi | Sütunlar ayrı, yuvarlak köşeli paneller; aralarında boşluk | `ana-pencere-ayrik-yuvarlak-paneller`, `ana-pencere-sagda-uyeler-ve-dosyalar` | Tek renkte bile bölümler net ayrılır. **Kullanıcı kararı** (bkz. `design-system.md`) |
+| Kanal listesi | Ses kanalının altında içerideki kişiler; her satırda mikrofon ve sağır simgesi | `ana-pencere-ses-kanali-altinda-kisiler`, `uye-listesi-ses-durumlari-kompakt` | Girmeden kimin orada olduğu görünür. Bugünkü önizleme sadeleşir |
+| Kullanıcı paneli | Sol altta "Ses bağlı" kartı (oda adı, bağlantı durumu, ayrıl) ve altında avatar, ad, mikrofon, kulaklık, ayarlar | `ana-pencere-ses-kanali-altinda-kisiler`, `uye-listesi-ses-durumlari-kompakt` | Bugünkü sabit çağrı çubuğunun daha derli toplu hâli |
+| Ses odası ekranı (yeni) | Ses kanalına girince ana alanda katılımcı kartları; konuşanın kartında halka | `ses-odasi-konusanlar-kart-dinleyenler-izgara` | Bugün ayrı bir oda ekranı yok. Rol ayrımı olmadığı için "konuşan / dinleyen" ayrımı yerine herkes eşit kart |
+| Kalabalık oda | 9 kişiden sonra kartlar küçülür, ızgara sıklaşır | `ses-odasi-konusanlar-kart-dinleyenler-izgara` (alt ızgara) | Bugünkü 8 kişilik yörünge sınırı kalkar |
+| Ekran paylaşımı | Paylaşımlar odada büyük kart; birden fazlaysa yan yana | `ses-odasi-yayinlar-yan-yana` | Ekran paylaşımı ve Birlikte İzle oda ekranının içine girer |
+| Kontrol çubuğu | Oda ekranında altta ortada yüzen hap: mikrofon, kulaklık, ekran paylaş, ayarlar, ayrıl | `ses-odasi-konusanlar-kart-dinleyenler-izgara`, `ses-kontrol-hapi-sohbetin-icinde` | Kontroller içerikle birlikte görünür, ekranın kenarına sıkışmaz |
+| Odadan çıkınca | Yazılı kanala geçince oda küçülür; kullanıcı panelindeki "Ses bağlı" kartı kalır, tıklayınca odaya döner | `aktif-oda-yuzen-hap-oda-kartlari`, `ses-kontrol-hapi-sohbetin-icinde` | Sesten çıkmadan gezinilir; aktif kanala tekrar tıklamak artık ayrılmaz |
+| Ses daveti | Hazır yanıtlar: "Kanala katıl", "2 dakika", "Meşgulüm" | `uye-listesi-ses-durumlari-kompakt` | Sonraki tur; bu turda kapsam dışı |
+| Sağ panel | Üyeler rollerine göre gruplu; altında paylaşılan dosyalar | `ana-pencere-klasik-uc-sutun-rotuslu`, `ana-pencere-sagda-uyeler-ve-dosyalar` | Dosyalar bölümü sonraki tur; gruplama bu turda |
+
+**Almadığımız:** Vision Pro'daki cam efekti ve arka plan fotoğrafları, Twitch tarzı yayın keşfi, mekânsal oda haritası (Teamflow), oda keşfi sayfası (Clubhouse). Zircle sunucu tabanlı ve tek renkli.
+
+**Bilinen sorunların karşılığı:**
+
+| Sorun | Çözüm |
+|---|---|
+| Bağlanıyor durumu yok | Kanala tıklayınca hemen oda ekranı açılır: iskelet kartlar ve "Bağlanıyor…" |
+| Mikrofon izni | Oda ekranında kart: neden, nasıl açılır (tarayıcı ve Windows için ayrı), "Dinleyici olarak devam et" |
+| Yanlışlıkla ayrılma | Aktif kanala tıklamak oda ekranını açar; ayrılmak yalnız "Ayrıl" düğmesiyle |
+| Sessiz katılma | Kanal satırında sağ tık menüsü ve Shift + tıklama |
+| Ekran okuyucu | Katılma, ayrılma ve bağlantı durumları `aria-live="polite"` ile duyurulur; konuşma duyurulmaz |
 
 ## 1. Referanslara erişim
 
 | Referans | Sonuç |
 |---|---|
-| `design-refs/` klasörü | **Yok.** Projede böyle bir klasör bulunmuyor. Ekran görüntüleri eklenirse bu belge güncellenecek. |
+| `design-refs/` klasörü | İlk turda yoktu. İkinci turda eklendi (bkz. bölüm 0). |
 | Dribbble: Voice Chat App (Purrweb) | Chrome'da açıldı, görseller incelendi. |
 | Dribbble: Mollo.io voice chat controls | **Kaldırılmış.** Dribbble 404 veriyor. |
 | Dribbble: Redefining Social Audio Experiences | Chrome'da açıldı, görseller ve açıklama incelendi. |
@@ -105,7 +139,7 @@ Açık tema: lavanta zemin (`#E4E3F2`, `#BEB9D1`), çivit vurgu (`#4337EE`), sı
 
 **Zircle'a uyanlar:** Zircle'ın yerleşimi zaten bu modele yakın. Eksik parça şu: **ses kanalına girince ana alanda bir oda görünümü** (ızgara, büyük kontroller), kanal listesinde yalnız kısa bir özet. Telefonda bu görünüm tam ekran açılır ve aşağı kaydırınca küçültülmüş çubuğa iner.
 
-## 4. Önerilen tasarım yönleri
+## 4. Önerilen tasarım yönleri (ilk tur; reddedildi)
 
 Ortak yapı (her yönde aynı, yalnızca görünüm değişir):
 

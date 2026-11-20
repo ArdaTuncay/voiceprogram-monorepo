@@ -8,9 +8,11 @@ Bu dosya, Zircle'ın arayüzünü yeniden tasarlama işinin talimatıdır. Yeni 
 
 - **Ürün:** Zircle. Sesli ve yazılı sohbet uygulaması: sunucular, sesli ve yazılı kanallar, arkadaşlar, özel mesajlar, ekran paylaşımı, Birlikte İzle.
 - **Hedef his:** Modern, sade, koyu tema öncelikli, oyuncu topluluklarına uygun.
-- **Renk kararı (kullanıcı, 20 Kasım):** Renkler bugünkü gibi siyah ve gri kalacak. Tasarımlar birbirinden renkle değil, **yerleşim ve kurguyla** ayrışmalı. Açık tema yine desteklenir, ama koyu tema esastır.
+- **Renk kararı (kullanıcı, 20 Kasım gece; öncekinin yerine):** Siyah yok: zemin ve paneller tek gri ton (`#171717`), kartlar bir ton açık. Vurgu yeşil (`#d9f99d`); kırmızı yalnız mikrofon kapalı ve ayrılma için. Açık tema yine desteklenir, ama koyu tema esastır. (İlk karar "siyah ve gri, renksiz" idi.)
 - **Referanslar:** TeamSpeak 6 ve Discord'un masaüstü düzeni ile `design-refs/galeri.html`. Bu galeride Dribbble'dan seçilmiş 12 kurgu var; görseller internetten yüklenir, tarayıcıda açılmalı.
-- **Önceki denemeler:** 20 Kasım'da iki tur örnek gösterildi ve beğenilmedi. Önce renk tabanlı üç yön, sonra beş yerleşim yönü (Klasik, Yörünge, Sahne, Yan panel, Lobi) denendi. Bunlar [Design tuvali](https://claude.ai/artifact/1EqN3rYWJd8LEwbfCCGxGS)'nin "Uygulama tasarımı" sayfasında duruyor. Aynı yönleri tekrar önerme; gerçek uygulama referanslarından yola çık.
+- **Önceki denemeler:** 20 Kasım'da iki tur örnek gösterildi ve beğenilmedi. Önce renk tabanlı üç yön, sonra beş yerleşim yönü (Klasik, Yörünge, Sahne, Yan panel, Lobi) denendi. Bunlar [Design tuvali](https://claude.ai/artifact/1EqN3rYWJd8LEwbfCCGxGS)'nin "Uygulama tasarımı" sayfasında duruyor. Aynı yönleri tekrar önerme.
+- **Son karar (kullanıcı, 20 Kasım gece):** Özgün yönler reddedildi. Tasarım, kullanıcının gönderdiği konsepte göre kurulur (`design-refs/ana-pencere-ayrik-yuvarlak-paneller.png`): solda sunucu şeridi ve kanal kartları, ortada sohbet, sağda açılıp kapanan üyeler kartı, sağ üstte ara, ayarlar ve profil. Dosyalar bölümü yok; paylaşılan medya sunucu tarafında ayrı tutulur. **Renk:** siyah yok, zemin ve paneller tek gri ton; vurgu yeşil (`#d9f99d`). Örnek: `docs/ornek-tasarim/`.
+- **Önceki yön değişikliği (kullanıcı, 20 Kasım akşam; geçersiz):** Referanslar yerleşim ve görünüm kaynağı değil; yalnız temel işlevler listesi için kullanılır. Görsel dil özgün olacak: sesli sohbetin doğasından (ses dalgaları, varlık hissi, canlılık) yola çıkan, Discord ve TeamSpeak'e benzemeyen bir kimlik. İki yön `docs/yonler/` klasöründe; seçilen uygulanır.
 
 ### Teknik yapı
 
@@ -63,6 +65,8 @@ cd desktop;  npm start          # kurulum dosyası için: npm run build:win
 
 ### Bilinen sorunlar (yeni tasarımda çöz)
 
+**Durum (20 Kasım):** Hepsi çözüldü: kanal kartında "Bağlanıyor…", mikrofon izni yardım kartı (adımlar + "Tekrar dene"), aktif kanala tıklamak artık çıkarmıyor, Shift + tıklama ya da "Sessiz katıl" düğmesi, ekran okuyucu için katılma/ayrılma duyurusu. Masaüstünde özel başlık çubuğu, en küçük pencere boyutu ve tepsi simgesi eklendi (X uygulamadan çıkar — kullanıcı kararı).
+
 - **Bağlanırken geri bildirim yok:** "Bağlanıyor" durumu görünmüyor. `activeRoomId` ancak mikrofon alınıp katılım bitince ayarlanıyor.
 - **Mikrofon izni:** Reddedilince yalnızca bir hata metni çıkıyor; nasıl düzeltileceği anlatılmıyor.
 - **Yanlışlıkla ayrılma:** İçinde olduğun ses kanalına tekrar tıklamak seni odadan çıkarıyor (`Chat.tsx`, `handleVoiceRoomClick`).
@@ -72,9 +76,11 @@ cd desktop;  npm start          # kurulum dosyası için: npm run build:win
 ## 1. Araştırma
 
 - **Toplanacak referanslar:** "desktop voice chat app", "voice channel", "community chat sidebar", "call controls", "audio settings" için gerçek uygulama ekranları.
-- **Kaynaklar:**
-  - **Lazyweb kurulmadı** (nedeni aşağıdaki "Araç durumu" bölümünde). Kullanıcı onaylarsa kurulur; yoksa Chrome ile Dribbble ve benzeri sitelerden toplanır.
+- **Kaynaklar:** Chrome ile Dribbble ve Behance.
+  - **Aramalar:** "voice chat desktop app", "discord redesign", "voice channel ui", "teamspeak concept".
+  - **Lazyweb kullanılmıyor** (kullanıcı kararı, 20 Kasım; nedeni "Araç durumu" bölümünde).
   - discord.com ve Medium bu bilgisayardan açılmıyor. Discord Türkiye'de erişime kapalı.
+- **Kayıt:** En iyi 8-10 görsel `design-refs/` klasörüne `.png` olarak kaydedilir. Dosya adı neyi gösterdiğini anlatır (ör. `ana-pencere-teamspeak6.png`). Kaynak linkleri `design-refs/kaynaklar.md` dosyasında.
 - **Bulgular:** `docs/design-research.md` dosyasına yazılır: hangi kalıbı neden alıyoruz. Bu dosyada 20 Kasım'dan kalan bir ilk araştırma var; güncellenerek kullanılır.
 
 ## 2. Tasarım sistemi
@@ -135,4 +141,4 @@ cd desktop;  npm start          # kurulum dosyası için: npm run build:win
 | ui-ux-pro-max | Kuruldu, 2.15.0. Kullanıcı düzeyinde; arama betiği Python 3.12.5 ile denendi |
 | web-design-guidelines (Vercel) | Kuruldu. Kullanıcı düzeyinde: `~/.claude/skills/web-design-guidelines` |
 | Playwright MCP | Kuruldu. Yalnızca bu proje için; bağlantı kontrol edildi |
-| Lazyweb | **Kurulmadı.** Verilen eklenti komutu bu depoda çalışmıyor; resmî kurulum `curl \| bash` ile uzaktan betik çalıştırıyor. Paket ayrıca istemleri kaydedip dış bir sunucuya gönderebilen bir telemetri betiği taşıyor. Kullanıcı kararı bekleniyor |
+| Lazyweb | **Kurulmayacak** (kullanıcı kararı, 20 Kasım). Verilen eklenti komutu bu depoda çalışmıyor; resmî kurulum `curl \| bash` ile uzaktan betik çalıştırıyor. Paket ayrıca istemleri kaydedip dış bir sunucuya gönderebilen bir telemetri betiği taşıyor. Yerine Chrome ile Dribbble ve Behance kullanılır |
