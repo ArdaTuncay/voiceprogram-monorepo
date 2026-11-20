@@ -8,6 +8,7 @@ defmodule Backend.Uploads.S3Test do
   use Backend.DataCase, async: false
 
   alias Backend.Uploads
+  alias Backend.Uploads.S3
 
   @config [
     adapter: :s3,
@@ -78,5 +79,65 @@ defmodule Backend.Uploads.S3Test do
   test "only private references can be read" do
     assert Uploads.read_private("/uploads/AbCdEfGhIjKlMnOpQrStUv.pdf") == {:error, :not_found}
     assert Uploads.read_private("private:../../etc/passwd") == {:error, :not_found}
+  end
+
+  describe "authorization/1 matches AWS's published SigV4 examples" do
+    # From AWS's "Signature Calculations for the Authorization Header:
+    # Transferring Payload in a Single Chunk" — the same credentials, date
+    # and requests, and the signatures AWS lists for them. R2 checks
+    # signatures exactly the same way.
+    @example %{
+      region: "us-east-1",
+      access_key_id: "AKIAIOSFODNN7EXAMPLE",
+      secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      amz_date: "20130524T000000Z",
+      date_stamp: "20130524"
+    }
+
+    test "GET Object" do
+      auth =
+        S3.authorization(
+          Map.merge(@example, %{
+            method: "GET",
+            uri_path: "/test.txt",
+            payload_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            headers: %{
+              "host" => "examplebucket.s3.amazonaws.com",
+              "range" => "bytes=0-9",
+              "x-amz-content-sha256" =>
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "x-amz-date" => "20130524T000000Z"
+            }
+          })
+        )
+
+      assert auth ==
+               "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request, " <>
+                 "SignedHeaders=host;range;x-amz-content-sha256;x-amz-date, " <>
+                 "Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"
+    end
+
+    test "PUT Object" do
+      payload_hash = "44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072"
+
+      auth =
+        S3.authorization(
+          Map.merge(@example, %{
+            method: "PUT",
+            uri_path: "/test%24file.text",
+            payload_hash: payload_hash,
+            headers: %{
+              "host" => "examplebucket.s3.amazonaws.com",
+              "date" => "Fri, 24 May 2013 00:00:00 GMT",
+              "x-amz-content-sha256" => payload_hash,
+              "x-amz-date" => "20130524T000000Z",
+              "x-amz-storage-class" => "REDUCED_REDUNDANCY"
+            }
+          })
+        )
+
+      assert auth =~
+               "Signature=98ad721746da40c64f1a55b78f14c238d841ea1380cd77a1b5971af0ece108bd"
+    end
   end
 end
