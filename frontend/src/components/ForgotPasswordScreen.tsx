@@ -3,12 +3,14 @@ import type { FormEvent } from 'react';
 import { requestPasswordReset } from '../services/api';
 import { useT } from '../i18n';
 import { rich } from '../i18n/rich';
-import mascot from '../assets/zircle-mascot.svg';
+import AuthShell from './AuthShell';
 import './Auth.css';
 
 interface Props {
   initialEmail: string;
   onBackToLogin: () => void;
+  /** Inside another card instead of a full page (see AuthShell). */
+  bare?: boolean;
 }
 
 type State = 'idle' | 'sending' | 'sent' | 'error';
@@ -17,7 +19,7 @@ type State = 'idle' | 'sending' | 'sent' | 'error';
  * requests a reset link; the confirmation copy is the same whether or not
  * the address is registered, matching the backend's anti-enumeration
  * response (see BackendWeb.PasswordResetController). */
-export default function ForgotPasswordScreen({ initialEmail, onBackToLogin }: Props) {
+export default function ForgotPasswordScreen({ initialEmail, onBackToLogin, bare }: Props) {
   const t = useT();
   const [email, setEmail] = useState(initialEmail);
   const [state, setState] = useState<State>('idle');
@@ -30,61 +32,58 @@ export default function ForgotPasswordScreen({ initialEmail, onBackToLogin }: Pr
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <img src={mascot} alt={t('Zircle maskotu')} className="auth-mascot" />
-        <h1>{t('Şifremi unuttum')}</h1>
+    <AuthShell bare={bare}>
+      <h1>{t('Şifremi unuttum')}</h1>
 
-        {state === 'sent' ? (
+      {state === 'sent' ? (
+        <p className="subtitle">
+          {rich(
+            t(
+              '{email} adresi kayıtlıysa, şifre sıfırlama bağlantısı gönderdik. Bağlantı 1 saat geçerlidir — gelen kutunuzda görünmüyorsa spam/gereksiz klasörünü de kontrol edin.'
+            ),
+            { email: <strong>{email.trim()}</strong> }
+          )}
+        </p>
+      ) : (
+        <>
           <p className="subtitle">
-            {rich(
-              t(
-                '{email} adresi kayıtlıysa, şifre sıfırlama bağlantısı gönderdik. Bağlantı 1 saat geçerlidir — gelen kutunuzda görünmüyorsa spam/gereksiz klasörünü de kontrol edin.'
-              ),
-              { email: <strong>{email.trim()}</strong> }
+            {t(
+              'Hesabınızın e-posta adresini girin, size yeni şifre belirlemeniz için bir bağlantı gönderelim.'
             )}
           </p>
-        ) : (
-          <>
-            <p className="subtitle">
-              {t(
-                'Hesabınızın e-posta adresini girin, size yeni şifre belirlemeniz için bir bağlantı gönderelim.'
-              )}
-            </p>
-            <form className="auth-form" onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label htmlFor="forgot-email">{t('E-posta')}</label>
-                <input
-                  id="forgot-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                />
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="forgot-email">{t('E-posta')}</label>
+              <input
+                id="forgot-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </div>
+
+            {state === 'error' && (
+              <div className="auth-error" role="alert">
+                {t('İstek gönderilemedi, lütfen biraz sonra tekrar deneyin.')}
               </div>
+            )}
 
-              {state === 'error' && (
-                <div className="auth-error" role="alert">
-                  {t('İstek gönderilemedi, lütfen biraz sonra tekrar deneyin.')}
-                </div>
-              )}
+            <button type="submit" className="auth-submit" disabled={state === 'sending'}>
+              {state === 'sending' ? t('Gönderiliyor…') : t('Sıfırlama bağlantısı gönder')}
+            </button>
+          </form>
+        </>
+      )}
 
-              <button type="submit" className="auth-submit" disabled={state === 'sending'}>
-                {state === 'sending' ? t('Gönderiliyor…') : t('Sıfırlama bağlantısı gönder')}
-              </button>
-            </form>
-          </>
-        )}
+      <hr className="auth-divider" />
 
-        <hr className="auth-divider" />
-
-        <p className="auth-toggle">
-          <button type="button" onClick={onBackToLogin}>
-            {t('Giriş ekranına dön')}
-          </button>
-        </p>
-      </div>
-    </div>
+      <p className="auth-toggle">
+        <button type="button" onClick={onBackToLogin}>
+          {t('Giriş ekranına dön')}
+        </button>
+      </p>
+    </AuthShell>
   );
 }
