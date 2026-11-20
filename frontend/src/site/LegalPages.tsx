@@ -149,7 +149,8 @@ export function PrivacyPage() {
               <p>Zircle'ı çalıştırmak için aşağıdaki hizmetlerden yararlanırız. Bu hizmetler verilerini yalnızca bizim adımıza işler; bazıları yurt dışında bulunur.</p>
               <ul>
                 <li><b>Vercel:</b> web sitesinin ve uygulamanın yayınlanması.</li>
-                <li><b>Render:</b> sunucumuzun barındırılması ve paylaşılan dosyaların ve fotoğrafların saklanması.</li>
+                <li><b>Render:</b> sunucumuzun barındırılması.</li>
+                <li><b>Cloudflare R2:</b> paylaşılan dosyaların ve fotoğrafların saklanması.</li>
                 <li><b>Neon:</b> veritabanımızın barındırılması.</li>
                 <li><b>Brevo:</b> hesabınla ilgili e-postaların gönderilmesi.</li>
                 <li><b>Metered:</b> doğrudan bağlanamayan cihazlar için sesli görüşme bağlantısının aktarılması.</li>

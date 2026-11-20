@@ -108,7 +108,7 @@ Taslak: https://claude.ai/artifact/YBkxVqBF1ezQ5eYUKmZ1a5. Sayfalarda sarı işa
 
 - [ ] **Cloudflare kartını sanal kartla değiştir.** R2'yi açarken (20 Kasım) gerçek kredi kartı girildi. Bankanın uygulamasından düşük limitli bir sanal kart oluşturup Cloudflare → Manage account → Billing → Payment info'dan değiştir. Kart yalnız doğrulama için; 9 GB sınırı (PR #46) yüzünden ücret çıkmaz.
 - [ ] **Cloudflare'de fatura uyarısı kur** (Billing → Notifications), istersen mobil uygulama ile iki adımlı doğrulama ve yedek kodlar.
-- [ ] **Dosya depolama:** R2 bağlandıktan sonra Gizlilik sayfasındaki "Render: … dosyaların saklanması" satırını Cloudflare R2 olarak güncelle.
+- [x] **Dosya depolama:** R2 bağlandı (21 Kasım; #46 9 GB sınırı, #47 imza düzeltmesi, #48 dosyalar sunucu üzerinden, çünkü `*.r2.dev` Türkiye'deki ağlarda engelli). Gizlilik metni güncellendi. Alan adı alınınca kovaya bağlanıp `S3_PUBLIC_URL_BASE` oraya çevrilecek.
 - [ ] **Ses aktarımı (TURN):** Render'da `METERED_*` yok; canlıda ayarlı mı kontrol et, değilse Gizlilik'teki Metered satırını kaldır ya da Metered'ı bağla.
 
 ## Bu işte değişen başlıca dosyalar
