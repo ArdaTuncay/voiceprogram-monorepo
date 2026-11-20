@@ -57,11 +57,11 @@ Tasarım tuvali, "A2 sitesi" sayfası: https://claude.ai/artifact/1EqN3rYWJd8LEw
 
 ### 2. Gizlilik ve Koşullar için cevaplar
 Taslak: https://claude.ai/artifact/YBkxVqBF1ezQ5eYUKmZ1a5. Sayfalarda sarı işaretli `<Todo>` alanları bunlar; hepsi `frontend/src/site/LegalPages.tsx` dosyasında.
-- [ ] **Veri sorumlusu:** Zircle'ı işleten kişinin adı soyadı ya da şirketin unvanı.
-- [ ] **KVKK başvuru adresi:** E-postayı gizleme kararıyla çelişiyor, ama bu iki metinde en az bir adres olmalı.
-- [ ] **Yaş sınırı.**
-- [ ] **Canlıda açık olan hizmetler:** Dosyalar hangi depolama hizmetinde (R2, S3 ya da başka)? Sentry açık mı? Önde Cloudflare var mı?
-- [ ] **Sözler:** "Reklam göstermeyiz, verilerini satmayız" ve "Zircle ücretsizdir" cümleleri kalsın mı?
+- [x] **Veri sorumlusu:** Arda Tuncay (20 Kasım).
+- [x] **KVKK başvuru adresi:** ceng.ardatuncay@gmail.com, yalnız Gizlilik ve Koşullar sayfalarında (20 Kasım).
+- [x] **Yaş sınırı:** 13 (20 Kasım).
+- [x] **Canlıda açık olan hizmetler** (Render ortam değişkenlerinden, 20 Kasım): `S3_*` yok, dosyalar Render'ın diskinde; `SENTRY_DSN` yok; trafik Render'ın Cloudflare altyapısından geçiyor; veritabanı Neon. **Dikkat:** Render'da `METERED_*` da yok; ses aktarımı (TURN) canlıda ayarlı olmayabilir, metindeki Metered satırı doğrulanmalı.
+- [x] **Sözler:** İkisi de kalıyor (20 Kasım).
 - [ ] **Son güncelleme tarihi:** "[yayın tarihi]" yerine yayın günü yazılacak.
 - [ ] **Hukuki inceleme:** Yayından önce bir hukukçuya baktırmak önerilir. Sonrasında metinlerin İngilizcesi yazılabilir.
 - Bilinmesi gereken: Hesap silinince kişi anonimleşir ama gönderdiği mesajlar silinmez. Taslak bunu açıkça yazıyor.

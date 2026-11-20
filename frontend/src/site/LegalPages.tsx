@@ -7,14 +7,9 @@ import type { SitePage } from './siteHome';
  * The privacy policy (/gizlilik) and terms of use (/kosullar). The text is
  * a first draft written from what the app really does (see the git history
  * of this file for the review), and is in Turkish only until it has had a
- * legal review. <Todo> marks what the owner still has to fill in before
- * going live.
+ * legal review. Filled in with the owner's answers on 20 Nov 2026; only the
+ * "Son güncelleme" date is set on the launch day.
  */
-
-/** Something the owner still has to fill in; shown highlighted on purpose. */
-function Todo({ children }: { children: ReactNode }) {
-  return <mark className="site-todo">{children}</mark>;
-}
 
 interface Section {
   id: string;
@@ -74,7 +69,7 @@ function LegalPage({ current, title, intro, sections, seeAlso }: {
 
 const CONTACT = (
   <p>
-    <Todo>[BAŞVURU ADRESİ]</Todo>. Sık sorulan sorular için <a href="/destek">Destek</a> sayfasına bakabilirsin.
+    Başvuruların ve soruların için: <a href="mailto:ceng.ardatuncay@gmail.com">ceng.ardatuncay@gmail.com</a>. Sık sorulan sorular için <a href="/destek">Destek</a> sayfasına bakabilirsin.
   </p>
 );
 
@@ -92,7 +87,7 @@ export function PrivacyPage() {
         <p>
           Bu metin, Zircle'ı kullandığında hangi verilerinin tutulduğunu, ne için kullanıldığını ve neler yapabileceğini
           anlatır. 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında veri sorumlusu{' '}
-          <Todo>[VERİ SORUMLUSU]</Todo>'dur.
+          Arda Tuncay'dur.
         </p>
       }
       sections={[
@@ -125,7 +120,7 @@ export function PrivacyPage() {
                 <li>İzin verdiğin bildirimleri göndermek için.</li>
                 <li>Raporları incelemek için. Sunucudaki raporlar sunucu sahibine ve moderatörlere, özel mesaj raporları Zircle ekibine gider.</li>
               </ul>
-              <p><Todo>Verilerini reklam için kullanmayız ve satmayız.</Todo></p>
+              <p>Verilerini reklam için kullanmayız ve satmayız.</p>
             </>
           ),
         },
@@ -154,14 +149,13 @@ export function PrivacyPage() {
               <p>Zircle'ı çalıştırmak için aşağıdaki hizmetlerden yararlanırız. Bu hizmetler verilerini yalnızca bizim adımıza işler; bazıları yurt dışında bulunur.</p>
               <ul>
                 <li><b>Vercel:</b> web sitesinin ve uygulamanın yayınlanması.</li>
-                <li><b>Render:</b> sunucumuzun ve veritabanımızın barındırılması.</li>
+                <li><b>Render:</b> sunucumuzun barındırılması ve paylaşılan dosyaların ve fotoğrafların saklanması.</li>
+                <li><b>Neon:</b> veritabanımızın barındırılması.</li>
                 <li><b>Brevo:</b> hesabınla ilgili e-postaların gönderilmesi.</li>
                 <li><b>Metered:</b> doğrudan bağlanamayan cihazlar için sesli görüşme bağlantısının aktarılması.</li>
-                <li><b><Todo>[DOSYA DEPOLAMA HİZMETİ]</Todo>:</b> paylaşılan dosyaların ve fotoğrafların saklanması.</li>
                 <li><b>Tarayıcı bildirim servisleri</b> (Google, Mozilla, Apple): bildirimlerin cihazına ulaştırılması. Bildirimi kullanmıyorsan bu servislere bir şey gönderilmez.</li>
                 <li><b>YouTube:</b> "Birlikte izle"de bir YouTube videosu açıldığında video YouTube'dan yüklenir.</li>
-                <li><b><Todo>[Sentry, açıksa]</Todo>:</b> uygulamadaki hataların kaydedilmesi.</li>
-                <li><b><Todo>[Cloudflare, açıksa]</Todo>:</b> sunucumuza gelen trafiğin korunması.</li>
+                <li><b>Cloudflare:</b> sunucumuza gelen trafiğin iletilmesi ve korunması (Render'ın altyapısı üzerinden).</li>
               </ul>
               <p>Mesajda bir bağlantı paylaştığında, önizlemesini göstermek için bağlantıdaki sayfayı bizim sunucumuz açar; senin IP adresin o siteye gönderilmez.</p>
             </>
@@ -216,7 +210,7 @@ export function TermsPage() {
       ]}
       intro={
         <p>
-          Zircle'ı kullanarak bu koşulları kabul etmiş olursun. Zircle'ı <Todo>[VERİ SORUMLUSU]</Todo> sunar.
+          Zircle'ı kullanarak bu koşulları kabul etmiş olursun. Zircle'ı Arda Tuncay sunar.
         </p>
       }
       sections={[
@@ -226,7 +220,7 @@ export function TermsPage() {
           body: (
             <p>
               Zircle; sesli kanallar, yazılı sohbet, özel mesajlar ve dosya paylaşımı sunan bir sohbet hizmetidir. Tarayıcıdan
-              ve Windows uygulamasından kullanılır. <Todo>Zircle ücretsizdir.</Todo> Hizmeti geliştirmek için özellikleri
+              ve Windows uygulamasından kullanılır. Zircle ücretsizdir. Hizmeti geliştirmek için özellikleri
               zaman içinde değiştirebiliriz.
             </p>
           ),
@@ -236,7 +230,7 @@ export function TermsPage() {
           title: '2. Hesap ve yaş sınırı',
           body: (
             <ul>
-              <li>Zircle'ı kullanmak için en az <Todo>[YAŞ SINIRI]</Todo> yaşında olmalısın.</li>
+              <li>Zircle'ı kullanmak için en az 13 yaşında olmalısın.</li>
               <li>Kayıt olurken doğru bir e-posta adresi vermelisin.</li>
               <li>Şifreni kimseyle paylaşma. Hesabında yapılanlardan sen sorumlusun; iki adımlı doğrulamayı açmanı öneririz.</li>
               <li>Hesabın sana özeldir; başkasına devredemezsin.</li>
