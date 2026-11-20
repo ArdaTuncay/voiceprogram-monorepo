@@ -104,6 +104,13 @@ Taslak: https://claude.ai/artifact/YBkxVqBF1ezQ5eYUKmZ1a5. Sayfalarda sarı işa
    - [ ] Masaüstü uygulaması siteyi değil, kendi giriş ekranını gösteriyor.
 4. Yenilikler ve yasal sayfalardaki tarihleri yayın günüyle güncellemek.
 
+## Sonra yapılacaklar (hatırlatma)
+
+- [ ] **Cloudflare kartını sanal kartla değiştir.** R2'yi açarken (20 Kasım) gerçek kredi kartı girildi. Bankanın uygulamasından düşük limitli bir sanal kart oluşturup Cloudflare → Manage account → Billing → Payment info'dan değiştir. Kart yalnız doğrulama için; 9 GB sınırı (PR #46) yüzünden ücret çıkmaz.
+- [ ] **Cloudflare'de fatura uyarısı kur** (Billing → Notifications), istersen mobil uygulama ile iki adımlı doğrulama ve yedek kodlar.
+- [ ] **Dosya depolama:** R2 bağlandıktan sonra Gizlilik sayfasındaki "Render: … dosyaların saklanması" satırını Cloudflare R2 olarak güncelle.
+- [ ] **Ses aktarımı (TURN):** Render'da `METERED_*` yok; canlıda ayarlı mı kontrol et, değilse Gizlilik'teki Metered satırını kaldır ya da Metered'ı bağla.
+
 ## Bu işte değişen başlıca dosyalar
 
 - **Sunucu:**
