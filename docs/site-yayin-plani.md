@@ -70,6 +70,7 @@ Taslak: https://claude.ai/artifact/YBkxVqBF1ezQ5eYUKmZ1a5. Sayfalarda sarı işa
 İndir düğmesi şu adresi gösteriyor: `https://github.com/ArdaTuncay/voiceprogram-monorepo/releases/download/desktop-v1.0.0/Zircle-Setup-1.0.0.exe`. Bu dosya henüz yok.
 - [ ] Derlemek: `cd frontend; npm run build:electron`, sonra `cd desktop; npm run build:win`. (20 Kasım: site dalından deneme derlemesi yapıldı, 112,8 MB. Yayına çıkacak dosya merge'den sonra `main`'den yeniden derlenecek. Simge eklendi: `desktop/build/icon.png`, `favicon.svg`'deki maskottan üretilen 512×512 şeffaf PNG.)
 - [ ] Kurulum dosyasını deneyip uygulamanın açıldığını ve giriş yapılabildiğini kontrol etmek.
+  - 20 Kasım: `feat/uygulama-tasarim`'dan (tüm site + yeni tasarım) aday derlendi: `desktop/dist/Zircle-Setup-1.0.0.exe`, 112,9 MB. Paketli uygulama açıldı, yeni başlık çubuğu çalışıyor, canlı sunucuya (`/api/healthz` 200) ulaşıyor. Giriş ekranının dar sütuna sıkışma hatası düzeltildi (f5e46f4). **Kalan:** kurulum dosyasını kurup gerçek hesapla giriş yapmak (kullanıcı yapacak).
 - [ ] **Yayın günü** (kullanıcı kararı, 20 Kasım): GitHub'da `desktop-v1.0.0` sürümünü oluşturup `Zircle-Setup-1.0.0.exe` dosyasını yüklemek. **Dışarıya açık bir işlem; önce kullanıcıdan onay al.**
 - [ ] `frontend/src/site/release.ts` içinde `date` (YYYY-AA-GG) ve `sizeMb` alanlarını doldurmak. Böylece İndir ve Yenilikler sayfalarında tarih ve boyut görünür.
 - Eski `desktop-v1` sürümü (Ağustos, 0.0.0) 20 Kasım'da kullanıcının isteğiyle silindi. Git etiketi `desktop-v1` de silindi.
