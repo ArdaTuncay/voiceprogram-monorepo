@@ -237,15 +237,27 @@ if config_env() == :prod do
   # S3_REGION to the bucket's real region (e.g. eu-central-1) and make the
   # bucket (or its objects) publicly readable, or front it with a CDN and
   # set S3_PUBLIC_URL_BASE to that instead.
-  if System.get_env("S3_BUCKET") do
+  #
+  # Values are trimmed: a line break pasted along with a key or URL (easy to
+  # do in a dashboard) otherwise ends up inside the host name or the
+  # signature and every upload fails.
+  s3_env = fn name ->
+    case System.get_env(name) do
+      nil -> nil
+      value -> String.trim(value)
+    end
+  end
+
+  if s3_env.("S3_BUCKET") do
     config :backend, :uploads,
       adapter: :s3,
-      bucket: System.fetch_env!("S3_BUCKET"),
-      region: System.get_env("S3_REGION", "auto"),
-      endpoint: System.get_env("S3_ENDPOINT"),
-      access_key_id: System.fetch_env!("S3_ACCESS_KEY_ID"),
-      secret_access_key: System.fetch_env!("S3_SECRET_ACCESS_KEY"),
-      public_url_base: System.get_env("S3_PUBLIC_URL_BASE")
+      bucket: s3_env.("S3_BUCKET"),
+      region: s3_env.("S3_REGION") || "auto",
+      endpoint: s3_env.("S3_ENDPOINT"),
+      access_key_id: s3_env.("S3_ACCESS_KEY_ID") || raise("S3_ACCESS_KEY_ID is missing"),
+      secret_access_key:
+        s3_env.("S3_SECRET_ACCESS_KEY") || raise("S3_SECRET_ACCESS_KEY is missing"),
+      public_url_base: s3_env.("S3_PUBLIC_URL_BASE")
   end
 
   config :backend, BackendWeb.Endpoint,

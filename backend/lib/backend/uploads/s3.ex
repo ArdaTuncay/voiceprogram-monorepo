@@ -87,28 +87,20 @@ defmodule Backend.Uploads.S3 do
         "x-amz-date" => amz_date
       })
 
-    {signed_headers, canonical_headers} = canonical_headers(headers)
     verb = method |> Atom.to_string() |> String.upcase()
 
-    canonical_request =
-      Enum.join([verb, uri_path, "", canonical_headers, "", signed_headers, payload_hash], "\n")
-
-    credential_scope = "#{date_stamp}/#{region}/s3/aws4_request"
-
-    string_to_sign =
-      Enum.join(
-        ["AWS4-HMAC-SHA256", amz_date, credential_scope, sha256_hex(canonical_request)],
-        "\n"
-      )
-
-    signature =
-      secret_access_key
-      |> signing_key(date_stamp, region)
-      |> hmac_hex(string_to_sign)
-
     authorization =
-      "AWS4-HMAC-SHA256 Credential=#{access_key_id}/#{credential_scope}, " <>
-        "SignedHeaders=#{signed_headers}, Signature=#{signature}"
+      authorization(%{
+        method: verb,
+        uri_path: uri_path,
+        headers: headers,
+        payload_hash: payload_hash,
+        region: region,
+        access_key_id: access_key_id,
+        secret_access_key: secret_access_key,
+        amz_date: amz_date,
+        date_stamp: date_stamp
+      })
 
     # Bodies are files, not JSON — never let Req decode them.
     Req.request(
@@ -120,6 +112,40 @@ defmodule Backend.Uploads.S3 do
         decode_body: false
       ] ++ req_options()
     )
+  end
+
+  @doc false
+  # The SigV4 `Authorization` header for one request — pure, so it can be
+  # checked against AWS's published example signatures (see s3_test.exs).
+  # `headers` must already include host, x-amz-content-sha256 and x-amz-date.
+  def authorization(%{} = req) do
+    {signed_headers, canonical_headers} = canonical_headers(req.headers)
+
+    # canonical_headers already ends every line with a newline; the
+    # canonical request then has exactly one more newline before the signed
+    # header list. (An extra blank line here made every real S3/R2 request
+    # fail with 403 SignatureDoesNotMatch.)
+    canonical_request =
+      Enum.join(
+        [req.method, req.uri_path, "", canonical_headers, signed_headers, req.payload_hash],
+        "\n"
+      )
+
+    credential_scope = "#{req.date_stamp}/#{req.region}/s3/aws4_request"
+
+    string_to_sign =
+      Enum.join(
+        ["AWS4-HMAC-SHA256", req.amz_date, credential_scope, sha256_hex(canonical_request)],
+        "\n"
+      )
+
+    signature =
+      req.secret_access_key
+      |> signing_key(req.date_stamp, req.region)
+      |> hmac_hex(string_to_sign)
+
+    "AWS4-HMAC-SHA256 Credential=#{req.access_key_id}/#{credential_scope}, " <>
+      "SignedHeaders=#{signed_headers}, Signature=#{signature}"
   end
 
   # Test-only seam: config/test.exs routes these through Req.Test.
