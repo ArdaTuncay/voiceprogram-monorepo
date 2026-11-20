@@ -257,6 +257,11 @@ body {
   margin: 0;
   overflow: hidden;
   height: 100vh;
+  /* Room for the desktop title strip. Padding, not a margin on #root: a
+     child's top margin collapses through body, makes the page 32px taller
+     than the window, and the first scrollIntoView then scrolls the whole
+     page up under the strip. (box-sizing is border-box, so 100vh holds.) */
+  padding-top: var(--titlebar-height);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -265,7 +270,6 @@ body {
 #root {
   width: 100%;
   height: calc(100vh - var(--titlebar-height));
-  margin-top: var(--titlebar-height);
   display: flex;
 }
 
