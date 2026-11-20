@@ -72,7 +72,7 @@ Taslak: https://claude.ai/artifact/YBkxVqBF1ezQ5eYUKmZ1a5. Sayfalarda sarı işa
 - [ ] Kurulum dosyasını deneyip uygulamanın açıldığını ve giriş yapılabildiğini kontrol etmek.
 - [ ] **Yayın günü** (kullanıcı kararı, 20 Kasım): GitHub'da `desktop-v1.0.0` sürümünü oluşturup `Zircle-Setup-1.0.0.exe` dosyasını yüklemek. **Dışarıya açık bir işlem; önce kullanıcıdan onay al.**
 - [ ] `frontend/src/site/release.ts` içinde `date` (YYYY-AA-GG) ve `sizeMb` alanlarını doldurmak. Böylece İndir ve Yenilikler sayfalarında tarih ve boyut görünür.
-- Eski `desktop-v1` sürümü (Ağustos, 0.0.0) 20 Kasım'da kullanıcının isteğiyle silindi. Git etiketi `desktop-v1` duruyor.
+- Eski `desktop-v1` sürümü (Ağustos, 0.0.0) 20 Kasım'da kullanıcının isteğiyle silindi. Git etiketi `desktop-v1` de silindi.
 
 ### 4. Kayıt ve PR'lar
 - [x] `feat/site-sayfalar` dalını yerelde commit'lemek (20 Kasım).
